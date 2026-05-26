@@ -1,3 +1,5 @@
+kind: Application
+
 server:
   port: 8083
   servlet:
@@ -37,3 +39,5 @@ keycloack:
   base-url: http://localhost:8080
   realm: seller
   client-id: cabinet
+
+
