@@ -25,19 +25,28 @@ spring:
   jackson:
     deserialization:
       fail-on-unknown-properties: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${keycloack.base-url}/realms/${keycloack.realm}
 
 logging:
+  pattern:
+    level: "%5p [%X{requestId:-}]"
   level:
     org:
       hibernate:
         SQL: DEBUG
-        orm:
-          jdbc:
-            bind: TRACE
+        orm.jdbc.bind: TRACE
+      springframework:
+        security: DEBUG
+        web: INFO
+
 
 keycloack:
   base-url: http://localhost:8080
-  realm: seller
-  client-id: cabinet
+  realm: bravi
+  client-id: user-token-proxy
 
 

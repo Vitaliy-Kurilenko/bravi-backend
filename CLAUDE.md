@@ -10,8 +10,10 @@ Spring Boot 4.x застосунок на Java 26, PostgreSQL, інтеграц�
 ua.com.bravi.bravi
 ├── client/                  REST-клієнти до зовнішніх систем (Keycloak тощо)
 │   └── dto/                 DTO для запитів/відповідей зовнішніх API
-├── component/               Допоміжні Spring-компоненти (не сервіси й не домен)
-├── config/                  Spring-конфігурації
+├── common/                  Спільні константи проекту (HttpConstants тощо)
+├── component/               Допоміжні Spring-компоненти (фільтри, парсери,
+│                            request-scoped біни — не сервіси й не домен)
+├── config/                  Spring-конфігурації (WebConfig, SecurityConfig, ...)
 │   ├── props/               @ConfigurationProperties класи
 │   └── restclient/          Конфігурація RestClient бінів
 ├── controller/              REST-контролери (HTTP-шар)
@@ -110,4 +112,30 @@ DI робимо через constructor injection (`@RequiredArgsConstructor`), �
 
 - `application.yaml` — основна конфігурація
 - Кастомні properties — через `@ConfigurationProperties` у `config/props/` (а не `@Value`)
+- **Значення, що не змінюються між середовищами** (фіксовані набори заголовків, URL-патерни роутів, технічні переліки) — це `public static final` константи у `common/`, НЕ в `application.yaml`. Конфіг — лише для того, що реально варіюється
 - Секрети не комітимо — через env-змінні чи зовнішні vault'и
+
+## 9. Cross-cutting infrastructure (HTTP)
+
+Кожен бізнес-запит проходить ланцюжок фільтрів:
+
+```
+order  filter                          відповідальність
+─────  ────────────────────────────── ─────────────────────────────────────
+ -200  RequiredHeadersFilter          валідує наявність кожного заголовка
+                                      зі списку HttpConstants.REQUIRED_HEADERS;
+                                      400 ProblemDetail при відсутності
+ -190  RequestIdMdcFilter             MDC.put("requestId") + echo у response;
+                                      ставиться ДО security, щоб логи 401/403
+                                      теж корелювались
+ -100  Spring Security FilterChainProxy  валідація JWT через JWKS Keycloak;
+                                      401 при невалідному/відсутньому токені
+    0  InvocationContextFilter        читає SecurityContext + headers,
+                                      заповнює @RequestScope InvocationContext
+```
+
+- **Обов'язкові заголовки і виключені шляхи** — список у `common/HttpConstants.java` (`REQUIRED_HEADERS`, `EXCLUDED_PATHS`). Додати новий обов'язковий заголовок — один рядок у константі
+- **JWT** — Spring Security resource server, `issuer-uri` зібрано з `keycloack.base-url` + `keycloack.realm`; ролі витягуються з claim'а `realm_access.roles` Keycloak
+- **`InvocationContext`** — `@RequestScope` бін у `component/`. Поля: `requestId`, `userExtId`, `username`, `email`, `roles`, `device`. Інжектиться через constructor injection куди потрібно
+- **401/403** — повертаються кастомними `ProblemDetail*EntryPoint`/`*AccessDeniedHandler` напряму у response (Spring Security кидає до MVC-диспатчера, `@RestControllerAdvice` там не активний)
+- **Фільтри реєструються через `FilterRegistrationBean`** у `config/WebConfig.java` — самі класи фільтрів НЕ позначені `@Component`, щоб уникнути подвійної автореєстрації

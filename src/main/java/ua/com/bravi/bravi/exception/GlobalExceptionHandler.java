@@ -51,6 +51,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.badRequest().body(problem);
     }
 
+    @ExceptionHandler(MissingRequiredHeaderException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ProblemDetail handleMissingRequiredHeader(
+            MissingRequiredHeaderException ex
+    ) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problem.setTitle("Missing required header");
+        problem.setDetail("Request must include '" + ex.getHeaderName() + "' header");
+        problem.setProperty("header", ex.getHeaderName());
+
+        return problem;
+    }
+
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ProblemDetail handleUnexpectedException(
