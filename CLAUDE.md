@@ -139,3 +139,7 @@ order  filter                          відповідальність
 - **`InvocationContext`** — `@RequestScope` бін у `component/`. Поля: `requestId`, `userExtId`, `username`, `email`, `roles`, `device`. Інжектиться через constructor injection куди потрібно
 - **401/403** — повертаються кастомними `ProblemDetail*EntryPoint`/`*AccessDeniedHandler` напряму у response (Spring Security кидає до MVC-диспатчера, `@RestControllerAdvice` там не активний)
 - **Фільтри реєструються через `FilterRegistrationBean`** у `config/WebConfig.java` — самі класи фільтрів НЕ позначені `@Component`, щоб уникнути подвійної автореєстрації
+
+## 10. README
+
+Перед кожним комітом обов'язково оновлюй `README.md`, якщо зміни торкаються функціоналу, переліку чи опису змінних оточення, способу запуску або конфігурації. `README.md` має лишатися актуальним джерелом правди для запуску й налаштування застосунку.
