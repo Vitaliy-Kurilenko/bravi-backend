@@ -34,6 +34,20 @@ public class UserService {
         applyToContext(user);
     }
 
+
+    public User getUserContext() {
+        return new User(
+                invocationContext.getUserId(),
+                invocationContext.getUserExtId(),
+                invocationContext.getUserType(),
+                invocationContext.getFirstName(),
+                invocationContext.getLastName(),
+                invocationContext.getEmail(),
+                invocationContext.getUserStatus()
+        );
+    }
+
+
     private User createUser(UUID extId) {
         if (invocationContext.getUserType() == null) {
             throw new UserProvisioningException(

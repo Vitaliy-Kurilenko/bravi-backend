@@ -1,28 +1,37 @@
 package ua.com.bravi.bravi.controller;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import ua.com.bravi.bravi.component.InvocationContext;
+import ua.com.bravi.bravi.controller.dto.out.UserResponse;
+import ua.com.bravi.bravi.controller.mapper.UserDtoMapper;
+import ua.com.bravi.bravi.domain.user.User;
+import ua.com.bravi.bravi.domain.user.UserStatus;
+import ua.com.bravi.bravi.domain.user.UserType;
+import ua.com.bravi.bravi.service.UserService;
 
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class UserControllerTest {
 
+    private final UserService userService = mock(UserService.class);
+    private final UserDtoMapper userDtoMapper = mock(UserDtoMapper.class);
+    private final UserController controller = new UserController(userService, userDtoMapper);
+
     @Test
-    void testEndpointReturnsInvocationContextString() {
-        InvocationContext context = new InvocationContext();
-        context.setRequestId("corr-1");
-        context.setUserExtId(UUID.fromString("22222222-2222-2222-2222-222222222222"));
-        context.setUsername("john");
-        UserController controller = new UserController(context);
+    void getUserContextMapsServiceResultToResponse() {
+        User user = new User(5L, UUID.randomUUID(), UserType.SELLER,
+                "John", "Doe", "john@example.com", UserStatus.ACTIVE);
+        UserResponse response = new UserResponse("SELLER", "John", "Doe", "john@example.com", "ACTIVE");
+        when(userService.getUserContext()).thenReturn(user);
+        when(userDtoMapper.toUserResponse(user)).thenReturn(response);
 
-        ResponseEntity<String> response = controller.Test();
+        UserResponse result = controller.getUserContext();
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo(context.toString());
-        assertThat(response.getBody()).contains("corr-1", "john");
+        assertThat(result).isSameAs(response);
+        verify(userService).getUserContext();
     }
 }

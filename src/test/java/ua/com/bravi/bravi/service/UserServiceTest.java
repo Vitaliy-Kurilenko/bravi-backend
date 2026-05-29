@@ -57,6 +57,27 @@ class UserServiceTest {
     }
 
     @Test
+    void getUserContextReadsFromInvocationContextWithoutQuery() {
+        context.setUserId(9L);
+        context.setUserType(UserType.BUYER);
+        context.setUserStatus(UserStatus.ACTIVE);
+        context.setFirstName("Jane");
+        context.setLastName("Roe");
+        context.setEmail("jane@example.com");
+
+        User user = service.getUserContext();
+
+        assertThat(user.id()).isEqualTo(9L);
+        assertThat(user.extId()).isEqualTo(EXT_ID);
+        assertThat(user.type()).isEqualTo(UserType.BUYER);
+        assertThat(user.status()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(user.firstName()).isEqualTo("Jane");
+        assertThat(user.lastName()).isEqualTo("Roe");
+        assertThat(user.email()).isEqualTo("jane@example.com");
+        verify(repository, never()).findByExtId(any());
+    }
+
+    @Test
     void loadsExistingUserIntoContextWithoutSaving() {
         UserEntity entity = new UserEntity();
         when(repository.findByExtId(EXT_ID)).thenReturn(Optional.of(entity));

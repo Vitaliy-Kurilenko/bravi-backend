@@ -68,7 +68,7 @@ class UserProvisioningTest extends AbstractPostgresIT {
         headers.setBearerAuth("any-token");
         headers.add(HttpConstants.REQUEST_ID_HEADER, "corr-it");
         return rest.exchange(
-                "http://localhost:" + port + "/api/users/users",
+                "http://localhost:" + port + "/api/users/context",
                 org.springframework.http.HttpMethod.GET,
                 new HttpEntity<>(headers),
                 String.class);
@@ -85,12 +85,14 @@ class UserProvisioningTest extends AbstractPostgresIT {
         assertThat(created.getStatus()).isEqualTo(UserStatus.ACTIVE);
         assertThat(created.getType()).isEqualTo(UserType.SELLER);
         assertThat(created.getFirstName()).isEqualTo("Jit");
-        assertThat(first.getBody()).contains("userId=" + created.getId());
+        assertThat(first.getBody())
+                .contains("\"type\":\"SELLER\"")
+                .contains("\"first_name\":\"Jit\"")
+                .contains("\"status\":\"ACTIVE\"");
 
         ResponseEntity<String> second = callTestEndpoint();
 
         assertThat(second.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(repository.count()).isEqualTo(1);
-        assertThat(second.getBody()).contains("userId=" + created.getId());
     }
 }

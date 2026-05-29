@@ -1,25 +1,29 @@
 package ua.com.bravi.bravi.controller;
 
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import ua.com.bravi.bravi.component.InvocationContext;
+import ua.com.bravi.bravi.controller.dto.out.UserResponse;
+import ua.com.bravi.bravi.controller.mapper.UserDtoMapper;
+import ua.com.bravi.bravi.service.UserService;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/users")
+@Tag(name = "UserController")
 public class UserController {
 
-    private final InvocationContext invocationContext;
+    private final UserService userService;
+    private final UserDtoMapper userDtoMapper;
 
-    @GetMapping("/users")
-    public ResponseEntity<String> Test() {
-
-        return ResponseEntity.ok(invocationContext.toString());
-
+    @Operation(summary = "User context", description = "Returns the user's context")
+    @GetMapping("/context")
+    public UserResponse getUserContext() {
+        return userDtoMapper.toUserResponse(userService.getUserContext());
     }
 
 }
