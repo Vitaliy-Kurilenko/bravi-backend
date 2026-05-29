@@ -5,8 +5,8 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
-import ua.com.bravi.bravi.persistance.enums.UserStatus;
-import ua.com.bravi.bravi.persistance.enums.UserType;
+import ua.com.bravi.bravi.domain.user.UserStatus;
+import ua.com.bravi.bravi.domain.user.UserType;
 
 import java.time.Instant;
 import java.util.UUID;

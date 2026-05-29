@@ -1,0 +1,96 @@
+package ua.com.bravi.bravi;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.web.client.RestTemplate;
+import ua.com.bravi.bravi.domain.user.UserStatus;
+import ua.com.bravi.bravi.domain.user.UserType;
+import ua.com.bravi.bravi.persistance.IUserEntityRepository;
+import ua.com.bravi.bravi.persistance.entity.UserEntity;
+import ua.com.bravi.bravi.util.HttpConstants;
+
+import java.time.Instant;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+class UserProvisioningTest extends AbstractPostgresIT {
+
+    private static final UUID EXT_ID = UUID.fromString("44444444-4444-4444-4444-444444444444");
+
+    @TestConfiguration
+    static class StubJwtDecoderConfig {
+
+        @Bean
+        JwtDecoder jwtDecoder() {
+            Jwt jwt = Jwt.withTokenValue("stub")
+                    .header("alg", "none")
+                    .subject(EXT_ID.toString())
+                    .claim("preferred_username", "jit.user")
+                    .claim("email", "jit@example.com")
+                    .claim("given_name", "Jit")
+                    .claim("family_name", "User")
+                    .claim("user_type", "SELLER")
+                    .issuedAt(Instant.now())
+                    .expiresAt(Instant.now().plusSeconds(300))
+                    .build();
+            return token -> jwt;
+        }
+    }
+
+    @LocalServerPort
+    private int port;
+
+    @Autowired
+    private IUserEntityRepository repository;
+
+    private final RestTemplate rest = new RestTemplate();
+
+    @BeforeEach
+    void cleanTable() {
+        repository.deleteAll();
+    }
+
+    private ResponseEntity<String> callTestEndpoint() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth("any-token");
+        headers.add(HttpConstants.REQUEST_ID_HEADER, "corr-it");
+        return rest.exchange(
+                "http://localhost:" + port + "/api/users/users",
+                org.springframework.http.HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class);
+    }
+
+    @Test
+    void firstRequestCreatesUserAndSubsequentReusesIt() {
+        ResponseEntity<String> first = callTestEndpoint();
+
+        assertThat(first.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(repository.count()).isEqualTo(1);
+
+        UserEntity created = repository.findByExtId(EXT_ID).orElseThrow();
+        assertThat(created.getStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(created.getType()).isEqualTo(UserType.SELLER);
+        assertThat(created.getFirstName()).isEqualTo("Jit");
+        assertThat(first.getBody()).contains("userId=" + created.getId());
+
+        ResponseEntity<String> second = callTestEndpoint();
+
+        assertThat(second.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(repository.count()).isEqualTo(1);
+        assertThat(second.getBody()).contains("userId=" + created.getId());
+    }
+}

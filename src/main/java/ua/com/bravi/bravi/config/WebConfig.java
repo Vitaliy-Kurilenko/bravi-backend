@@ -1,22 +1,36 @@
 package ua.com.bravi.bravi.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.HandlerExceptionResolver;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import ua.com.bravi.bravi.component.CurrentUserInterceptor;
 import ua.com.bravi.bravi.component.InvocationContext;
 import ua.com.bravi.bravi.component.InvocationContextFilter;
 import ua.com.bravi.bravi.component.RequestIdMdcFilter;
 import ua.com.bravi.bravi.component.RequiredHeadersFilter;
 import ua.com.bravi.bravi.component.UserAgentParser;
+import ua.com.bravi.bravi.util.HttpConstants;
 
 @Configuration
-public class WebConfig {
+@RequiredArgsConstructor
+public class WebConfig implements WebMvcConfigurer {
 
     private static final int REQUIRED_HEADERS_ORDER = -200;
     private static final int REQUEST_ID_MDC_ORDER = -190;
     private static final int INVOCATION_CONTEXT_ORDER = 0;
+
+    private final CurrentUserInterceptor currentUserInterceptor;
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(currentUserInterceptor)
+                .excludePathPatterns(HttpConstants.EXCLUDED_PATHS);
+    }
 
     @Bean
     FilterRegistrationBean<RequiredHeadersFilter> requiredHeadersFilterRegistration(

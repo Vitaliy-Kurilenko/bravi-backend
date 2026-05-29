@@ -24,12 +24,13 @@ ua.com.bravi.bravi
 │   └── <aggregate>/         Згруповано по агрегатах (наприклад, domain/user)
 │       ├── <Aggregate>.java       Доменна модель (POJO, без JPA-анотацій)
 │       ├── <Aggregate>Policy.java Правила/інваріанти
-│       └── <Aggregate>Service.java Use-case'и над агрегатом (опційно)
+│       ├── <Aggregate>Service.java Use-case'и над агрегатом (опційно)
+│       └── enums                  Доменні enum'и (UserType, UserStatus тощо)
 ├── exception/               Кастомні exception'и
 │   └── dto/                 DTO для error response (FiledValidationError тощо)
 ├── persistance/             JPA-шар: репозиторії та entity
 │   ├── entity/              JPA @Entity класи
-│   └── enums/               Enum'и, що зберігаються в БД
+│   └── mapper/              MapStruct мапери entity ↔ domain
 └── service/                 Application-сервіси — оркестрація use-case'ів
                              (комбінують domain + persistance + client)
 ```

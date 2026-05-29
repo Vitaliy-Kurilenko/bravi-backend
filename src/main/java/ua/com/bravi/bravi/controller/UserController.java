@@ -15,9 +15,8 @@ public class UserController {
 
     private final InvocationContext invocationContext;
 
-    @GetMapping("/test")
+    @GetMapping("/users")
     public ResponseEntity<String> Test() {
-
 
         return ResponseEntity.ok(invocationContext.toString());
 

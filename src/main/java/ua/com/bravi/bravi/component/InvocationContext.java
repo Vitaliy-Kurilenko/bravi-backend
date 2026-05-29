@@ -4,6 +4,8 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.annotation.RequestScope;
+import ua.com.bravi.bravi.domain.user.UserStatus;
+import ua.com.bravi.bravi.domain.user.UserType;
 
 import java.util.Set;
 import java.util.UUID;
@@ -21,6 +23,12 @@ public class InvocationContext {
     private Set<String> roles;
     private DeviceInfo device;
 
+    private Long userId;
+    private String firstName;
+    private String lastName;
+    private UserType userType;
+    private UserStatus userStatus;
+
     public String toString(){
         return "InvocationContext{" +
             "requestId='" + requestId + '\'' +
@@ -29,6 +37,11 @@ public class InvocationContext {
             ", email='" + email + '\'' +
             ", roles=" + roles +
             ", device=" + device +
+            ", userId=" + userId +
+            ", firstName='" + firstName + '\'' +
+            ", lastName='" + lastName + '\'' +
+            ", userType=" + userType +
+            ", userStatus=" + userStatus +
             '}';
     }
 }

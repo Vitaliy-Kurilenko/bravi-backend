@@ -10,6 +10,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import ua.com.bravi.bravi.domain.user.UserType;
 import ua.com.bravi.bravi.util.HttpConstants;
 
 import java.time.Instant;
@@ -41,6 +42,9 @@ class InvocationContextFilterTest {
                 .subject(SUBJECT.toString())
                 .claim("preferred_username", "john.doe")
                 .claim("email", "john@example.com")
+                .claim("given_name", "John")
+                .claim("family_name", "Doe")
+                .claim("user_type", "seller")
                 .issuedAt(Instant.now())
                 .expiresAt(Instant.now().plusSeconds(60))
                 .build();
@@ -67,7 +71,34 @@ class InvocationContextFilterTest {
         assertThat(context.getEmail()).isEqualTo("john@example.com");
         assertThat(context.getRoles()).containsExactlyInAnyOrder("admin", "seller");
         assertThat(context.getDevice()).isSameAs(device);
+        assertThat(context.getFirstName()).isEqualTo("John");
+        assertThat(context.getLastName()).isEqualTo("Doe");
+        assertThat(context.getUserType()).isEqualTo(UserType.SELLER);
         verify(chain).doFilter(request, response);
+    }
+
+    @Test
+    void firstNameFallsBackToUsernameAndIgnoresUnknownUserType() throws Exception {
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "none")
+                .subject(SUBJECT.toString())
+                .claim("preferred_username", "john.doe")
+                .claim("user_type", "manager")
+                .build();
+        SecurityContextHolder.getContext().setAuthentication(
+                new JwtAuthenticationToken(jwt, List.of()));
+        when(userAgentParser.parse(null)).thenReturn(DeviceInfo.unknown(null));
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/users/test");
+        request.addHeader(HttpConstants.REQUEST_ID_HEADER, "corr-2");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(context.getFirstName()).isEqualTo("john.doe");
+        assertThat(context.getLastName()).isNull();
+        assertThat(context.getUserType()).isNull();
     }
 
     @Test

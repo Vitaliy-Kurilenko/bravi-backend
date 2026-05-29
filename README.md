@@ -13,6 +13,7 @@ Backend-застосунок на **Spring Boot 4.x / Java 26**, PostgreSQL, і�
   - `InvocationContextFilter` — наповнює `@RequestScope` `InvocationContext` (користувач, ролі, девайс) з JWT та заголовків;
   - `UserAgentParser` — розбір `User-Agent` (yauaa) у `DeviceInfo`.
 - **Розрізнення помилок JWT** — окремі відповіді для протермінованого (`token_expired`) та невалідного (`token_invalid`) токена через `ProblemDetailAuthenticationEntryPoint`.
+- **Just-in-time provisioning користувача** — на кожен автентифікований запит `CurrentUserInterceptor` бере `ext_id` (Keycloak `sub`) з `InvocationContext`, шукає користувача в `users` і, якщо його немає, автоматично створює (`status=ACTIVE`, `type` з JWT-claim'а `user_type`). Внутрішній `id` користувача та його дані записуються в `InvocationContext` для downstream-логіки. Споживані JWT-claim'и: `user_type` (`BUYER`/`SELLER`), `given_name`/`family_name` (fallback `firstName` на `preferred_username`). Якщо для нового користувача `user_type` відсутній/невалідний — `422 User provisioning failed`.
 - **Персистентність** — JPA/Hibernate + PostgreSQL, схема керується **Flyway** (`src/main/resources/db.migration/`).
 - **Документація API** — Swagger UI / OpenAPI (springdoc).
 

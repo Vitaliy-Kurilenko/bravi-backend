@@ -50,6 +50,16 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void handlesUserProvisioning() {
+        ProblemDetail problem = handler.handleUserProvisioning(
+                new UserProvisioningException("'user_type' claim is missing"));
+
+        assertThat(problem.getStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT.value());
+        assertThat(problem.getTitle()).isEqualTo("User provisioning failed");
+        assertThat(problem.getDetail()).contains("user_type");
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void handlesValidationErrorsAsFieldList() {
         BindingResult bindingResult = mock(BindingResult.class);

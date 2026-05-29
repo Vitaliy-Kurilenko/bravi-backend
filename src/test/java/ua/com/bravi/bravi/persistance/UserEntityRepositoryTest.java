@@ -6,9 +6,9 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.dao.DataIntegrityViolationException;
 import ua.com.bravi.bravi.AbstractPostgresIT;
+import ua.com.bravi.bravi.domain.user.UserStatus;
+import ua.com.bravi.bravi.domain.user.UserType;
 import ua.com.bravi.bravi.persistance.entity.UserEntity;
-import ua.com.bravi.bravi.persistance.enums.UserStatus;
-import ua.com.bravi.bravi.persistance.enums.UserType;
 
 import java.util.UUID;
 
@@ -57,5 +57,14 @@ class UserEntityRepositoryTest extends AbstractPostgresIT {
 
         assertThatThrownBy(() -> repository.saveAndFlush(newUser(extId)))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void findsByExtId() {
+        UUID extId = UUID.randomUUID();
+        repository.saveAndFlush(newUser(extId));
+
+        assertThat(repository.findByExtId(extId)).isPresent();
+        assertThat(repository.findByExtId(UUID.randomUUID())).isEmpty();
     }
 }
