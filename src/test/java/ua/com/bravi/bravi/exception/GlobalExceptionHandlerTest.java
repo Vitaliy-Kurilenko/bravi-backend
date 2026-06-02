@@ -60,6 +60,35 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void handlesNotFound() {
+        ProblemDetail problem = handler.handleNotFound(new NotFoundException("Store not found"));
+
+        assertThat(problem.getStatus()).isEqualTo(HttpStatus.NOT_FOUND.value());
+        assertThat(problem.getTitle()).isEqualTo("Not found");
+        assertThat(problem.getDetail()).isEqualTo("Store not found");
+    }
+
+    @Test
+    void handlesStoreAlreadyExists() {
+        ProblemDetail problem = handler.handleStoreAlreadyExists(
+                new StoreAlreadyExistsException("User already has a store"));
+
+        assertThat(problem.getStatus()).isEqualTo(HttpStatus.CONFLICT.value());
+        assertThat(problem.getTitle()).isEqualTo("Store already exists");
+        assertThat(problem.getDetail()).isEqualTo("User already has a store");
+    }
+
+    @Test
+    void handlesForbidden() {
+        ProblemDetail problem = handler.handleForbidden(
+                new ForbiddenException("Only sellers can manage stores"));
+
+        assertThat(problem.getStatus()).isEqualTo(HttpStatus.FORBIDDEN.value());
+        assertThat(problem.getTitle()).isEqualTo("Forbidden");
+        assertThat(problem.getDetail()).isEqualTo("Only sellers can manage stores");
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void handlesValidationErrorsAsFieldList() {
         BindingResult bindingResult = mock(BindingResult.class);
