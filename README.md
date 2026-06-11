@@ -12,13 +12,13 @@ ua.com.bravi.bravi
 ├── shared/         ← OPEN-модуль: фільтри, SecurityConfig, InvocationContext, базові винятки
 ├── users/          ← User domain/persistence/service + UsersApi + UserProvisionedEvent
 ├── stores/         ← Store + StoreContact (contacts/) + StoreDeliveryMethod (delivery/) + StorePaymentMethod (payments/) + StoresApi/StoreContactsApi/DeliveryApi/PaymentsApi + StoreCreatedEvent
-├── catalog/        ← заготовка
+├── catalog/        ← Manufacturer (manufacturers/) + ManufacturersApi; решта — заготовка
 ├── orders/         ← заготовка
 ├── seller/         ← REST-контролери з префіксом /seller/** (hasAuthority('SELLER'))
 └── buyer/          ← REST-контролери з префіксом /buyer/** (hasAuthority('BUYER'))
 ```
 
-**Міжмодульний зв'язок:** seller/buyer звертаються до resource-модулів лише через named interfaces `users::api`, `stores::api` (інтерфейси + view records). Подійні нотифікації — через Spring Application Events (`UserProvisionedEvent`, `StoreCreatedEvent`); таблиця `event_publication` (Modulith JPA event registry) ведеться Flyway-міграцією `V4`. Цілісність модульних меж перевіряється `ModulithStructureTest`.
+**Міжмодульний зв'язок:** seller/buyer звертаються до resource-модулів лише через named interfaces `users::api`, `stores::api`, `catalog::api` (інтерфейси + view records). Подійні нотифікації — через Spring Application Events (`UserProvisionedEvent`, `StoreCreatedEvent`); таблиця `event_publication` (Modulith JPA event registry) ведеться Flyway-міграцією `V4`. Цілісність модульних меж перевіряється `ModulithStructureTest`.
 
 ## Функціонал
 
@@ -58,6 +58,11 @@ ua.com.bravi.bravi
 | PUT | `/seller/stores/payments/{methodCode}` | Підключити+налаштувати метод (ідемпотентно) | `204`; `404` невідомий код; `422` невалідний конфіг |
 | PATCH | `/seller/stores/payments/{methodCode}` | Оновити конфіг підключеного методу | `204`; `404` метод не підключено; `422` валідація |
 | DELETE | `/seller/stores/payments/{methodCode}` | Відключити метод (конфіг зберігається) | `204`; `404` метод не підключено |
+| GET | `/seller/manufacturers` | Усі виробники магазину поточного селлера | `200` `ManufacturerResponse[]`; `404` якщо магазину нема |
+| GET | `/seller/manufacturers/{manufacturerId}` | Виробник магазину (лише власник) | `200` `ManufacturerResponse`; `404`/`403` |
+| POST | `/seller/manufacturers` | Створити виробника | `201`; `404` нема магазину; `409` дубль назви; `400` валідація |
+| PATCH | `/seller/manufacturers/{manufacturerId}` | Часткове оновлення виробника (лише власник) | `204`; `404`/`403`/`409` |
+| DELETE | `/seller/manufacturers/{manufacturerId}` | Видалити виробника (лише власник) | `204`; `404`/`403` |
 
 Спроба BUYER'а звернутись на `/seller/**` (або навпаки) — `403 Forbidden`.
 
@@ -68,6 +73,8 @@ ua.com.bravi.bravi
 Методи доставки (`store_delivery_methods.store_id`) — один-до-багатьох на магазин, унікальні в межах магазину за `method_code`. Набір реалізованих методів — це plugin-провайдери в коді (`DeliveryMethodProvider`); додавання нового методу зводиться до одного `@Component` без правок спільного коду чи схеми БД (наразі є приклад `SELF_PICKUP`). Конфіг методу зберігається гнучко (JSONB `config`), валідується відповідним провайдером. `PUT` підключає+вмикає метод (ідемпотентний upsert), `DELETE` лише вимикає (`enabled=false`), не втрачаючи конфіг.
 
 Методи оплати (`store_payment_methods.store_id`) влаштовані ідентично до методів доставки: plugin-провайдери (`PaymentMethodProvider`), реєстр із перевіркою унікальності кодів на старті, гнучкий JSONB-конфіг із валідацією провайдером, та сама upsert/disable семантика. Додати новий метод = один `@Component` (наразі є приклад `CASH_ON_DELIVERY`). Конфіг повертається у відповідях як є — секрети платіжних провайдерів наразі не маскуються.
+
+Виробники (`manufacturers.store_id`) — один-до-багатьох на магазин (під-модуль `catalog/manufacturers/`), на них надалі посилатимуться товари. Назва (`name`) обов'язкова й унікальна в межах магазину (`uq_manufacturers_store_name`); спроба дубля — `409`. Статус (`ManufacturerStatus`: `ACTIVE`/`INACTIVE`) приймається з клієнта в тілі POST/PATCH; при створенні без `status` — дефолт `ACTIVE`, на PATCH `status` оновлюється лише якщо переданий; невалідне значення — `400`. Переглядати/редагувати/видаляти можна лише виробників власного магазину — інакше `403`/`404`.
 
 ## Вимоги
 
