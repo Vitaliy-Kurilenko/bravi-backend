@@ -11,7 +11,7 @@ Backend-застосунок на **Spring Boot 4.x / Java 26**, PostgreSQL, і�
 ua.com.bravi.bravi
 ├── shared/         ← OPEN-модуль: фільтри, SecurityConfig, InvocationContext, базові винятки
 ├── users/          ← User domain/persistence/service + UsersApi + UserProvisionedEvent
-├── stores/         ← Store + StoreContact (sub-package contacts/) + StoresApi/StoreContactsApi + StoreCreatedEvent
+├── stores/         ← Store + StoreContact (contacts/) + StoreDeliveryMethod (delivery/) + StoresApi/StoreContactsApi/DeliveryApi + StoreCreatedEvent
 ├── catalog/        ← заготовка
 ├── orders/         ← заготовка
 ├── seller/         ← REST-контролери з префіксом /seller/** (hasAuthority('SELLER'))
@@ -48,12 +48,19 @@ ua.com.bravi.bravi
 | POST | `/seller/stores/contacts` | Додати один або декілька контактів | `201`; `404` нема магазину; `400` валідація |
 | PATCH | `/seller/stores/contacts/{contactId}` | Часткове оновлення контакту (лише власник) | `204`; `404`/`403`/`400` |
 | DELETE | `/seller/stores/contacts/{contactId}` | Видалити контакт (лише власник) | `204`; `404`/`403` |
+| GET | `/seller/stores/delivery/available` | Каталог реалізованих методів доставки | `200` `DeliveryMethodDefinitionResponse[]` |
+| GET | `/seller/stores/delivery` | Методи доставки, підключені магазином | `200` `StoreDeliveryMethodResponse[]`; `404` якщо магазину нема |
+| PUT | `/seller/stores/delivery/{methodCode}` | Підключити+налаштувати метод (ідемпотентно) | `204`; `404` невідомий код; `422` невалідний конфіг |
+| PATCH | `/seller/stores/delivery/{methodCode}` | Оновити конфіг підключеного методу | `204`; `404` метод не підключено; `422` валідація |
+| DELETE | `/seller/stores/delivery/{methodCode}` | Відключити метод (конфіг зберігається) | `204`; `404` метод не підключено |
 
 Спроба BUYER'а звернутись на `/seller/**` (або навпаки) — `403 Forbidden`.
 
 Магазин прив'язаний до користувача один-до-одного (`stores.seller_id` UNIQUE). `status` магазину — серверно-кероване (дефолт `ACTIVE`), з клієнта не приймається; на PATCH оновлюються тільки передані поля.
 
 Контакти прив'язані до магазину один-до-багатьох (`store_contacts.store_id`). Підтримувані типи (`ContactType`): `PHONE`, `EMAIL`, `WEBSITE`, `VIBER`, `WHATSAPP`, `TELEGRAM`. Значення `value` валідуються відповідно до типу (email-формат, URL зі схемою `http`/`https`, телефонний номер, `@username` для Telegram). Редагувати/видаляти можна лише контакти власного магазину — інакше `403`.
+
+Методи доставки (`store_delivery_methods.store_id`) — один-до-багатьох на магазин, унікальні в межах магазину за `method_code`. Набір реалізованих методів — це plugin-провайдери в коді (`DeliveryMethodProvider`); додавання нового методу зводиться до одного `@Component` без правок спільного коду чи схеми БД (наразі є приклад `SELF_PICKUP`). Конфіг методу зберігається гнучко (JSONB `config`), валідується відповідним провайдером. `PUT` підключає+вмикає метод (ідемпотентний upsert), `DELETE` лише вимикає (`enabled=false`), не втрачаючи конфіг.
 
 ## Вимоги
 
