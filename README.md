@@ -12,7 +12,7 @@ ua.com.bravi.bravi
 ├── shared/         ← OPEN-модуль: фільтри, SecurityConfig, InvocationContext, базові винятки
 ├── users/          ← User domain/persistence/service + UsersApi + UserProvisionedEvent
 ├── stores/         ← Store + StoreContact (contacts/) + StoreDeliveryMethod (delivery/) + StorePaymentMethod (payments/) + StoresApi/StoreContactsApi/DeliveryApi/PaymentsApi + StoreCreatedEvent
-├── catalog/        ← Manufacturer (manufacturers/) + ManufacturersApi; решта — заготовка
+├── catalog/        ← Manufacturer (manufacturers/) + Category (categories/) + ManufacturersApi/CategoriesApi; решта — заготовка
 ├── orders/         ← заготовка
 ├── seller/         ← REST-контролери з префіксом /seller/** (hasAuthority('SELLER'))
 └── buyer/          ← REST-контролери з префіксом /buyer/** (hasAuthority('BUYER'))
@@ -63,6 +63,11 @@ ua.com.bravi.bravi
 | POST | `/seller/manufacturers` | Створити виробника | `201`; `404` нема магазину; `409` дубль назви; `400` валідація |
 | PATCH | `/seller/manufacturers/{manufacturerId}` | Часткове оновлення виробника (лише власник) | `204`; `404`/`403`/`409` |
 | DELETE | `/seller/manufacturers/{manufacturerId}` | Видалити виробника (лише власник) | `204`; `404`/`403` |
+| GET | `/seller/categories` | Дерево категорій магазину поточного селлера | `200` `CategoryResponse[]` (вкладене); `404` якщо магазину нема |
+| GET | `/seller/categories/{categoryId}` | Піддерево категорії (лише власник) | `200` `CategoryResponse`; `404`/`403` |
+| POST | `/seller/categories` | Створити категорію (опц. `parent_id`) | `201`; `404` нема магазину/parent; `409` дубль назви; `400` валідація/глибина |
+| PATCH | `/seller/categories/{categoryId}` | Часткове оновлення + опц. переміщення (`parent_id`) | `204`; `404`/`403`/`409`; `400` цикл/глибина |
+| DELETE | `/seller/categories/{categoryId}` | Видалити категорію (лише власник) | `204`; `404`/`403`; `409` якщо має підкатегорії |
 
 Спроба BUYER'а звернутись на `/seller/**` (або навпаки) — `403 Forbidden`.
 
@@ -75,6 +80,8 @@ ua.com.bravi.bravi
 Методи оплати (`store_payment_methods.store_id`) влаштовані ідентично до методів доставки: plugin-провайдери (`PaymentMethodProvider`), реєстр із перевіркою унікальності кодів на старті, гнучкий JSONB-конфіг із валідацією провайдером, та сама upsert/disable семантика. Додати новий метод = один `@Component` (наразі є приклад `CASH_ON_DELIVERY`). Конфіг повертається у відповідях як є — секрети платіжних провайдерів наразі не маскуються.
 
 Виробники (`manufacturers.store_id`) — один-до-багатьох на магазин (під-модуль `catalog/manufacturers/`), на них надалі посилатимуться товари. Назва (`name`) обов'язкова й унікальна в межах магазину (`uq_manufacturers_store_name`); спроба дубля — `409`. Статус (`ManufacturerStatus`: `ACTIVE`/`INACTIVE`) приймається з клієнта в тілі POST/PATCH; при створенні без `status` — дефолт `ACTIVE`, на PATCH `status` оновлюється лише якщо переданий; невалідне значення — `400`. Переглядати/редагувати/видаляти можна лише виробників власного магазину — інакше `403`/`404`.
+
+Категорії товарів (`categories.store_id`, під-модуль `catalog/categories/`) — **ієрархічне дерево до 3 рівнів** у межах магазину; батько задається через `parent_id` (self-FK `fk_categories_on_parent`). Назва обов'язкова й унікальна **серед сіблінгів** (окремі часткові індекси для коренів `uq_categories_root_name` та підкатегорій `uq_categories_child_name`); дубль — `409`. Статус (`CategoryStatus`: `ACTIVE`/`INACTIVE`) — як у виробника (дефолт `ACTIVE`). Інваріанти дерева (`CategoryHierarchyPolicy`, домен): глибина ≤ 3, заборона циклів. **Переміщення** виконується в рамках `PATCH`: `parent_id` non-null переміщує піддерево під вказаного батька (перевірка циклу/глибини → `400`); `parent_id` null/відсутній — батько не змінюється (від'єднання назад у корінь через PATCH не підтримується). `GET` повертає вкладене дерево (`children[]`). Видалення категорії з підкатегоріями блокується — `409`. Усі дії — лише в межах власного магазину (`403`/`404`).
 
 ## Вимоги
 
