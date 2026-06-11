@@ -11,7 +11,7 @@ Backend-застосунок на **Spring Boot 4.x / Java 26**, PostgreSQL, і�
 ua.com.bravi.bravi
 ├── shared/         ← OPEN-модуль: фільтри, SecurityConfig, InvocationContext, базові винятки
 ├── users/          ← User domain/persistence/service + UsersApi + UserProvisionedEvent
-├── stores/         ← Store + StoreContact (contacts/) + StoreDeliveryMethod (delivery/) + StoresApi/StoreContactsApi/DeliveryApi + StoreCreatedEvent
+├── stores/         ← Store + StoreContact (contacts/) + StoreDeliveryMethod (delivery/) + StorePaymentMethod (payments/) + StoresApi/StoreContactsApi/DeliveryApi/PaymentsApi + StoreCreatedEvent
 ├── catalog/        ← заготовка
 ├── orders/         ← заготовка
 ├── seller/         ← REST-контролери з префіксом /seller/** (hasAuthority('SELLER'))
@@ -53,6 +53,11 @@ ua.com.bravi.bravi
 | PUT | `/seller/stores/delivery/{methodCode}` | Підключити+налаштувати метод (ідемпотентно) | `204`; `404` невідомий код; `422` невалідний конфіг |
 | PATCH | `/seller/stores/delivery/{methodCode}` | Оновити конфіг підключеного методу | `204`; `404` метод не підключено; `422` валідація |
 | DELETE | `/seller/stores/delivery/{methodCode}` | Відключити метод (конфіг зберігається) | `204`; `404` метод не підключено |
+| GET | `/seller/stores/payments/available` | Каталог реалізованих методів оплати | `200` `PaymentMethodDefinitionResponse[]` |
+| GET | `/seller/stores/payments` | Методи оплати, підключені магазином | `200` `StorePaymentMethodResponse[]`; `404` якщо магазину нема |
+| PUT | `/seller/stores/payments/{methodCode}` | Підключити+налаштувати метод (ідемпотентно) | `204`; `404` невідомий код; `422` невалідний конфіг |
+| PATCH | `/seller/stores/payments/{methodCode}` | Оновити конфіг підключеного методу | `204`; `404` метод не підключено; `422` валідація |
+| DELETE | `/seller/stores/payments/{methodCode}` | Відключити метод (конфіг зберігається) | `204`; `404` метод не підключено |
 
 Спроба BUYER'а звернутись на `/seller/**` (або навпаки) — `403 Forbidden`.
 
@@ -61,6 +66,8 @@ ua.com.bravi.bravi
 Контакти прив'язані до магазину один-до-багатьох (`store_contacts.store_id`). Підтримувані типи (`ContactType`): `PHONE`, `EMAIL`, `WEBSITE`, `VIBER`, `WHATSAPP`, `TELEGRAM`. Значення `value` валідуються відповідно до типу (email-формат, URL зі схемою `http`/`https`, телефонний номер, `@username` для Telegram). Редагувати/видаляти можна лише контакти власного магазину — інакше `403`.
 
 Методи доставки (`store_delivery_methods.store_id`) — один-до-багатьох на магазин, унікальні в межах магазину за `method_code`. Набір реалізованих методів — це plugin-провайдери в коді (`DeliveryMethodProvider`); додавання нового методу зводиться до одного `@Component` без правок спільного коду чи схеми БД (наразі є приклад `SELF_PICKUP`). Конфіг методу зберігається гнучко (JSONB `config`), валідується відповідним провайдером. `PUT` підключає+вмикає метод (ідемпотентний upsert), `DELETE` лише вимикає (`enabled=false`), не втрачаючи конфіг.
+
+Методи оплати (`store_payment_methods.store_id`) влаштовані ідентично до методів доставки: plugin-провайдери (`PaymentMethodProvider`), реєстр із перевіркою унікальності кодів на старті, гнучкий JSONB-конфіг із валідацією провайдером, та сама upsert/disable семантика. Додати новий метод = один `@Component` (наразі є приклад `CASH_ON_DELIVERY`). Конфіг повертається у відповідях як є — секрети платіжних провайдерів наразі не маскуються.
 
 ## Вимоги
 
