@@ -28,6 +28,10 @@ spring:
   jackson:
     deserialization:
       fail-on-unknown-properties: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
   security:
     oauth2:
       resourceserver:
@@ -51,4 +55,10 @@ keycloack:
   base-url: http://localhost:8080
   realm: bravi
   client-id: user-token-proxy
+
+catalog:
+  products:
+    image-storage:
+      base-path: ${PRODUCT_IMAGE_PATH:./data/product-images}
+      max-file-size: 5MB
 

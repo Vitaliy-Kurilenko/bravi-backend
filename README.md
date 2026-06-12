@@ -12,7 +12,7 @@ ua.com.bravi.bravi
 ├── shared/         ← OPEN-модуль: фільтри, SecurityConfig, InvocationContext, базові винятки
 ├── users/          ← User domain/persistence/service + UsersApi + UserProvisionedEvent
 ├── stores/         ← Store + StoreContact (contacts/) + StoreDeliveryMethod (delivery/) + StorePaymentMethod (payments/) + StoresApi/StoreContactsApi/DeliveryApi/PaymentsApi + StoreCreatedEvent
-├── catalog/        ← Manufacturer (manufacturers/) + Category (categories/) + ManufacturersApi/CategoriesApi; решта — заготовка
+├── catalog/        ← Manufacturer (manufacturers/) + Category (categories/) + Product (products/) + ManufacturersApi/CategoriesApi/ProductsApi; решта — заготовка
 ├── orders/         ← заготовка
 ├── seller/         ← REST-контролери з префіксом /seller/** (hasAuthority('SELLER'))
 └── buyer/          ← REST-контролери з префіксом /buyer/** (hasAuthority('BUYER'))
@@ -68,6 +68,16 @@ ua.com.bravi.bravi
 | POST | `/seller/categories` | Створити категорію (опц. `parent_id`) | `201`; `404` нема магазину/parent; `409` дубль назви; `400` валідація/глибина |
 | PATCH | `/seller/categories/{categoryId}` | Часткове оновлення + опц. переміщення (`parent_id`) | `204`; `404`/`403`/`409`; `400` цикл/глибина |
 | DELETE | `/seller/categories/{categoryId}` | Видалити категорію (лише власник) | `204`; `404`/`403`; `409` якщо має підкатегорії |
+| GET | `/seller/products` | Список товарів: пошук/фільтр/пагінація/сортування | `200` `ProductPageResponse` |
+| GET | `/seller/products/{productId}` | Товар магазину (лише власник) | `200` `ProductResponse`; `404`/`403` |
+| POST | `/seller/products` | Створити товар | `201` `ProductResponse`; `409` дубль code/sku; `404` невідомий category/manufacturer/stock; `400` валідація |
+| PATCH | `/seller/products/{productId}` | Часткове оновлення товару | `204`; `404`/`403`/`409`/`400` |
+| DELETE | `/seller/products/{productId}` | Видалити товар разом із фото | `204`; `404`/`403` |
+| GET | `/seller/products/{productId}/images` | Галерея фото товару | `200` `ProductImageResponse[]` |
+| POST | `/seller/products/{productId}/images` | Завантажити фото (multipart `file`, опц. `is_primary`) | `201` `ProductImageResponse`; `400` не-image/завеликий |
+| GET | `/seller/products/{productId}/images/{imageId}` | Бінарний вміст фото | `200` (image/*); `404` |
+| PUT | `/seller/products/{productId}/images/{imageId}` | Замінити файл фото (multipart `file`) | `200` `ProductImageResponse`; `400` |
+| DELETE | `/seller/products/{productId}/images/{imageId}` | Видалити фото | `204`; `404` |
 
 Спроба BUYER'а звернутись на `/seller/**` (або навпаки) — `403 Forbidden`.
 
@@ -80,6 +90,10 @@ ua.com.bravi.bravi
 Методи оплати (`store_payment_methods.store_id`) влаштовані ідентично до методів доставки: plugin-провайдери (`PaymentMethodProvider`), реєстр із перевіркою унікальності кодів на старті, гнучкий JSONB-конфіг із валідацією провайдером, та сама upsert/disable семантика. Додати новий метод = один `@Component` (наразі є приклад `CASH_ON_DELIVERY`). Конфіг повертається у відповідях як є — секрети платіжних провайдерів наразі не маскуються.
 
 Виробники (`manufacturers.store_id`) — один-до-багатьох на магазин (під-модуль `catalog/manufacturers/`), на них надалі посилатимуться товари. Назва (`name`) обов'язкова й унікальна в межах магазину (`uq_manufacturers_store_name`); спроба дубля — `409`. Статус (`ManufacturerStatus`: `ACTIVE`/`INACTIVE`) приймається з клієнта в тілі POST/PATCH; при створенні без `status` — дефолт `ACTIVE`, на PATCH `status` оновлюється лише якщо переданий; невалідне значення — `400`. Переглядати/редагувати/видаляти можна лише виробників власного магазину — інакше `403`/`404`.
+
+Товари (`products.store_id`, під-модуль `catalog/products/`) — створюються seller'ом у межах магазину. `code` обов'язковий і унікальний у магазині (`uq_products_store_code` → `409`); `sku` опційний, унікальний-якщо-заданий (частковий індекс). Прив'язки опційні й валідуються по магазину: `category_id` через `CategoriesApi`, `manufacturer_id` через `ManufacturersApi` (чужий/неіснуючий → `404`/`403`). Статус наявності — довідник `stock_statuses` (seed: `IN_STOCK`/`OUT_OF_STOCK`/`PREORDER`), `stock_status_id` обов'язковий FK. Ціни (`partner_price`, `recommended_price`) — `BigDecimal` у валюті магазину; `status` (`ProductStatus` `ACTIVE`/`INACTIVE`, дефолт `ACTIVE`). `GET /seller/products` підтримує `search` (по name/code/sku), фільтри (`category_ids`, `manufacturer_ids`, `stock_statuses`, `statuses`, `min_price`/`max_price` по partner_price, `created_from`/`created_to`), сортування (`sort_by` ∈ id/name/price/recommended_price/quantity/stock_status_id/created_at/updated_at/manufacturer_id, `sort_order` ASC/DESC) та пагінацію (`page` від 1, `limit` ≤ 100); відповідь — `{data, count_per_page, count, limit, pages, page, sort_by, sort_order}`.
+
+**Фото товару** (`product_images`, 1:N, галерея) — завантаження/заміна/видалення через `/seller/products/{id}/images`. Сховище за портом `ProductImageStorage` із локальним FS-адаптером (`LocalProductImageStorage`); у БД — лише `storage_key` + метадані. Перше фото стає головним (`is_primary`); видалення головного підвищує наступне. Приймаються лише `image/*` у межах ліміту розміру. Шлях сховища — env `PRODUCT_IMAGE_PATH` (дефолт `./data/product-images`); заміна на S3/MinIO — новий адаптер порту без змін викликачів.
 
 Категорії товарів (`categories.store_id`, під-модуль `catalog/categories/`) — **ієрархічне дерево до 3 рівнів** у межах магазину; батько задається через `parent_id` (self-FK `fk_categories_on_parent`). Назва обов'язкова й унікальна **серед сіблінгів** (окремі часткові індекси для коренів `uq_categories_root_name` та підкатегорій `uq_categories_child_name`); дубль — `409`. Статус (`CategoryStatus`: `ACTIVE`/`INACTIVE`) — як у виробника (дефолт `ACTIVE`). Інваріанти дерева (`CategoryHierarchyPolicy`, домен): глибина ≤ 3, заборона циклів. **Переміщення** виконується в рамках `PATCH`: `parent_id` non-null переміщує піддерево під вказаного батька (перевірка циклу/глибини → `400`); `parent_id` null/відсутній — батько не змінюється (від'єднання назад у корінь через PATCH не підтримується). `GET` повертає вкладене дерево (`children[]`). Видалення категорії з підкатегоріями блокується — `409`. Усі дії — лише в межах власного магазину (`403`/`404`).
 
@@ -108,6 +122,7 @@ ua.com.bravi.bravi
 | `KEYCLOACK_REALM`     | Realm Keycloak                                    | `bravi`                 |
 | `KEYCLOACK_CLIENT_ID` | Client ID застосунку в Keycloak                   | `user-token-proxy`      |
 | `SERVER_PORT`         | Порт HTTP-сервера                                 | `8083`                  |
+| `PRODUCT_IMAGE_PATH`  | Каталог локального сховища фото товарів           | `./data/product-images` |
 
 > JWT `issuer-uri` збирається як `${KEYCLOACK_BASE_URL}/realms/${KEYCLOACK_REALM}`.
 > Секрети (`DB_PASSWORD` тощо) не комітяться — лише через env або зовнішній vault.
