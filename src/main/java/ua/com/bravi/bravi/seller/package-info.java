@@ -1,4 +1,4 @@
 @org.springframework.modulith.ApplicationModule(
-        displayName = "Seller (presentation)"
+        displayName = "Seller"
 )
 package ua.com.bravi.bravi.seller;

@@ -1,7 +1,7 @@
 package ua.com.bravi.bravi.seller.controller.dto.out;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import ua.com.bravi.bravi.catalog.products.domain.ProductStatus;
+import ua.com.bravi.bravi.seller.catalog.products.domain.ProductStatus;
 
 import java.math.BigDecimal;
 import java.time.Instant;

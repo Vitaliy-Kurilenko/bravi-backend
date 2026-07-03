@@ -1,7 +1,7 @@
 package ua.com.bravi.bravi.seller.controller.dto.out;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import ua.com.bravi.bravi.catalog.manufacturers.domain.ManufacturerStatus;
+import ua.com.bravi.bravi.seller.catalog.manufacturers.domain.ManufacturerStatus;
 
 import java.time.Instant;
 

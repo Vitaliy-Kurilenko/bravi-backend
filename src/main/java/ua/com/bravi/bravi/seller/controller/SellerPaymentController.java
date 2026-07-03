@@ -18,8 +18,8 @@ import ua.com.bravi.bravi.seller.controller.dto.out.PaymentMethodDefinitionRespo
 import ua.com.bravi.bravi.seller.controller.dto.out.StorePaymentMethodResponse;
 import ua.com.bravi.bravi.seller.controller.mapper.PaymentDtoMapper;
 import ua.com.bravi.bravi.shared.component.RequireStore;
-import ua.com.bravi.bravi.stores.api.CurrentStoreHolder;
-import ua.com.bravi.bravi.stores.payments.api.PaymentsApi;
+import ua.com.bravi.bravi.seller.stores.api.CurrentStoreHolder;
+import ua.com.bravi.bravi.seller.stores.payments.api.PaymentsApi;
 
 import java.util.List;
 import java.util.Map;

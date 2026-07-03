@@ -5,8 +5,8 @@ import org.mapstruct.Mapping;
 import ua.com.bravi.bravi.seller.controller.dto.in.StoreContactCreateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.in.StoreContactUpdateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.out.StoreContactResponse;
-import ua.com.bravi.bravi.stores.contacts.api.StoreContactView;
-import ua.com.bravi.bravi.stores.contacts.domain.StoreContact;
+import ua.com.bravi.bravi.seller.stores.contacts.api.StoreContactView;
+import ua.com.bravi.bravi.seller.stores.contacts.domain.StoreContact;
 
 import java.util.List;
 

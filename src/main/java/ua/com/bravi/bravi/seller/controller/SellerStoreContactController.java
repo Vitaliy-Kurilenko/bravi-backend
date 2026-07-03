@@ -19,9 +19,9 @@ import ua.com.bravi.bravi.seller.controller.dto.in.StoreContactCreateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.in.StoreContactUpdateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.out.StoreContactResponse;
 import ua.com.bravi.bravi.seller.controller.mapper.StoreContactDtoMapper;
-import ua.com.bravi.bravi.stores.api.CurrentStoreHolder;
+import ua.com.bravi.bravi.seller.stores.api.CurrentStoreHolder;
 import ua.com.bravi.bravi.shared.component.RequireStore;
-import ua.com.bravi.bravi.stores.contacts.api.StoreContactsApi;
+import ua.com.bravi.bravi.seller.stores.contacts.api.StoreContactsApi;
 
 import java.util.List;
 

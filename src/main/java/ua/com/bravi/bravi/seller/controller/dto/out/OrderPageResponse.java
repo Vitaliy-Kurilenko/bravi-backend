@@ -1,7 +1,7 @@
 package ua.com.bravi.bravi.seller.controller.dto.out;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import ua.com.bravi.bravi.orders.domain.OrderSortBy;
+import ua.com.bravi.bravi.seller.orders.domain.OrderSortBy;
 import ua.com.bravi.bravi.shared.common.SortOrder;
 
 import java.util.List;

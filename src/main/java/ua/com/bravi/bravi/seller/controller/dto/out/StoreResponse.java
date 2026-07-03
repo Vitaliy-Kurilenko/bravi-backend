@@ -1,7 +1,7 @@
 package ua.com.bravi.bravi.seller.controller.dto.out;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import ua.com.bravi.bravi.stores.domain.WorkingHours;
+import ua.com.bravi.bravi.seller.stores.domain.WorkingHours;
 
 import java.time.ZoneId;
 import java.util.Currency;

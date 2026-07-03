@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
-import ua.com.bravi.bravi.catalog.products.domain.ProductStatus;
+import ua.com.bravi.bravi.seller.catalog.products.domain.ProductStatus;
 
 import java.math.BigDecimal;
 

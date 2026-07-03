@@ -3,7 +3,7 @@ package ua.com.bravi.bravi.seller.controller.dto.in;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import ua.com.bravi.bravi.stores.domain.WorkingHours;
+import ua.com.bravi.bravi.seller.stores.domain.WorkingHours;
 
 import java.time.ZoneId;
 import java.util.Currency;

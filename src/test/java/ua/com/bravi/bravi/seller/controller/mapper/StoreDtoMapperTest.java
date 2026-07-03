@@ -5,9 +5,9 @@ import org.mapstruct.factory.Mappers;
 import ua.com.bravi.bravi.seller.controller.dto.in.StoreCreateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.in.StoreUpdateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.out.StoreResponse;
-import ua.com.bravi.bravi.stores.api.StoreView;
-import ua.com.bravi.bravi.stores.domain.Store;
-import ua.com.bravi.bravi.stores.domain.WorkingHours;
+import ua.com.bravi.bravi.seller.stores.api.StoreView;
+import ua.com.bravi.bravi.seller.stores.domain.Store;
+import ua.com.bravi.bravi.seller.stores.domain.WorkingHours;
 
 import java.time.Instant;
 import java.time.LocalTime;

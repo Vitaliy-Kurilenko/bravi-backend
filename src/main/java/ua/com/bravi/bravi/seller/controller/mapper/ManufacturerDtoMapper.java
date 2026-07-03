@@ -2,8 +2,8 @@ package ua.com.bravi.bravi.seller.controller.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import ua.com.bravi.bravi.catalog.manufacturers.api.ManufacturerView;
-import ua.com.bravi.bravi.catalog.manufacturers.domain.Manufacturer;
+import ua.com.bravi.bravi.seller.catalog.manufacturers.api.ManufacturerView;
+import ua.com.bravi.bravi.seller.catalog.manufacturers.domain.Manufacturer;
 import ua.com.bravi.bravi.seller.controller.dto.in.ManufacturerCreateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.in.ManufacturerUpdateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.out.ManufacturerResponse;

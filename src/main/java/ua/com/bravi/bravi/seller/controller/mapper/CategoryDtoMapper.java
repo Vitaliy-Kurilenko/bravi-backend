@@ -2,8 +2,8 @@ package ua.com.bravi.bravi.seller.controller.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import ua.com.bravi.bravi.catalog.categories.api.CategoryView;
-import ua.com.bravi.bravi.catalog.categories.domain.Category;
+import ua.com.bravi.bravi.seller.catalog.categories.api.CategoryView;
+import ua.com.bravi.bravi.seller.catalog.categories.domain.Category;
 import ua.com.bravi.bravi.seller.controller.dto.in.CategoryCreateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.in.CategoryUpdateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.out.CategoryResponse;

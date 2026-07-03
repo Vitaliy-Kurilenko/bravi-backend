@@ -19,8 +19,8 @@ import ua.com.bravi.bravi.seller.controller.dto.out.StoreResponse;
 import ua.com.bravi.bravi.seller.controller.mapper.StoreDtoMapper;
 import ua.com.bravi.bravi.shared.component.InvocationContext;
 import ua.com.bravi.bravi.shared.exception.NotFoundException;
-import ua.com.bravi.bravi.stores.api.StoresApi;
-import ua.com.bravi.bravi.stores.api.CurrentStoreHolder;
+import ua.com.bravi.bravi.seller.stores.api.StoresApi;
+import ua.com.bravi.bravi.seller.stores.api.CurrentStoreHolder;
 import ua.com.bravi.bravi.shared.component.PermitNoStore;
 import ua.com.bravi.bravi.shared.component.RequireStore;
 

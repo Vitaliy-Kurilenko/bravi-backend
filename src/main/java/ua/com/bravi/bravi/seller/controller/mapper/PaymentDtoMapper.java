@@ -4,9 +4,9 @@ import org.mapstruct.Mapper;
 import ua.com.bravi.bravi.seller.controller.dto.out.ConfigFieldResponse;
 import ua.com.bravi.bravi.seller.controller.dto.out.PaymentMethodDefinitionResponse;
 import ua.com.bravi.bravi.seller.controller.dto.out.StorePaymentMethodResponse;
-import ua.com.bravi.bravi.stores.payments.api.ConfigFieldView;
-import ua.com.bravi.bravi.stores.payments.api.PaymentMethodDefinitionView;
-import ua.com.bravi.bravi.stores.payments.api.StorePaymentMethodView;
+import ua.com.bravi.bravi.seller.stores.payments.api.ConfigFieldView;
+import ua.com.bravi.bravi.seller.stores.payments.api.PaymentMethodDefinitionView;
+import ua.com.bravi.bravi.seller.stores.payments.api.StorePaymentMethodView;
 
 import java.util.List;
 

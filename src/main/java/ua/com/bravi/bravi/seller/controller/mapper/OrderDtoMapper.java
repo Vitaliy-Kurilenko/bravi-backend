@@ -2,12 +2,12 @@ package ua.com.bravi.bravi.seller.controller.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import ua.com.bravi.bravi.orders.api.OrderPage;
-import ua.com.bravi.bravi.orders.api.OrderStatusView;
-import ua.com.bravi.bravi.orders.api.OrderView;
-import ua.com.bravi.bravi.orders.domain.Order;
-import ua.com.bravi.bravi.orders.domain.OrderItem;
-import ua.com.bravi.bravi.orders.domain.OrderItemEdit;
+import ua.com.bravi.bravi.seller.orders.api.OrderPage;
+import ua.com.bravi.bravi.seller.orders.api.OrderStatusView;
+import ua.com.bravi.bravi.seller.orders.api.OrderView;
+import ua.com.bravi.bravi.seller.orders.domain.Order;
+import ua.com.bravi.bravi.seller.orders.domain.OrderItem;
+import ua.com.bravi.bravi.seller.orders.domain.OrderItemEdit;
 import ua.com.bravi.bravi.seller.controller.dto.in.OrderCreateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.in.OrderItemEditRequest;
 import ua.com.bravi.bravi.seller.controller.dto.in.OrderItemRequest;

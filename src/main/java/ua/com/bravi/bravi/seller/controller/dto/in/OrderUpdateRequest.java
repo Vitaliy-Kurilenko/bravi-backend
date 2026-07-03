@@ -2,7 +2,7 @@ package ua.com.bravi.bravi.seller.controller.dto.in;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.PositiveOrZero;
-import ua.com.bravi.bravi.orders.domain.DeliveryType;
+import ua.com.bravi.bravi.seller.orders.domain.DeliveryType;
 
 import java.math.BigDecimal;
 

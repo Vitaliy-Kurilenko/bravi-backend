@@ -18,8 +18,8 @@ import ua.com.bravi.bravi.seller.controller.dto.out.DeliveryMethodDefinitionResp
 import ua.com.bravi.bravi.seller.controller.dto.out.StoreDeliveryMethodResponse;
 import ua.com.bravi.bravi.seller.controller.mapper.DeliveryDtoMapper;
 import ua.com.bravi.bravi.shared.component.RequireStore;
-import ua.com.bravi.bravi.stores.api.CurrentStoreHolder;
-import ua.com.bravi.bravi.stores.delivery.api.DeliveryApi;
+import ua.com.bravi.bravi.seller.stores.api.CurrentStoreHolder;
+import ua.com.bravi.bravi.seller.stores.delivery.api.DeliveryApi;
 
 import java.util.List;
 import java.util.Map;

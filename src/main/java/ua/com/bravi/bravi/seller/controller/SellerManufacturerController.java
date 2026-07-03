@@ -15,13 +15,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import ua.com.bravi.bravi.catalog.manufacturers.api.ManufacturersApi;
+import ua.com.bravi.bravi.seller.catalog.manufacturers.api.ManufacturersApi;
 import ua.com.bravi.bravi.seller.controller.dto.in.ManufacturerCreateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.in.ManufacturerUpdateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.out.ManufacturerResponse;
 import ua.com.bravi.bravi.seller.controller.mapper.ManufacturerDtoMapper;
 import ua.com.bravi.bravi.shared.component.RequireStore;
-import ua.com.bravi.bravi.stores.api.CurrentStoreHolder;
+import ua.com.bravi.bravi.seller.stores.api.CurrentStoreHolder;
 
 import java.util.List;
 

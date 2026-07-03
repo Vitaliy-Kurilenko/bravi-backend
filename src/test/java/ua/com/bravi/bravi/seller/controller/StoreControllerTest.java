@@ -8,10 +8,10 @@ import ua.com.bravi.bravi.seller.controller.dto.in.StoreUpdateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.out.StoreResponse;
 import ua.com.bravi.bravi.seller.controller.mapper.StoreDtoMapper;
 import ua.com.bravi.bravi.shared.component.InvocationContext;
-import ua.com.bravi.bravi.stores.api.StoreView;
-import ua.com.bravi.bravi.stores.api.StoresApi;
-import ua.com.bravi.bravi.stores.api.CurrentStoreHolder;
-import ua.com.bravi.bravi.stores.domain.Store;
+import ua.com.bravi.bravi.seller.stores.api.StoreView;
+import ua.com.bravi.bravi.seller.stores.api.StoresApi;
+import ua.com.bravi.bravi.seller.stores.api.CurrentStoreHolder;
+import ua.com.bravi.bravi.seller.stores.domain.Store;
 
 import java.time.ZoneId;
 import java.util.Currency;
