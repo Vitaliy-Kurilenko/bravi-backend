@@ -11,8 +11,6 @@ import ua.com.bravi.bravi.identity.api.CurrentUserView;
 import ua.com.bravi.bravi.identity.api.IdentityApi;
 import ua.com.bravi.bravi.identity.api.event.UserProvisionedEvent;
 import ua.com.bravi.bravi.identity.domain.User;
-import ua.com.bravi.bravi.identity.domain.UserType;
-import ua.com.bravi.bravi.identity.exception.UserProvisioningException;
 import ua.com.bravi.bravi.identity.persistence.IUserEntityRepository;
 import ua.com.bravi.bravi.identity.persistence.IUserEntityRepository.UserContextProjection;
 import ua.com.bravi.bravi.identity.persistence.mapper.UserEntityMapper;
@@ -68,7 +66,6 @@ public class UserService implements IdentityApi {
         return new CurrentUserView(
                 invocationContext.getUserId(),
                 invocationContext.getUserExtId(),
-                invocationContext.getUserType(),
                 invocationContext.getUserStatus(),
                 invocationContext.getFirstName(),
                 invocationContext.getLastName(),
@@ -77,25 +74,18 @@ public class UserService implements IdentityApi {
     }
 
     private User createUser(UUID extId) {
-        UserType userType = parseUserType(invocationContext.getUserType());
-        if (userType == null) {
-            throw new UserProvisioningException(
-                    "Cannot provision user: 'user_type' claim is missing or invalid");
-        }
-
         User toCreate = User.provisionNew(
                 extId,
                 invocationContext.getFirstName(),
                 invocationContext.getLastName(),
-                invocationContext.getEmail(),
-                userType
+                invocationContext.getEmail()
         );
 
         try {
             User saved = userEntityMapper.toDomain(
                     userRepository.save(userEntityMapper.toEntity(toCreate)));
             eventPublisher.publishEvent(new UserProvisionedEvent(
-                    saved.id(), saved.extId(), saved.type().name(), Instant.now()));
+                    saved.id(), saved.extId(), Instant.now()));
             return saved;
         } catch (DataIntegrityViolationException concurrentInsert) {
             return userRepository.findByExtId(extId)
@@ -106,7 +96,6 @@ public class UserService implements IdentityApi {
 
     private void applyToContext(UserContextProjection projection) {
         invocationContext.setUserId(projection.getUserId());
-        invocationContext.setUserType(projection.getUserType() == null ? null : projection.getUserType().name());
         invocationContext.setUserStatus(projection.getUserStatus() == null ? null : projection.getUserStatus().name());
         invocationContext.setFirstName(projection.getFirstName());
         invocationContext.setLastName(projection.getLastName());
@@ -115,7 +104,6 @@ public class UserService implements IdentityApi {
 
     private void applyToContext(User user) {
         invocationContext.setUserId(user.id());
-        invocationContext.setUserType(user.type() == null ? null : user.type().name());
         invocationContext.setUserStatus(user.status() == null ? null : user.status().name());
         invocationContext.setFirstName(user.firstName());
         invocationContext.setLastName(user.lastName());
@@ -126,7 +114,6 @@ public class UserService implements IdentityApi {
         return new CurrentUserView(
                 projection.getUserId(),
                 projection.getUserExtId(),
-                projection.getUserType() == null ? null : projection.getUserType().name(),
                 projection.getUserStatus() == null ? null : projection.getUserStatus().name(),
                 projection.getFirstName(),
                 projection.getLastName(),
@@ -138,22 +125,10 @@ public class UserService implements IdentityApi {
         return new CurrentUserView(
                 user.id(),
                 user.extId(),
-                user.type() == null ? null : user.type().name(),
                 user.status() == null ? null : user.status().name(),
                 user.firstName(),
                 user.lastName(),
                 user.email()
         );
-    }
-
-    private UserType parseUserType(String raw) {
-        if (raw == null) {
-            return null;
-        }
-        try {
-            return UserType.valueOf(raw);
-        } catch (IllegalArgumentException ex) {
-            return null;
-        }
     }
 }

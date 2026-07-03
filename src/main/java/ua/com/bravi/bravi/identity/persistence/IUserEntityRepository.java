@@ -4,7 +4,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import ua.com.bravi.bravi.identity.domain.UserStatus;
-import ua.com.bravi.bravi.identity.domain.UserType;
 import ua.com.bravi.bravi.identity.persistence.entity.UserEntity;
 
 import java.util.Optional;
@@ -17,7 +16,6 @@ public interface IUserEntityRepository extends JpaRepository<UserEntity, Long> {
     @Query("""
             SELECT u.id AS userId,
                    u.extId AS userExtId,
-                   u.type AS userType,
                    u.status AS userStatus,
                    u.firstName AS firstName,
                    u.lastName AS lastName,
@@ -30,7 +28,6 @@ public interface IUserEntityRepository extends JpaRepository<UserEntity, Long> {
     interface UserContextProjection {
         Long getUserId();
         UUID getUserExtId();
-        UserType getUserType();
         UserStatus getUserStatus();
         String getFirstName();
         String getLastName();

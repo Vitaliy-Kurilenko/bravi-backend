@@ -6,7 +6,6 @@ import java.util.UUID;
 public record UserProvisionedEvent(
         Long userId,
         UUID extId,
-        String type,
         Instant at
 ) {
 }

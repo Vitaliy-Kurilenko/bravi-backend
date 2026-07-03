@@ -30,7 +30,6 @@ import ua.com.bravi.bravi.seller.orders.persistence.entity.OrderStatusEntity;
 import ua.com.bravi.bravi.seller.orders.persistence.mapper.OrderEntityMapper;
 import ua.com.bravi.bravi.shared.common.SortOrder;
 import ua.com.bravi.bravi.shared.exception.NotFoundException;
-import ua.com.bravi.bravi.identity.api.CurrentUserView;
 import ua.com.bravi.bravi.identity.api.IdentityApi;
 
 import java.math.BigDecimal;
@@ -43,7 +42,6 @@ public class OrderService implements OrdersApi {
     private static final int DEFAULT_LIMIT = 20;
     private static final int MAX_LIMIT = 100;
     private static final String DEFAULT_STATUS_CODE = "NEW";
-    private static final String BUYER_TYPE = "BUYER";
 
     private final IOrderEntityRepository orderRepository;
     private final IOrderStatusRepository orderStatusRepository;
@@ -220,14 +218,10 @@ public class OrderService implements OrdersApi {
         if (buyerId == null) {
             throw new InvalidOrderRequestException("buyer_id", "Buyer is required");
         }
-        CurrentUserView buyer;
         try {
-            buyer = usersApi.getById(buyerId);
+            usersApi.getById(buyerId);
         } catch (NotFoundException notFound) {
             throw new InvalidOrderRequestException("buyer_id", "Buyer not found");
-        }
-        if (!BUYER_TYPE.equalsIgnoreCase(buyer.type())) {
-            throw new InvalidOrderRequestException("buyer_id", "User is not a buyer");
         }
         return buyerId;
     }

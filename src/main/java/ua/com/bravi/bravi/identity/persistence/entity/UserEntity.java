@@ -6,7 +6,6 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 import ua.com.bravi.bravi.identity.domain.UserStatus;
-import ua.com.bravi.bravi.identity.domain.UserType;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -26,10 +25,6 @@ public class UserEntity {
     @NotNull
     @Column(name = "ext_id", nullable = false, unique = true)
     private UUID extId;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "type", nullable = false)
-    private UserType type;
 
     @NotNull
     @Column(name = "first_name", nullable = false)

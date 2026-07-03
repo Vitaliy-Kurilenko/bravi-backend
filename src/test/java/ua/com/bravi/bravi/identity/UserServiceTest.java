@@ -11,8 +11,6 @@ import ua.com.bravi.bravi.identity.api.CurrentUserView;
 import ua.com.bravi.bravi.identity.api.event.UserProvisionedEvent;
 import ua.com.bravi.bravi.identity.domain.User;
 import ua.com.bravi.bravi.identity.domain.UserStatus;
-import ua.com.bravi.bravi.identity.domain.UserType;
-import ua.com.bravi.bravi.identity.exception.UserProvisioningException;
 import ua.com.bravi.bravi.identity.persistence.IUserEntityRepository;
 import ua.com.bravi.bravi.identity.persistence.entity.UserEntity;
 import ua.com.bravi.bravi.identity.persistence.mapper.UserEntityMapper;
@@ -47,7 +45,7 @@ class UserServiceTest {
     }
 
     private static User domainUser(Long id, UserStatus status) {
-        return new User(id, EXT_ID, UserType.SELLER, "John", "Doe", "john@example.com", status);
+        return new User(id, EXT_ID, "John", "Doe", "john@example.com", status);
     }
 
     @Test
@@ -63,7 +61,6 @@ class UserServiceTest {
     @Test
     void getCurrentUserContextReadsFromInvocationContextWithoutQuery() {
         context.setUserId(9L);
-        context.setUserType("BUYER");
         context.setUserStatus("ACTIVE");
         context.setFirstName("Jane");
         context.setLastName("Roe");
@@ -73,7 +70,6 @@ class UserServiceTest {
 
         assertThat(view.id()).isEqualTo(9L);
         assertThat(view.extId()).isEqualTo(EXT_ID);
-        assertThat(view.type()).isEqualTo("BUYER");
         assertThat(view.status()).isEqualTo("ACTIVE");
         assertThat(view.firstName()).isEqualTo("Jane");
         assertThat(view.lastName()).isEqualTo("Roe");
@@ -83,7 +79,6 @@ class UserServiceTest {
 
     @Test
     void createsUserWhenMissingAndPublishesEvent() {
-        context.setUserType("SELLER");
         context.setFirstName("John");
         context.setLastName("Doe");
         context.setEmail("john@example.com");
@@ -107,7 +102,6 @@ class UserServiceTest {
 
     @Test
     void recoversFromConcurrentInsert() {
-        context.setUserType("SELLER");
         UserEntity existing = new UserEntity();
         when(repository.findContextByExtId(EXT_ID)).thenReturn(Optional.empty());
         when(repository.findByExtId(EXT_ID)).thenReturn(Optional.of(existing));
@@ -119,17 +113,5 @@ class UserServiceTest {
 
         assertThat(result.id()).isEqualTo(21L);
         assertThat(context.getUserId()).isEqualTo(21L);
-    }
-
-    @Test
-    void rejectsCreationWhenUserTypeMissing() {
-        context.setUserType(null);
-        when(repository.findContextByExtId(EXT_ID)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> service.resolveCurrentUser())
-                .isInstanceOf(UserProvisioningException.class)
-                .hasMessageContaining("user_type");
-
-        verify(repository, never()).save(any());
     }
 }

@@ -12,14 +12,13 @@ class UserTest {
     void provisionNewActivatesUserWithoutId() {
         UUID extId = UUID.randomUUID();
 
-        User user = User.provisionNew(extId, "John", "Doe", "john@example.com", UserType.SELLER);
+        User user = User.provisionNew(extId, "John", "Doe", "john@example.com");
 
         assertThat(user.id()).isNull();
         assertThat(user.extId()).isEqualTo(extId);
         assertThat(user.firstName()).isEqualTo("John");
         assertThat(user.lastName()).isEqualTo("Doe");
         assertThat(user.email()).isEqualTo("john@example.com");
-        assertThat(user.type()).isEqualTo(UserType.SELLER);
         assertThat(user.status()).isEqualTo(UserStatus.ACTIVE);
     }
 }
