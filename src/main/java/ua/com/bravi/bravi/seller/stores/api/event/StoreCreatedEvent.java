@@ -4,7 +4,7 @@ import java.time.Instant;
 
 public record StoreCreatedEvent(
         Long storeId,
-        Long sellerId,
+        Long sellerAccountId,
         Instant at
 ) {
 }

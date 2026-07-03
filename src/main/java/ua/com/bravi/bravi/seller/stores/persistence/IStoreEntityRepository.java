@@ -7,7 +7,5 @@ import java.util.Optional;
 
 public interface IStoreEntityRepository extends JpaRepository<StoreEntity, Long> {
 
-    Optional<StoreEntity> findBySellerId(Long sellerId);
-
-    boolean existsBySellerId(Long sellerId);
+    Optional<StoreEntity> findFirstBySellerAccountIdOrderByIdAsc(Long sellerAccountId);
 }

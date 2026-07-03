@@ -17,7 +17,7 @@ import java.util.Currency;
 @Setter
 @Entity
 @Table(name = "stores", indexes = {
-        @Index(name = "idx_stores_seller_id", columnList = "seller_id")
+        @Index(name = "idx_stores_seller_account_id", columnList = "seller_account_id")
 })
 public class StoreEntity {
 
@@ -26,8 +26,12 @@ public class StoreEntity {
     private Long id;
 
     @NotNull
-    @Column(name = "seller_id", nullable = false, unique = true)
-    private Long sellerId;
+    @Column(name = "public_id", nullable = false, unique = true)
+    private String publicId;
+
+    @NotNull
+    @Column(name = "seller_account_id", nullable = false)
+    private Long sellerAccountId;
 
     @NotNull
     @Column(name = "name", nullable = false)

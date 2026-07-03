@@ -6,15 +6,20 @@ import org.springframework.transaction.annotation.Transactional;
 import ua.com.bravi.bravi.access.api.AccessApi;
 import ua.com.bravi.bravi.access.api.AccessContextView;
 import ua.com.bravi.bravi.access.api.AccountView;
+import ua.com.bravi.bravi.access.domain.AccountStatus;
+import ua.com.bravi.bravi.access.domain.AccountType;
 import ua.com.bravi.bravi.access.domain.MembershipStatus;
 import ua.com.bravi.bravi.access.persistence.IAccountRepository;
 import ua.com.bravi.bravi.access.persistence.IMembershipRepository;
+import ua.com.bravi.bravi.access.persistence.entity.AccountEntity;
 import ua.com.bravi.bravi.access.persistence.entity.MembershipEntity;
 import ua.com.bravi.bravi.access.persistence.mapper.AccountEntityMapper;
 import ua.com.bravi.bravi.shared.component.InvocationContext;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -75,6 +80,30 @@ public class AccessService implements AccessApi {
         return accountRepository.findById(id)
                 .map(accountEntityMapper::toDomain)
                 .map(accountEntityMapper::toView);
+    }
+
+    @Override
+    @Transactional
+    public AccountView provisionOwnerAccount(Long userId, String accountType) {
+        AccountType type = AccountType.valueOf(accountType);
+
+        AccountEntity account = new AccountEntity();
+        account.setPublicId(UUID.randomUUID().toString());
+        account.setType(type);
+        account.setStatus(AccountStatus.ACTIVE);
+        AccountEntity savedAccount = accountRepository.save(account);
+
+        MembershipEntity membership = new MembershipEntity();
+        membership.setPublicId(UUID.randomUUID().toString());
+        membership.setUserId(userId);
+        membership.setAccountId(savedAccount.getId());
+        membership.setStatus(MembershipStatus.ACTIVE);
+        membership.setJoinedAt(Instant.now());
+        MembershipEntity savedMembership = membershipRepository.save(membership);
+
+        membershipRepository.assignSystemRole(savedMembership.getId(), type.name() + "_OWNER");
+
+        return accountEntityMapper.toView(accountEntityMapper.toDomain(savedAccount));
     }
 
     @Override

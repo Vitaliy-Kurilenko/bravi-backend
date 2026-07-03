@@ -1,6 +1,7 @@
 package ua.com.bravi.bravi.access.persistence;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import ua.com.bravi.bravi.access.domain.MembershipStatus;
@@ -36,4 +37,14 @@ public interface IMembershipRepository extends JpaRepository<MembershipEntity, L
               AND m.status = 'ACTIVE'
             """, nativeQuery = true)
     List<String> findPermissionCodes(@Param("userId") Long userId, @Param("accountId") Long accountId);
+
+    /** Assigns a system role (account_id IS NULL) to a membership by role code. */
+    @Modifying
+    @Query(value = """
+            INSERT INTO membership_roles (membership_id, role_id, assigned_at)
+            SELECT :membershipId, r.id, now()
+            FROM roles r
+            WHERE r.code = :roleCode AND r.account_id IS NULL
+            """, nativeQuery = true)
+    void assignSystemRole(@Param("membershipId") Long membershipId, @Param("roleCode") String roleCode);
 }

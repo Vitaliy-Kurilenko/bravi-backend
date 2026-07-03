@@ -30,7 +30,7 @@ class StoreDtoMapperTest {
         Instant updated = Instant.parse("2026-02-01T00:00:00Z");
 
         StoreView view = new StoreView(
-                10L, 1L, "Shop", "Cool shop", "UA", "Kyiv obl.", "Kyiv",
+                10L, "pub-1", 1L, "Shop", "Cool shop", "UA", "Kyiv obl.", "Kyiv",
                 "01001", "Khreschatyk 1", "office 3",
                 KYIV, "https://logo", wh, UAH, true,
                 "ACTIVE", created, updated
@@ -65,7 +65,7 @@ class StoreDtoMapperTest {
         Store store = mapper.toDomain(req);
 
         assertThat(store.id()).isNull();
-        assertThat(store.sellerId()).isNull();
+        assertThat(store.sellerAccountId()).isNull();
         assertThat(store.status()).isNull();
         assertThat(store.createdAt()).isNull();
         assertThat(store.updatedAt()).isNull();
@@ -95,7 +95,7 @@ class StoreDtoMapperTest {
         assertThat(store.currency()).isNull();
         assertThat(store.allowReturn()).isNull();
         assertThat(store.id()).isNull();
-        assertThat(store.sellerId()).isNull();
+        assertThat(store.sellerAccountId()).isNull();
         assertThat(store.status()).isNull();
     }
 

@@ -7,7 +7,7 @@ import ua.com.bravi.bravi.seller.controller.dto.in.StoreCreateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.in.StoreUpdateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.out.StoreResponse;
 import ua.com.bravi.bravi.seller.controller.mapper.StoreDtoMapper;
-import ua.com.bravi.bravi.shared.component.InvocationContext;
+import ua.com.bravi.bravi.access.api.CurrentAccountHolder;
 import ua.com.bravi.bravi.seller.stores.api.StoreView;
 import ua.com.bravi.bravi.seller.stores.api.StoresApi;
 import ua.com.bravi.bravi.seller.stores.api.CurrentStoreHolder;
@@ -26,10 +26,10 @@ class StoreControllerTest {
 
     private final StoresApi storesApi = mock(StoresApi.class);
     private final StoreDtoMapper storeDtoMapper = mock(StoreDtoMapper.class);
-    private final InvocationContext invocationContext = mock(InvocationContext.class);
+    private final CurrentAccountHolder currentAccountHolder = mock(CurrentAccountHolder.class);
     private final CurrentStoreHolder currentStoreHolder = mock(CurrentStoreHolder.class);
     private final SellerStoreController controller =
-            new SellerStoreController(storesApi, storeDtoMapper, invocationContext, currentStoreHolder);
+            new SellerStoreController(storesApi, storeDtoMapper, currentAccountHolder, currentStoreHolder);
 
     @Test
     void getStoreReturnsMappedResponse() {
@@ -54,7 +54,7 @@ class StoreControllerTest {
         );
         Store domain = mock(Store.class);
         when(storeDtoMapper.toDomain(request)).thenReturn(domain);
-        when(invocationContext.getUserId()).thenReturn(7L);
+        when(currentAccountHolder.getAccountId()).thenReturn(7L);
         when(storesApi.createStore(7L, domain)).thenReturn(100L);
 
         ResponseEntity<Void> result = controller.createStore(request);

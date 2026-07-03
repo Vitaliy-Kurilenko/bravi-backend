@@ -8,7 +8,8 @@ import java.util.Currency;
 
 public record StoreView(
         Long id,
-        Long sellerId,
+        String publicId,
+        Long sellerAccountId,
         String name,
         String description,
         String country,

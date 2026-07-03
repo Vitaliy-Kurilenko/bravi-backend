@@ -27,17 +27,23 @@ class ManufacturerEntityRepositoryTest extends AbstractPostgresIT {
     private EntityManager entityManager;
 
     private Long persistStore() {
-        Object sellerId = entityManager.createNativeQuery(
-                        "INSERT INTO users (ext_id, type, first_name, email, status, created_at) " +
-                                "VALUES (:extId, 'SELLER', 'John', :email, 'ACTIVE', now()) RETURNING id")
-                .setParameter("extId", UUID.randomUUID())
-                .setParameter("email", "seller-" + UUID.randomUUID() + "@example.com")
+        Object accountId = entityManager.createNativeQuery(
+                        "INSERT INTO accounts (public_id, type, status, created_at) " +
+                                "VALUES (:pid, 'SELLER', 'ACTIVE', now()) RETURNING id")
+                .setParameter("pid", UUID.randomUUID().toString())
                 .getSingleResult();
+        long sellerAccountId = ((Number) accountId).longValue();
+        entityManager.createNativeQuery(
+                        "INSERT INTO seller_accounts (account_id, onboarding_status, created_at) " +
+                                "VALUES (:aid, 'ACTIVE', now())")
+                .setParameter("aid", sellerAccountId)
+                .executeUpdate();
 
         Object storeId = entityManager.createNativeQuery(
-                        "INSERT INTO stores (seller_id, name, timezone, currency, allow_return, status, created_at) " +
-                                "VALUES (:sellerId, 'Shop', 'Europe/Kyiv', 'UAH', true, 'ACTIVE', now()) RETURNING id")
-                .setParameter("sellerId", ((Number) sellerId).longValue())
+                        "INSERT INTO stores (public_id, seller_account_id, name, timezone, currency, allow_return, status, created_at) " +
+                                "VALUES (:spid, :sellerAccountId, 'Shop', 'Europe/Kyiv', 'UAH', true, 'ACTIVE', now()) RETURNING id")
+                .setParameter("spid", UUID.randomUUID().toString())
+                .setParameter("sellerAccountId", sellerAccountId)
                 .getSingleResult();
         return ((Number) storeId).longValue();
     }

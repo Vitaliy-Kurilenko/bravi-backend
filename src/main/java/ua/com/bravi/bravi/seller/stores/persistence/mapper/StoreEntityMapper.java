@@ -18,7 +18,8 @@ public interface StoreEntityMapper {
     StoreView toView(StoreEntity entity);
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "sellerId", ignore = true)
+    @Mapping(target = "publicId", ignore = true)
+    @Mapping(target = "sellerAccountId", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
@@ -26,7 +27,8 @@ public interface StoreEntityMapper {
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "sellerId", ignore = true)
+    @Mapping(target = "publicId", ignore = true)
+    @Mapping(target = "sellerAccountId", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)

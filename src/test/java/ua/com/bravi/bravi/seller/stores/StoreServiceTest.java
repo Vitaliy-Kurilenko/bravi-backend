@@ -5,15 +5,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.dao.DataIntegrityViolationException;
-import ua.com.bravi.bravi.shared.exception.ForbiddenException;
 import ua.com.bravi.bravi.shared.exception.NotFoundException;
 import ua.com.bravi.bravi.seller.stores.api.event.StoreCreatedEvent;
 import ua.com.bravi.bravi.seller.stores.domain.Store;
 import ua.com.bravi.bravi.seller.stores.domain.StoreStatus;
-import ua.com.bravi.bravi.seller.stores.exception.StoreAlreadyExistsException;
 import ua.com.bravi.bravi.seller.stores.persistence.IStoreEntityRepository;
+import ua.com.bravi.bravi.seller.stores.persistence.IStoreSettingsRepository;
 import ua.com.bravi.bravi.seller.stores.persistence.entity.StoreEntity;
+import ua.com.bravi.bravi.seller.stores.persistence.entity.StoreSettingsEntity;
 import ua.com.bravi.bravi.seller.stores.persistence.mapper.StoreEntityMapper;
 
 import java.time.ZoneId;
@@ -31,10 +30,11 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class StoreServiceTest {
 
-    private static final Long SELLER_ID = 42L;
+    private static final Long ACCOUNT_ID = 42L;
     private static final Long STORE_ID = 7L;
 
     private final IStoreEntityRepository storeRepository = mock(IStoreEntityRepository.class);
+    private final IStoreSettingsRepository storeSettingsRepository = mock(IStoreSettingsRepository.class);
     private final StoreEntityMapper storeEntityMapper = mock(StoreEntityMapper.class);
     private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
 
@@ -42,7 +42,7 @@ class StoreServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new StoreService(storeRepository, storeEntityMapper, eventPublisher);
+        service = new StoreService(storeRepository, storeSettingsRepository, storeEntityMapper, eventPublisher);
     }
 
     private static Store newStore() {
@@ -56,63 +56,42 @@ class StoreServiceTest {
     }
 
     @Test
-    void findStoreIdByUserIdReturnsId() {
+    void findFirstStoreIdByAccountIdReturnsId() {
         StoreEntity entity = new StoreEntity();
         entity.setId(STORE_ID);
-        when(storeRepository.findBySellerId(SELLER_ID)).thenReturn(Optional.of(entity));
+        when(storeRepository.findFirstBySellerAccountIdOrderByIdAsc(ACCOUNT_ID)).thenReturn(Optional.of(entity));
 
-        assertThat(service.findStoreIdByUserId(SELLER_ID)).contains(STORE_ID);
+        assertThat(service.findFirstStoreIdByAccountId(ACCOUNT_ID)).contains(STORE_ID);
     }
 
     @Test
-    void findStoreIdByUserIdReturnsEmptyWhenAbsent() {
-        when(storeRepository.findBySellerId(SELLER_ID)).thenReturn(Optional.empty());
+    void findFirstStoreIdByAccountIdReturnsEmptyWhenAbsent() {
+        when(storeRepository.findFirstBySellerAccountIdOrderByIdAsc(ACCOUNT_ID)).thenReturn(Optional.empty());
 
-        assertThat(service.findStoreIdByUserId(SELLER_ID)).isEmpty();
+        assertThat(service.findFirstStoreIdByAccountId(ACCOUNT_ID)).isEmpty();
     }
 
     @Test
-    void createStorePersistsEntityWithSellerIdAndPublishesEvent() {
+    void createStorePersistsEntityWithAccountAndSettingsAndPublishesEvent() {
         Store store = newStore();
         StoreEntity entity = new StoreEntity();
         StoreEntity saved = new StoreEntity();
         saved.setId(STORE_ID);
-        saved.setSellerId(SELLER_ID);
+        saved.setSellerAccountId(ACCOUNT_ID);
+        saved.setCurrency(Currency.getInstance("UAH"));
+        saved.setTimezone(ZoneId.of("UTC"));
 
-        when(storeRepository.existsBySellerId(SELLER_ID)).thenReturn(false);
         when(storeEntityMapper.toEntity(store)).thenReturn(entity);
         when(storeRepository.save(entity)).thenReturn(saved);
 
-        Long resultId = service.createStore(SELLER_ID, store);
+        Long resultId = service.createStore(ACCOUNT_ID, store);
 
         assertThat(resultId).isEqualTo(STORE_ID);
-        assertThat(entity.getSellerId()).isEqualTo(SELLER_ID);
+        assertThat(entity.getSellerAccountId()).isEqualTo(ACCOUNT_ID);
+        assertThat(entity.getPublicId()).isNotBlank();
         verify(storeRepository).save(entity);
+        verify(storeSettingsRepository).save(any(StoreSettingsEntity.class));
         verify(eventPublisher).publishEvent(any(StoreCreatedEvent.class));
-    }
-
-    @Test
-    void createStoreFailsWhenSellerAlreadyHasStore() {
-        when(storeRepository.existsBySellerId(SELLER_ID)).thenReturn(true);
-
-        assertThatThrownBy(() -> service.createStore(SELLER_ID, newStore()))
-                .isInstanceOf(StoreAlreadyExistsException.class);
-
-        verify(storeRepository, never()).save(any());
-    }
-
-    @Test
-    void createStoreTranslatesUniqueViolationToConflict() {
-        Store store = newStore();
-        StoreEntity entity = new StoreEntity();
-
-        when(storeRepository.existsBySellerId(SELLER_ID)).thenReturn(false);
-        when(storeEntityMapper.toEntity(store)).thenReturn(entity);
-        when(storeRepository.save(entity))
-                .thenThrow(new DataIntegrityViolationException("duplicate seller_id"));
-
-        assertThatThrownBy(() -> service.createStore(SELLER_ID, store))
-                .isInstanceOf(StoreAlreadyExistsException.class);
     }
 
     @Test
@@ -140,24 +119,5 @@ class StoreServiceTest {
                 .isInstanceOf(NotFoundException.class);
 
         verify(storeEntityMapper, never()).updateEntity(any(), any());
-    }
-
-    @Test
-    void requireOwnershipPassesWhenSellerMatches() {
-        StoreEntity entity = new StoreEntity();
-        entity.setSellerId(SELLER_ID);
-        when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(entity));
-
-        service.requireOwnership(STORE_ID, SELLER_ID);
-    }
-
-    @Test
-    void requireOwnershipThrowsForbiddenWhenSellerMismatches() {
-        StoreEntity entity = new StoreEntity();
-        entity.setSellerId(SELLER_ID);
-        when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(entity));
-
-        assertThatThrownBy(() -> service.requireOwnership(STORE_ID, 999L))
-                .isInstanceOf(ForbiddenException.class);
     }
 }

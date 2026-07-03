@@ -17,7 +17,7 @@ import ua.com.bravi.bravi.seller.controller.dto.in.StoreCreateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.in.StoreUpdateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.out.StoreResponse;
 import ua.com.bravi.bravi.seller.controller.mapper.StoreDtoMapper;
-import ua.com.bravi.bravi.shared.component.InvocationContext;
+import ua.com.bravi.bravi.access.api.CurrentAccountHolder;
 import ua.com.bravi.bravi.shared.exception.NotFoundException;
 import ua.com.bravi.bravi.seller.stores.api.StoresApi;
 import ua.com.bravi.bravi.seller.stores.api.CurrentStoreHolder;
@@ -34,13 +34,12 @@ public class SellerStoreController {
 
     private final StoresApi storesApi;
     private final StoreDtoMapper storeDtoMapper;
-    private final InvocationContext invocationContext;
+    private final CurrentAccountHolder currentAccountHolder;
     private final CurrentStoreHolder currentStoreHolder;
 
     @Operation(summary = "Get store", description = "Returns the current user's store")
     @GetMapping
     public StoreResponse getStore() {
-        System.out.println("Test");
         Long storeId = currentStoreHolder.get();
         return storesApi.getStoreById(storeId)
                 .map(storeDtoMapper::toResponse)
@@ -51,7 +50,11 @@ public class SellerStoreController {
     @PostMapping
     @PermitNoStore
     public ResponseEntity<Void> createStore(@Valid @RequestBody StoreCreateRequest request) {
-        Long storeId = storesApi.createStore(invocationContext.getUserId(), storeDtoMapper.toDomain(request));
+        Long sellerAccountId = currentAccountHolder.getAccountId();
+        if (sellerAccountId == null) {
+            throw new NotFoundException("Seller account not found — onboard a seller account first");
+        }
+        Long storeId = storesApi.createStore(sellerAccountId, storeDtoMapper.toDomain(request));
         currentStoreHolder.set(storeId);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }

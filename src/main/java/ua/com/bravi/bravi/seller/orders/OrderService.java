@@ -30,8 +30,6 @@ import ua.com.bravi.bravi.seller.orders.persistence.entity.OrderStatusEntity;
 import ua.com.bravi.bravi.seller.orders.persistence.mapper.OrderEntityMapper;
 import ua.com.bravi.bravi.shared.common.SortOrder;
 import ua.com.bravi.bravi.shared.exception.NotFoundException;
-import ua.com.bravi.bravi.seller.stores.delivery.api.DeliveryApi;
-import ua.com.bravi.bravi.seller.stores.payments.api.PaymentsApi;
 import ua.com.bravi.bravi.identity.api.CurrentUserView;
 import ua.com.bravi.bravi.identity.api.IdentityApi;
 
@@ -52,8 +50,6 @@ public class OrderService implements OrdersApi {
     private final OrderEntityMapper orderEntityMapper;
     private final IdentityApi usersApi;
     private final ProductsApi productsApi;
-    private final PaymentsApi paymentsApi;
-    private final DeliveryApi deliveryApi;
 
     @Override
     public OrderPage search(Long storeId, OrderSearchQuery query) {
@@ -83,8 +79,8 @@ public class OrderService implements OrdersApi {
     @Transactional
     public Long create(Long storeId, Order order) {
         Long buyerId = requireBuyer(order.buyerId());
-        requireEnabledPayment(storeId, order.paymentMethodCode());
-        requireEnabledDelivery(storeId, order.deliveryMethodCode());
+        requireMethodCode(order.paymentMethodCode(), "payment_method_code");
+        requireMethodCode(order.deliveryMethodCode(), "delivery_method_code");
         OrderStatusEntity status = orderStatusRepository.findByCode(DEFAULT_STATUS_CODE)
                 .orElseThrow(() -> new NotFoundException("Default order status is not configured"));
 
@@ -236,27 +232,9 @@ public class OrderService implements OrdersApi {
         return buyerId;
     }
 
-    private void requireEnabledPayment(Long storeId, String methodCode) {
-        if (methodCode == null) {
-            throw new InvalidOrderRequestException("payment_method_code", "Payment method is required");
-        }
-        boolean enabled = paymentsApi.findEnabledByStoreId(storeId).stream()
-                .anyMatch(method -> method.methodCode().equals(methodCode));
-        if (!enabled) {
-            throw new InvalidOrderRequestException("payment_method_code",
-                    "Payment method is not enabled for the store");
-        }
-    }
-
-    private void requireEnabledDelivery(Long storeId, String methodCode) {
-        if (methodCode == null) {
-            throw new InvalidOrderRequestException("delivery_method_code", "Delivery method is required");
-        }
-        boolean enabled = deliveryApi.findEnabledByStoreId(storeId).stream()
-                .anyMatch(method -> method.methodCode().equals(methodCode));
-        if (!enabled) {
-            throw new InvalidOrderRequestException("delivery_method_code",
-                    "Delivery method is not enabled for the store");
+    private void requireMethodCode(String methodCode, String field) {
+        if (methodCode == null || methodCode.isBlank()) {
+            throw new InvalidOrderRequestException(field, field + " is required");
         }
     }
 

@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.dao.DataIntegrityViolationException;
 import ua.com.bravi.bravi.AbstractPostgresIT;
 import ua.com.bravi.bravi.seller.stores.domain.StoreStatus;
 import ua.com.bravi.bravi.seller.stores.domain.WorkingHours;
@@ -17,7 +16,6 @@ import java.util.Currency;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -29,19 +27,26 @@ class StoreEntityRepositoryTest extends AbstractPostgresIT {
     @Autowired
     private EntityManager entityManager;
 
-    private Long persistSeller() {
-        Object id = entityManager.createNativeQuery(
-                        "INSERT INTO users (ext_id, type, first_name, email, status, created_at) " +
-                                "VALUES (:extId, 'SELLER', 'John', :email, 'ACTIVE', now()) RETURNING id")
-                .setParameter("extId", UUID.randomUUID())
-                .setParameter("email", "seller-" + UUID.randomUUID() + "@example.com")
+    /** Creates an ACCOUNT(SELLER) + its SELLER_ACCOUNT profile and returns the account id. */
+    private Long persistSellerAccount() {
+        Object accountId = entityManager.createNativeQuery(
+                        "INSERT INTO accounts (public_id, type, status, created_at) " +
+                                "VALUES (:pid, 'SELLER', 'ACTIVE', now()) RETURNING id")
+                .setParameter("pid", UUID.randomUUID().toString())
                 .getSingleResult();
-        return ((Number) id).longValue();
+        Long id = ((Number) accountId).longValue();
+        entityManager.createNativeQuery(
+                        "INSERT INTO seller_accounts (account_id, onboarding_status, created_at) " +
+                                "VALUES (:aid, 'ACTIVE', now())")
+                .setParameter("aid", id)
+                .executeUpdate();
+        return id;
     }
 
-    private static StoreEntity newStore(Long sellerId) {
+    private static StoreEntity newStore(Long sellerAccountId) {
         StoreEntity store = new StoreEntity();
-        store.setSellerId(sellerId);
+        store.setPublicId(UUID.randomUUID().toString());
+        store.setSellerAccountId(sellerAccountId);
         store.setName("Shop");
         store.setTimezone(ZoneId.of("Europe/Kyiv"));
         store.setCurrency(Currency.getInstance("UAH"));
@@ -55,9 +60,9 @@ class StoreEntityRepositoryTest extends AbstractPostgresIT {
 
     @Test
     void savesAndLoadsStoreWithJsonAndZoneId() {
-        Long sellerId = persistSeller();
+        Long sellerAccountId = persistSellerAccount();
 
-        StoreEntity saved = storeRepository.saveAndFlush(newStore(sellerId));
+        StoreEntity saved = storeRepository.saveAndFlush(newStore(sellerAccountId));
 
         StoreEntity loaded = storeRepository.findById(saved.getId()).orElseThrow();
         assertThat(loaded.getTimezone()).isEqualTo(ZoneId.of("Europe/Kyiv"));
@@ -71,9 +76,9 @@ class StoreEntityRepositoryTest extends AbstractPostgresIT {
 
     @Test
     void prePersistSetsCreatedAtAndPreUpdateSetsUpdatedAt() {
-        Long sellerId = persistSeller();
+        Long sellerAccountId = persistSellerAccount();
 
-        StoreEntity saved = storeRepository.saveAndFlush(newStore(sellerId));
+        StoreEntity saved = storeRepository.saveAndFlush(newStore(sellerAccountId));
         assertThat(saved.getCreatedAt()).isNotNull();
         assertThat(saved.getUpdatedAt()).isNull();
 
@@ -83,29 +88,20 @@ class StoreEntityRepositoryTest extends AbstractPostgresIT {
     }
 
     @Test
-    void enforcesUniqueSeller() {
-        Long sellerId = persistSeller();
-        storeRepository.saveAndFlush(newStore(sellerId));
+    void allowsMultipleStoresPerAccount() {
+        Long sellerAccountId = persistSellerAccount();
+        storeRepository.saveAndFlush(newStore(sellerAccountId));
+        storeRepository.saveAndFlush(newStore(sellerAccountId));
 
-        assertThatThrownBy(() -> storeRepository.saveAndFlush(newStore(sellerId)))
-                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThat(storeRepository.findAll()).hasSize(2);
     }
 
     @Test
-    void findBySellerIdReturnsStore() {
-        Long sellerId = persistSeller();
-        storeRepository.saveAndFlush(newStore(sellerId));
+    void findFirstBySellerAccountIdReturnsStore() {
+        Long sellerAccountId = persistSellerAccount();
+        storeRepository.saveAndFlush(newStore(sellerAccountId));
 
-        assertThat(storeRepository.findBySellerId(sellerId)).isPresent();
-        assertThat(storeRepository.findBySellerId(sellerId + 9999)).isEmpty();
-    }
-
-    @Test
-    void existsBySellerIdReflectsPersistedState() {
-        Long sellerId = persistSeller();
-
-        assertThat(storeRepository.existsBySellerId(sellerId)).isFalse();
-        storeRepository.saveAndFlush(newStore(sellerId));
-        assertThat(storeRepository.existsBySellerId(sellerId)).isTrue();
+        assertThat(storeRepository.findFirstBySellerAccountIdOrderByIdAsc(sellerAccountId)).isPresent();
+        assertThat(storeRepository.findFirstBySellerAccountIdOrderByIdAsc(sellerAccountId + 9999)).isEmpty();
     }
 }

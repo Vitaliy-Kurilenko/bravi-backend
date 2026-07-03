@@ -1,24 +1,17 @@
 package ua.com.bravi.bravi.seller.stores.api;
 
-import ua.com.bravi.bravi.shared.exception.ForbiddenException;
 import ua.com.bravi.bravi.seller.stores.domain.Store;
 
 import java.util.Optional;
 
 public interface StoresApi {
 
-    Optional<Long> findStoreIdByUserId(Long userId);
-
-    Optional<StoreView> findStoreByUserId(Long userId);
+    /** First store of a seller account (MVP single-store resolution). */
+    Optional<Long> findFirstStoreIdByAccountId(Long sellerAccountId);
 
     Optional<StoreView> getStoreById(Long storeId);
 
-    Long createStore(Long sellerId, Store store);
+    Long createStore(Long sellerAccountId, Store store);
 
     void updateStore(Long storeId, Store patch);
-
-    /**
-     * Throws {@link ForbiddenException} if the store does not belong to the given user.
-     */
-    void requireOwnership(Long storeId, Long userId);
 }

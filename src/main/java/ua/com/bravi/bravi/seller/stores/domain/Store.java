@@ -6,7 +6,7 @@ import java.util.Currency;
 
 public record Store(
         Long id,
-        Long sellerId,
+        Long sellerAccountId,
         String name,
         String description,
         String country,

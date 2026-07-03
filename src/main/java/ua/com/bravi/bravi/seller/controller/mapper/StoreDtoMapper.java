@@ -14,14 +14,14 @@ public interface StoreDtoMapper {
     StoreResponse toResponse(StoreView store);
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "sellerId", ignore = true)
+    @Mapping(target = "sellerAccountId", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     Store toDomain(StoreCreateRequest request);
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "sellerId", ignore = true)
+    @Mapping(target = "sellerAccountId", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)

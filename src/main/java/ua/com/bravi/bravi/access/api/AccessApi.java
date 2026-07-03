@@ -21,6 +21,13 @@ public interface AccessApi {
 
     Optional<AccountView> findAccountById(Long id);
 
+    /**
+     * Provisions a new account of the given type (e.g. {@code "SELLER"}) owned by the given user:
+     * creates the account (ACTIVE), an ACTIVE membership for the user, and assigns the
+     * system {@code <TYPE>_OWNER} role. Returns the created account.
+     */
+    AccountView provisionOwnerAccount(Long userId, String accountType);
+
     /** True when the current account grants the given permission code (e.g. {@code STORE_WRITE}). */
     boolean currentUserHasPermission(String permissionCode);
 }

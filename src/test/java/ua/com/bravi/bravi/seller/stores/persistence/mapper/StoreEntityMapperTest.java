@@ -25,7 +25,7 @@ class StoreEntityMapperTest {
     void toDomainMapsAllFieldsIncludingSellerId() {
         StoreEntity entity = new StoreEntity();
         entity.setId(5L);
-        entity.setSellerId(77L);
+        entity.setSellerAccountId(77L);
         entity.setName("Shop");
         entity.setDescription("Cool shop");
         entity.setCountry("UA");
@@ -41,7 +41,7 @@ class StoreEntityMapperTest {
         Store store = mapper.toDomain(entity);
 
         assertThat(store.id()).isEqualTo(5L);
-        assertThat(store.sellerId()).isEqualTo(77L);
+        assertThat(store.sellerAccountId()).isEqualTo(77L);
         assertThat(store.name()).isEqualTo("Shop");
         assertThat(store.timezone()).isEqualTo(KYIV);
         assertThat(store.currency()).isEqualTo(UAH);
@@ -64,7 +64,7 @@ class StoreEntityMapperTest {
         StoreEntity entity = mapper.toEntity(store);
 
         assertThat(entity.getId()).isNull();
-        assertThat(entity.getSellerId()).isNull();
+        assertThat(entity.getSellerAccountId()).isNull();
         // status default from entity field initializer remains (ACTIVE), not the domain BLOCKED
         assertThat(entity.getStatus()).isEqualTo(StoreStatus.ACTIVE);
         assertThat(entity.getCreatedAt()).isNull();
