@@ -22,9 +22,11 @@ public class InvocationContext {
     private DeviceInfo device;
 
     private Long userId;
+    private String userPublicId;
     private String firstName;
     private String lastName;
     private String userStatus;
+    private boolean emailVerified;
 
     public String toString(){
         return "InvocationContext{" +
@@ -35,9 +37,11 @@ public class InvocationContext {
             ", roles=" + roles +
             ", device=" + device +
             ", userId=" + userId +
+            ", userPublicId='" + userPublicId + '\'' +
             ", firstName='" + firstName + '\'' +
             ", lastName='" + lastName + '\'' +
             ", userStatus=" + userStatus +
+            ", emailVerified=" + emailVerified +
             '}';
     }
 }

@@ -1,6 +1,7 @@
 package ua.com.bravi.bravi.shared.config;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.access.PermissionEvaluator;
@@ -18,6 +19,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import ua.com.bravi.bravi.shared.common.HttpConstants;
 import ua.com.bravi.bravi.shared.component.ProblemDetailAccessDeniedHandler;
 import ua.com.bravi.bravi.shared.component.ProblemDetailAuthenticationEntryPoint;
+import ua.com.bravi.bravi.shared.config.props.SecurityProperties;
 
 import java.util.Collection;
 import java.util.List;
@@ -26,6 +28,7 @@ import java.util.Map;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@EnableConfigurationProperties(SecurityProperties.class)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -35,6 +38,7 @@ public class SecurityConfig {
 
     private final ProblemDetailAuthenticationEntryPoint authenticationEntryPoint;
     private final ProblemDetailAccessDeniedHandler accessDeniedHandler;
+    private final SecurityProperties securityProperties;
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -44,6 +48,7 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(permitted).permitAll()
+                        .requestMatchers(HttpConstants.INTERNAL_PATHS).hasAuthority(securityProperties.internalRole())
                         .requestMatchers("/seller/**").hasAuthority("role_seller")
                         .requestMatchers("/buyer/**").hasAuthority("role_buyer")
                         .anyRequest().authenticated()

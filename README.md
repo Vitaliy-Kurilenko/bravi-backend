@@ -15,16 +15,20 @@ Backend-застосунок на **Spring Boot 4.x / Java 26**, PostgreSQL, і�
 
 - **`shared`** — крос-катінг інфраструктура (фільтри, `SecurityConfig`, `InvocationContext`,
   базові винятки, утиліти). OPEN-модуль, доступний усім.
-- **`identity`** — користувачі (`users`). Just-in-time provisioning: на першому автентифікованому
-  запиті користувач створюється з JWT (Keycloak `sub` → `ext_id`).
+- **`identity`** — користувачі. Явний провіженінг: користувач створюється лише під час реєстрації
+  (Keycloak `sub` → `ext_id`), не JIT. `GET /me/accounts` резолвить користувача lookup-only.
 - **`access`** — tenancy + RBAC: акаунти, членства (memberships), ролі та права (permissions).
   Резолвить поточний акаунт користувача та його права.
-- **`seller`** — вертикаль продавця: онбординг seller-акаунта, магазини, товари/категорії/виробники
+- **`seller`** — вертикаль продавця: реєстрація seller-акаунта, магазини, товари/категорії/виробники
   магазину, замовлення продавця. REST під префіксом `/seller/**`.
 
+**Реєстрація:** зовнішній Auth Service створює користувача в Keycloak і викликає внутрішній
+`POST /internal/registrations/seller`, який створює бізнес-контекст (User + Account + SellerAccount +
+Membership, ідемпотентно за `keycloakUserId`). Цей ендпоінт захищений — токен має нести роль
+`service_registration` (Keycloak service-account Auth-сервісу).
+
 **Мультитенантність:** користувач належить до акаунта через membership; магазини належать
-seller-акаунту (1..N). Онбординг (`POST /seller/accounts`) створює акаунт + owner-membership +
-seller-профіль.
+seller-акаунту (1..N).
 
 **Аутентифікація:** Spring Security OAuth2 resource server — валідація JWT Keycloak через JWKS;
 ролі беруться з claim'а `realm_access.roles`. Формат помилок — RFC 9457 `ProblemDetail`.
@@ -57,6 +61,7 @@ Swagger UI / OpenAPI (springdoc).
 | `KEYCLOACK_BASE_URL`  | Базовий URL Keycloak (для збірки JWT `issuer-uri`) | `http://localhost:8080` |
 | `KEYCLOACK_REALM`     | Realm Keycloak                                     | `bravi`                 |
 | `KEYCLOACK_CLIENT_ID` | Client ID застосунку в Keycloak                    | `user-token-proxy`      |
+| `INTERNAL_API_ROLE`   | Realm-роль для доступу до `/internal/**`            | `service_registration`  |
 | `SERVER_PORT`         | Порт HTTP-сервера                                  | `8083`                  |
 | `PRODUCT_IMAGE_PATH`  | Каталог локального сховища фото товарів            | `./data/product-images` |
 

@@ -56,6 +56,11 @@ keycloack:
   realm: bravi
   client-id: user-token-proxy
 
+bravi:
+  security:
+    # Keycloak realm role the Auth Service's service-account token must carry to reach /internal/**
+    internal-role: ${INTERNAL_API_ROLE:service_registration}
+
 catalog:
   products:
     image-storage:

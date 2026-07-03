@@ -24,6 +24,10 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * With explicit registration, {@code /users/context} resolves the user *lookup-only*:
+ * an unknown identity is never auto-provisioned; a registered one is returned.
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class UserProvisioningTest extends AbstractPostgresIT {
 
@@ -61,7 +65,7 @@ class UserProvisioningTest extends AbstractPostgresIT {
         repository.deleteAll();
     }
 
-    private ResponseEntity<String> callTestEndpoint() {
+    private ResponseEntity<String> callUserContext() {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth("any-token");
         headers.add(HttpConstants.REQUEST_ID_HEADER, "corr-it");
@@ -73,22 +77,29 @@ class UserProvisioningTest extends AbstractPostgresIT {
     }
 
     @Test
-    void firstRequestCreatesUserAndSubsequentReusesIt() {
-        ResponseEntity<String> first = callTestEndpoint();
+    void unknownUserIsNotProvisioned() {
+        ResponseEntity<String> response = callUserContext();
 
-        assertThat(first.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(repository.count()).isEqualTo(1);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(repository.count()).isZero();
+    }
 
-        UserEntity created = repository.findByExtId(EXT_ID).orElseThrow();
-        assertThat(created.getStatus()).isEqualTo(UserStatus.ACTIVE);
-        assertThat(created.getFirstName()).isEqualTo("Jit");
-        assertThat(first.getBody())
+    @Test
+    void registeredUserIsResolved() {
+        UserEntity seeded = new UserEntity();
+        seeded.setPublicId("usr_seed");
+        seeded.setExtId(EXT_ID);
+        seeded.setFirstName("Jit");
+        seeded.setEmail("jit@example.com");
+        seeded.setStatus(UserStatus.ACTIVE);
+        repository.save(seeded);
+
+        ResponseEntity<String> response = callUserContext();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody())
                 .contains("\"first_name\":\"Jit\"")
                 .contains("\"status\":\"ACTIVE\"");
-
-        ResponseEntity<String> second = callTestEndpoint();
-
-        assertThat(second.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(repository.count()).isEqualTo(1);
     }
 }

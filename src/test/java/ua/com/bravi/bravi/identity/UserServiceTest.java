@@ -12,6 +12,7 @@ import ua.com.bravi.bravi.identity.api.event.UserProvisionedEvent;
 import ua.com.bravi.bravi.identity.domain.User;
 import ua.com.bravi.bravi.identity.domain.UserStatus;
 import ua.com.bravi.bravi.identity.persistence.IUserEntityRepository;
+import ua.com.bravi.bravi.identity.persistence.IUserEntityRepository.UserContextProjection;
 import ua.com.bravi.bravi.identity.persistence.entity.UserEntity;
 import ua.com.bravi.bravi.identity.persistence.mapper.UserEntityMapper;
 
@@ -44,11 +45,11 @@ class UserServiceTest {
     }
 
     private static User domainUser(Long id, UserStatus status) {
-        return new User(id, EXT_ID, "John", "Doe", "john@example.com", status);
+        return new User(id, "usr_" + id, EXT_ID, "John", "Doe", "john@example.com", true, status);
     }
 
     @Test
-    void skipsWhenExtIdMissing() {
+    void resolveSkipsWhenExtIdMissing() {
         context.setUserExtId(null);
 
         CurrentUserView result = service.resolveCurrentUser();
@@ -58,9 +59,45 @@ class UserServiceTest {
     }
 
     @Test
+    void resolveDoesNotCreateWhenUserUnknown() {
+        when(repository.findContextByExtId(EXT_ID)).thenReturn(Optional.empty());
+
+        CurrentUserView result = service.resolveCurrentUser();
+
+        assertThat(result).isNull();
+        assertThat(context.getUserId()).isNull();
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void resolvePopulatesContextWhenUserExists() {
+        UserContextProjection projection = mock(UserContextProjection.class);
+        when(projection.getUserId()).thenReturn(9L);
+        when(projection.getUserPublicId()).thenReturn("usr_9");
+        when(projection.getUserExtId()).thenReturn(EXT_ID);
+        when(projection.getUserStatus()).thenReturn(UserStatus.ACTIVE);
+        when(projection.isEmailVerified()).thenReturn(true);
+        when(projection.getFirstName()).thenReturn("Jane");
+        when(projection.getLastName()).thenReturn("Roe");
+        when(projection.getEmail()).thenReturn("jane@example.com");
+        when(repository.findContextByExtId(EXT_ID)).thenReturn(Optional.of(projection));
+
+        CurrentUserView view = service.resolveCurrentUser();
+
+        assertThat(view.id()).isEqualTo(9L);
+        assertThat(view.publicId()).isEqualTo("usr_9");
+        assertThat(view.emailVerified()).isTrue();
+        assertThat(context.getUserId()).isEqualTo(9L);
+        assertThat(context.getUserPublicId()).isEqualTo("usr_9");
+        assertThat(context.isEmailVerified()).isTrue();
+    }
+
+    @Test
     void getCurrentUserContextReadsFromInvocationContextWithoutQuery() {
         context.setUserId(9L);
+        context.setUserPublicId("usr_9");
         context.setUserStatus("ACTIVE");
+        context.setEmailVerified(true);
         context.setFirstName("Jane");
         context.setLastName("Roe");
         context.setEmail("jane@example.com");
@@ -68,8 +105,10 @@ class UserServiceTest {
         CurrentUserView view = service.getCurrentUserContext();
 
         assertThat(view.id()).isEqualTo(9L);
+        assertThat(view.publicId()).isEqualTo("usr_9");
         assertThat(view.extId()).isEqualTo(EXT_ID);
         assertThat(view.status()).isEqualTo("ACTIVE");
+        assertThat(view.emailVerified()).isTrue();
         assertThat(view.firstName()).isEqualTo("Jane");
         assertThat(view.lastName()).isEqualTo("Roe");
         assertThat(view.email()).isEqualTo("jane@example.com");
@@ -77,40 +116,45 @@ class UserServiceTest {
     }
 
     @Test
-    void createsUserWhenMissingAndPublishesEvent() {
-        context.setFirstName("John");
-        context.setLastName("Doe");
-        context.setEmail("john@example.com");
-        when(repository.findContextByExtId(EXT_ID)).thenReturn(Optional.empty());
-
+    void provisionUserCreatesWhenMissingAndPublishesEvent() {
+        when(repository.findByExtId(EXT_ID)).thenReturn(Optional.empty());
         UserEntity toSave = new UserEntity();
         UserEntity saved = new UserEntity();
         when(mapper.toEntity(any(User.class))).thenReturn(toSave);
         when(repository.save(toSave)).thenReturn(saved);
         when(mapper.toDomain(saved)).thenReturn(domainUser(15L, UserStatus.ACTIVE));
 
-        CurrentUserView result = service.resolveCurrentUser();
+        CurrentUserView result = service.provisionUser(EXT_ID, "john@example.com", "John", "Doe");
 
         verify(repository).save(toSave);
         verify(eventPublisher).publishEvent(any(UserProvisionedEvent.class));
         assertThat(result.id()).isEqualTo(15L);
         assertThat(result.status()).isEqualTo("ACTIVE");
-        assertThat(context.getUserId()).isEqualTo(15L);
-        assertThat(context.getUserStatus()).isEqualTo("ACTIVE");
     }
 
     @Test
-    void recoversFromConcurrentInsert() {
+    void provisionUserReturnsExistingWhenAlreadyRegistered() {
         UserEntity existing = new UserEntity();
-        when(repository.findContextByExtId(EXT_ID)).thenReturn(Optional.empty());
         when(repository.findByExtId(EXT_ID)).thenReturn(Optional.of(existing));
+        when(mapper.toDomain(existing)).thenReturn(domainUser(7L, UserStatus.ACTIVE));
+
+        CurrentUserView result = service.provisionUser(EXT_ID, "john@example.com", "John", "Doe");
+
+        assertThat(result.id()).isEqualTo(7L);
+        verify(repository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void provisionUserRecoversFromConcurrentInsert() {
+        UserEntity existing = new UserEntity();
+        when(repository.findByExtId(EXT_ID)).thenReturn(Optional.empty(), Optional.of(existing));
         when(mapper.toEntity(any(User.class))).thenReturn(new UserEntity());
         when(repository.save(any())).thenThrow(new DataIntegrityViolationException("dup ext_id"));
         when(mapper.toDomain(existing)).thenReturn(domainUser(21L, UserStatus.ACTIVE));
 
-        CurrentUserView result = service.resolveCurrentUser();
+        CurrentUserView result = service.provisionUser(EXT_ID, "john@example.com", "John", "Doe");
 
         assertThat(result.id()).isEqualTo(21L);
-        assertThat(context.getUserId()).isEqualTo(21L);
     }
 }

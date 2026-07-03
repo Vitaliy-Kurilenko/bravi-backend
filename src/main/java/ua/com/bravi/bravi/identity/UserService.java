@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ua.com.bravi.bravi.shared.component.InvocationContext;
 import ua.com.bravi.bravi.shared.exception.NotFoundException;
+import ua.com.bravi.bravi.shared.util.PublicIdGenerator;
 import ua.com.bravi.bravi.identity.api.CurrentUserView;
 import ua.com.bravi.bravi.identity.api.IdentityApi;
 import ua.com.bravi.bravi.identity.api.event.UserProvisionedEvent;
@@ -28,28 +29,44 @@ public class UserService implements IdentityApi {
     private final InvocationContext invocationContext;
     private final ApplicationEventPublisher eventPublisher;
 
+    /**
+     * Lookup-only: if the JWT subject maps to a known user, populate the InvocationContext and return it.
+     * Users are created explicitly via {@link #provisionUser} (registration), never implicitly here.
+     */
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public CurrentUserView resolveCurrentUser() {
         UUID extId = invocationContext.getUserExtId();
         if (extId == null) {
             return null;
         }
+        return userRepository.findContextByExtId(extId)
+                .map(projection -> {
+                    applyToContext(projection);
+                    return toView(projection);
+                })
+                .orElse(null);
+    }
 
-        Optional<UserContextProjection> existing = userRepository.findContextByExtId(extId);
-        if (existing.isPresent()) {
-            applyToContext(existing.get());
-            return toView(existing.get());
-        }
-
-        User created = createUser(extId);
-        applyToContext(created);
-        return toView(created);
+    @Override
+    @Transactional
+    public CurrentUserView provisionUser(UUID keycloakUserId, String email, String firstName, String lastName) {
+        return userRepository.findByExtId(keycloakUserId)
+                .map(userEntityMapper::toDomain)
+                .map(this::toView)
+                .orElseGet(() -> createUser(keycloakUserId, email, firstName, lastName));
     }
 
     @Override
     public Optional<CurrentUserView> findByExtId(UUID extId) {
         return userRepository.findByExtId(extId)
+                .map(userEntityMapper::toDomain)
+                .map(this::toView);
+    }
+
+    @Override
+    public Optional<CurrentUserView> findByEmail(String email) {
+        return userRepository.findByEmail(email)
                 .map(userEntityMapper::toDomain)
                 .map(this::toView);
     }
@@ -65,56 +82,49 @@ public class UserService implements IdentityApi {
     public CurrentUserView getCurrentUserContext() {
         return new CurrentUserView(
                 invocationContext.getUserId(),
+                invocationContext.getUserPublicId(),
                 invocationContext.getUserExtId(),
                 invocationContext.getUserStatus(),
+                invocationContext.isEmailVerified(),
                 invocationContext.getFirstName(),
                 invocationContext.getLastName(),
                 invocationContext.getEmail()
         );
     }
 
-    private User createUser(UUID extId) {
-        User toCreate = User.provisionNew(
-                extId,
-                invocationContext.getFirstName(),
-                invocationContext.getLastName(),
-                invocationContext.getEmail()
-        );
-
+    private CurrentUserView createUser(UUID extId, String email, String firstName, String lastName) {
+        User toCreate = User.register(PublicIdGenerator.userId(), extId, firstName, lastName, email);
         try {
             User saved = userEntityMapper.toDomain(
                     userRepository.save(userEntityMapper.toEntity(toCreate)));
             eventPublisher.publishEvent(new UserProvisionedEvent(
                     saved.id(), saved.extId(), Instant.now()));
-            return saved;
+            return toView(saved);
         } catch (DataIntegrityViolationException concurrentInsert) {
             return userRepository.findByExtId(extId)
                     .map(userEntityMapper::toDomain)
+                    .map(this::toView)
                     .orElseThrow(() -> concurrentInsert);
         }
     }
 
     private void applyToContext(UserContextProjection projection) {
         invocationContext.setUserId(projection.getUserId());
+        invocationContext.setUserPublicId(projection.getUserPublicId());
         invocationContext.setUserStatus(projection.getUserStatus() == null ? null : projection.getUserStatus().name());
+        invocationContext.setEmailVerified(projection.isEmailVerified());
         invocationContext.setFirstName(projection.getFirstName());
         invocationContext.setLastName(projection.getLastName());
         invocationContext.setEmail(projection.getEmail());
     }
 
-    private void applyToContext(User user) {
-        invocationContext.setUserId(user.id());
-        invocationContext.setUserStatus(user.status() == null ? null : user.status().name());
-        invocationContext.setFirstName(user.firstName());
-        invocationContext.setLastName(user.lastName());
-        invocationContext.setEmail(user.email());
-    }
-
     private CurrentUserView toView(UserContextProjection projection) {
         return new CurrentUserView(
                 projection.getUserId(),
+                projection.getUserPublicId(),
                 projection.getUserExtId(),
                 projection.getUserStatus() == null ? null : projection.getUserStatus().name(),
+                projection.isEmailVerified(),
                 projection.getFirstName(),
                 projection.getLastName(),
                 projection.getEmail()
@@ -124,8 +134,10 @@ public class UserService implements IdentityApi {
     private CurrentUserView toView(User user) {
         return new CurrentUserView(
                 user.id(),
+                user.publicId(),
                 user.extId(),
                 user.status() == null ? null : user.status().name(),
+                user.emailVerified(),
                 user.firstName(),
                 user.lastName(),
                 user.email()

@@ -1,7 +1,7 @@
 package ua.com.bravi.bravi.seller.account.domain;
 
 public enum SellerOnboardingStatus {
-    PENDING,
-    ACTIVE,
-    SUSPENDED
+    NOT_STARTED,
+    IN_PROGRESS,
+    COMPLETED
 }

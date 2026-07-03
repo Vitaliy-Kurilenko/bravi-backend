@@ -12,11 +12,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class SellerAccountExceptionHandler {
 
-    @ExceptionHandler(SellerAccountAlreadyExistsException.class)
+    @ExceptionHandler(RegistrationContextConflictException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
-    public ProblemDetail handleSellerAccountAlreadyExists(SellerAccountAlreadyExistsException ex) {
+    public ProblemDetail handleRegistrationContextConflict(RegistrationContextConflictException ex) {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
-        problem.setTitle("Seller account already exists");
+        problem.setTitle("Registration context conflict");
         problem.setDetail(ex.getMessage());
         return problem;
     }

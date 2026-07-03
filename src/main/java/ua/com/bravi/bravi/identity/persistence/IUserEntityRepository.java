@@ -13,10 +13,14 @@ public interface IUserEntityRepository extends JpaRepository<UserEntity, Long> {
 
     Optional<UserEntity> findByExtId(UUID extId);
 
+    Optional<UserEntity> findByEmail(String email);
+
     @Query("""
             SELECT u.id AS userId,
+                   u.publicId AS userPublicId,
                    u.extId AS userExtId,
                    u.status AS userStatus,
+                   u.emailVerified AS emailVerified,
                    u.firstName AS firstName,
                    u.lastName AS lastName,
                    u.email AS email
@@ -27,8 +31,10 @@ public interface IUserEntityRepository extends JpaRepository<UserEntity, Long> {
 
     interface UserContextProjection {
         Long getUserId();
+        String getUserPublicId();
         UUID getUserExtId();
         UserStatus getUserStatus();
+        boolean isEmailVerified();
         String getFirstName();
         String getLastName();
         String getEmail();

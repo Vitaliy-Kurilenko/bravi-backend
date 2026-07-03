@@ -1,8 +1,8 @@
 package ua.com.bravi.bravi.access.domain;
 
 public enum AccountStatus {
-    PENDING,
+    PENDING_ONBOARDING,
     ACTIVE,
-    SUSPENDED,
-    CLOSED
+    BLOCKED,
+    DISABLED
 }

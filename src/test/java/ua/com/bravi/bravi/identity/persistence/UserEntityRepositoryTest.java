@@ -23,9 +23,10 @@ class UserEntityRepositoryTest extends AbstractPostgresIT {
 
     private static UserEntity newUser(UUID extId) {
         UserEntity user = new UserEntity();
+        user.setPublicId("usr_" + extId);
         user.setExtId(extId);
         user.setFirstName("John");
-        user.setEmail("john@example.com");
+        user.setEmail(extId + "@example.com");
         user.setStatus(UserStatus.PENDING_ACTIVATION);
         return user;
     }

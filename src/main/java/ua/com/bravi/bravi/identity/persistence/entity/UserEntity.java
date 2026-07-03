@@ -23,6 +23,10 @@ public class UserEntity {
     private long id;
 
     @NotNull
+    @Column(name = "public_id", nullable = false, unique = true)
+    private String publicId;
+
+    @NotNull
     @Column(name = "ext_id", nullable = false, unique = true)
     private UUID extId;
 
@@ -36,6 +40,9 @@ public class UserEntity {
     @NotNull
     @Column(name = "email", nullable = false)
     private String email;
+
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)

@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ua.com.bravi.bravi.access.api.AccessApi;
 import ua.com.bravi.bravi.access.api.AccessContextView;
 import ua.com.bravi.bravi.access.api.AccountView;
+import ua.com.bravi.bravi.access.api.OwnerAccountView;
 import ua.com.bravi.bravi.access.domain.AccountStatus;
 import ua.com.bravi.bravi.access.domain.AccountType;
 import ua.com.bravi.bravi.access.domain.MembershipStatus;
@@ -15,11 +16,11 @@ import ua.com.bravi.bravi.access.persistence.entity.AccountEntity;
 import ua.com.bravi.bravi.access.persistence.entity.MembershipEntity;
 import ua.com.bravi.bravi.access.persistence.mapper.AccountEntityMapper;
 import ua.com.bravi.bravi.shared.component.InvocationContext;
+import ua.com.bravi.bravi.shared.util.PublicIdGenerator;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -83,18 +84,35 @@ public class AccessService implements AccessApi {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<OwnerAccountView> findOwnerAccount(Long userId, String accountType) {
+        AccountType type = AccountType.valueOf(accountType);
+        return membershipRepository.findByUserId(userId).stream()
+                .flatMap(membership -> accountRepository.findById(membership.getAccountId()).stream()
+                        .filter(account -> account.getType() == type)
+                        .map(account -> new OwnerAccountView(
+                                account.getId(),
+                                account.getPublicId(),
+                                account.getType().name(),
+                                account.getStatus().name(),
+                                membership.getId(),
+                                membership.getPublicId())))
+                .findFirst();
+    }
+
+    @Override
     @Transactional
-    public AccountView provisionOwnerAccount(Long userId, String accountType) {
+    public OwnerAccountView provisionOwnerAccount(Long userId, String accountType) {
         AccountType type = AccountType.valueOf(accountType);
 
         AccountEntity account = new AccountEntity();
-        account.setPublicId(UUID.randomUUID().toString());
+        account.setPublicId(PublicIdGenerator.generate(PublicIdGenerator.ACCOUNT_PREFIX));
         account.setType(type);
-        account.setStatus(AccountStatus.ACTIVE);
+        account.setStatus(AccountStatus.PENDING_ONBOARDING);
         AccountEntity savedAccount = accountRepository.save(account);
 
         MembershipEntity membership = new MembershipEntity();
-        membership.setPublicId(UUID.randomUUID().toString());
+        membership.setPublicId(PublicIdGenerator.generate(PublicIdGenerator.MEMBERSHIP_PREFIX));
         membership.setUserId(userId);
         membership.setAccountId(savedAccount.getId());
         membership.setStatus(MembershipStatus.ACTIVE);
@@ -103,7 +121,13 @@ public class AccessService implements AccessApi {
 
         membershipRepository.assignSystemRole(savedMembership.getId(), type.name() + "_OWNER");
 
-        return accountEntityMapper.toView(accountEntityMapper.toDomain(savedAccount));
+        return new OwnerAccountView(
+                savedAccount.getId(),
+                savedAccount.getPublicId(),
+                savedAccount.getType().name(),
+                savedAccount.getStatus().name(),
+                savedMembership.getId(),
+                savedMembership.getPublicId());
     }
 
     @Override

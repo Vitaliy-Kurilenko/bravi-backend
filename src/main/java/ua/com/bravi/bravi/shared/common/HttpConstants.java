@@ -1,6 +1,7 @@
 package ua.com.bravi.bravi.shared.common;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 public final class HttpConstants {
 
@@ -9,6 +10,9 @@ public final class HttpConstants {
     public static final String USER_AGENT_HEADER = "User-Agent";
 
     public static final String REQUEST_ID_MDC_KEY = "requestId";
+
+    /** Service-to-service endpoints (Auth Service → Backend); no end-user context. */
+    public static final String INTERNAL_PATHS = "/internal/**";
 
     public static final List<String> REQUIRED_HEADERS = List.of(
             REQUEST_ID_HEADER
@@ -21,6 +25,10 @@ public final class HttpConstants {
             "/swagger-ui.html",
             "/error"
     );
+
+    /** Paths that must not trigger end-user resolution/provisioning (public + service-to-service). */
+    public static final List<String> NON_USER_PATHS = Stream.concat(
+            EXCLUDED_PATHS.stream(), Stream.of(INTERNAL_PATHS)).toList();
 
     private HttpConstants() {
     }

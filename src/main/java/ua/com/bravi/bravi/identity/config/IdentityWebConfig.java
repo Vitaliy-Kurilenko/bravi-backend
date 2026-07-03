@@ -18,6 +18,6 @@ public class IdentityWebConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(currentUserInterceptor)
                 .order(InterceptorOrder.CURRENT_USER)
-                .excludePathPatterns(HttpConstants.EXCLUDED_PATHS);
+                .excludePathPatterns(HttpConstants.NON_USER_PATHS);
     }
 }

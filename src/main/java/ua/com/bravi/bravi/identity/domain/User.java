@@ -4,17 +4,21 @@ import java.util.UUID;
 
 public record User(
         Long id,
+        String publicId,
         UUID extId,
         String firstName,
         String lastName,
         String email,
+        boolean emailVerified,
         UserStatus status
 ) {
 
-    public static User provisionNew(UUID extId,
-                                    String firstName,
-                                    String lastName,
-                                    String email) {
-        return new User(null, extId, firstName, lastName, email, UserStatus.ACTIVE);
+    /** New user provisioned from an external identity (Keycloak); email not yet verified. */
+    public static User register(String publicId,
+                                UUID extId,
+                                String firstName,
+                                String lastName,
+                                String email) {
+        return new User(null, publicId, extId, firstName, lastName, email, false, UserStatus.ACTIVE);
     }
 }

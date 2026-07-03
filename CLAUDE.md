@@ -43,9 +43,10 @@ ua.com.bravi.bravi
 │
 └── seller/        @ApplicationModule — вертикаль продавця (власний домен + REST /seller/**)
     ├── controller/    seller-facing контролери (per-method @PreAuthorize hasPermission)
+    │                  + InternalSellerRegistrationController (POST /internal/registrations/seller)
     │                  (+ dto/in/, dto/out/, mapper/)
-    ├── account/       вкладений модуль: seller_accounts + онбординг
-    │                  (SellerAccountsApi, POST /seller/accounts)
+    ├── account/       вкладений модуль: seller_accounts; SellerRegistrationApi (реєстрація від
+    │                  Auth Service: User+Account+SellerAccount+Membership) + SellerAccountsApi
     ├── stores/        вкладений модуль: Store, StoreSettings, contacts/ (StoreContact);
     │                  StoresApi, StoreView, CurrentStoreHolder (резолвить через CurrentAccountHolder)
     ├── catalog/       вкладені модулі: categories/, manufacturers/, products/ (store-scoped)
@@ -230,8 +231,10 @@ order  filter                          відповідальність
 
 ## 10a. Авторизація (RBAC)
 
-Двошарова: (1) грубий HTTP-гейт у `SecurityConfig` — `/seller/**` → `hasAuthority('role_seller')`
-(Keycloak realm-роль); (2) тонка per-method перевірка прав — `@PreAuthorize("hasPermission('RESOURCE','ACTION')")`
+Тришарова: (1) service-to-service гейт — `/internal/**` → `hasAuthority(<internal-role>)` (за
+замовч. `service_registration`, конфігуровано `bravi.security.internal-role`); токен видає Keycloak
+service-account Auth-сервісу; (2) грубий HTTP-гейт `/seller/**` → `hasAuthority('role_seller')`
+(Keycloak realm-роль); (3) тонка per-method перевірка прав — `@PreAuthorize("hasPermission('RESOURCE','ACTION')")`
 на кожному ендпоінті контролера (READ на GET, WRITE на мутаціях).
 
 - `hasPermission(...)` маршрутизується в `access.security.AccessPermissionEvaluator` через
@@ -239,8 +242,10 @@ order  filter                          відповідальність
   акаунта з `CurrentAccountHolder` (коди виду `STORE_WRITE`, `PRODUCT_READ`, `ORDER_WRITE`)
 - Коди прав і system-ролі (`SELLER_OWNER`/`SELLER_MEMBER`) засіяно Flyway-міграцією; ресурси
   categories/manufacturers мапляться на `PRODUCT_*`, контакти магазину — на `STORE_*`
-- Онбординг (`POST /seller/accounts`) — виняток: акаунта ще нема, тож лишається на ролі
-  (`@PreAuthorize("hasAuthority('role_seller')")` + `@PermitNoStore`)
+- `/internal/**` виключено з `CurrentUserInterceptor` (`HttpConstants.NON_USER_PATHS`) — сервісний
+  токен не резолвиться в кінцевого користувача; реєстрація бере `keycloakUserId` з тіла запиту
+- Провіженінг користувача — **тільки явний** (`IdentityApi.provisionUser` через реєстрацію);
+  `resolveCurrentUser` — lookup-only, не створює. JIT-провіженінгу немає
 - Новий ресурс → додай пару `*_READ/*_WRITE` у seed-міграцію і `@PreAuthorize` на методи
 
 ## 11. README
