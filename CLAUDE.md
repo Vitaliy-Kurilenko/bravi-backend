@@ -9,71 +9,70 @@ Spring Boot 4.x застосунок на Java 26, PostgreSQL, інтеграц�
 Базовий пакет: `ua.com.bravi.bravi`. Кожен пакет першого рівня під ним — це **модуль**
 (`@ApplicationModule` у `package-info.java`). Модулі спілкуються між собою **тільки через
 опубліковані named interface'и** (`api`); прямий імпорт внутрішніх класів чужого модуля заборонений
-і ламає `ModularityTests`.
+і ламає `ModulithStructureTest` (`ApplicationModules.verify()`).
 
 ```
 ua.com.bravi.bravi
-├── shared/        @ApplicationModule(type = OPEN) — спільна інфраструктура,
-│                  доступна всім модулям без обмежень (cross-cutting)
+├── shared/        @ApplicationModule(type = OPEN) — крос-катінг інфраструктура,
+│                  доступна всім модулям без обмежень
 │   ├── common/        public static final константи (HttpConstants тощо)
 │   ├── component/     фільтри, request-scope біни (InvocationContext),
 │   │                  ProblemDetail-handler'и, парсери, маркер-анотації
 │   ├── config/        глобальні @Configuration (WebConfig, SecurityConfig)
-│   ├── exception/     базові кросові exception'и + GlobalExceptionHandler
-│   │   └── dto/       DTO для error response (FiledValidationError)
+│   ├── exception/     базові кросові exception'и + GlobalExceptionHandler (+ dto/)
 │   └── util/          stateless-хелпери (ValidationPatterns, конвертери)
 │
-├── users/         @ApplicationModule — бізнес-модуль (агрегат User)
-│   ├── api/           ПУБЛІЧНИЙ контракт модуля @NamedInterface("api"):
-│   │   │              UsersApi (інтерфейс), CurrentUserView (read-model record)
-│   │   └── event/     доменні події (UserProvisionedEvent) — публічні
-│   ├── UserService.java   корінь модуля: @Service, implements UsersApi (оркестрація)
-│   ├── controller/    REST-контролери, специфічні саме для цього модуля
-│   │   ├── dto/out/   Response-DTO
-│   │   └── mapper/    MapStruct DTO-мапери
-│   ├── component/     module-local Spring-компоненти (CurrentUserInterceptor)
-│   ├── config/        module-local WebMvcConfigurer (UsersWebConfig)
-│   ├── domain/        чиста бізнес-логіка: моделі (User), enum'и (UserType, UserStatus)
-│   ├── exception/     module-local exception'и + UsersExceptionHandler (@RestControllerAdvice)
-│   └── persistence/   JPA-шар (інкапсульований у модулі)
-│       ├── I<Entity>Repository.java   Spring Data репозиторій
-│       ├── entity/    JPA @Entity
-│       └── mapper/    MapStruct entity ↔ domain / view
+├── identity/      @ApplicationModule — агрегат User (хто такий користувач)
+│   ├── api/           @NamedInterface("api"): IdentityApi, CurrentUserView,
+│   │                  event/UserProvisionedEvent
+│   ├── UserService.java   корінь: implements IdentityApi (JIT-provisioning з JWT)
+│   ├── controller/    UserController (/users/context) + dto/out/ + mapper/
+│   ├── component/     CurrentUserInterceptor · config/ IdentityWebConfig
+│   ├── domain/        User, UserStatus (без типу — роль визначає membership в access)
+│   └── persistence/   UserEntity, IUserEntityRepository, mapper/
 │
-├── stores/        @ApplicationModule — агрегат Store (+ вкладений під-модуль contacts/)
-│   ├── api/           StoresApi, StoreView, CurrentStoreHolder, event/StoreCreatedEvent
-│   ├── StoreService.java  implements StoresApi
-│   ├── domain/        @NamedInterface("api") — Store/WorkingHours/StoreStatus
-│   │                  експонуються, бо фігурують у сигнатурах StoresApi
-│   ├── component/ · config/ · exception/ · persistence/   (як у users)
-│   └── contacts/      вкладений модуль (api/, domain/, persistence/, exception/, *Service)
+├── access/        @ApplicationModule — tenancy + RBAC (як перевіряємо доступ)
+│   ├── api/           @NamedInterface("api"): AccessApi, AccessContextView, AccountView,
+│   │                  CurrentAccountHolder (@RequestScope місток до поточного акаунта)
+│   ├── AccessService.java  implements AccessApi: resolveCurrentContext,
+│   │                  provisionOwnerAccount (створює account + owner-membership)
+│   ├── security/      AccessPermissionEvaluator (Spring Security PermissionEvaluator bean)
+│   ├── domain/        Account, AccountType, AccountStatus, MembershipStatus
+│   └── persistence/   accounts, memberships (+ roles/permissions/join-таблиці;
+│                      role/permission codes читаються native-запитами)
 │
-├── seller/        @ApplicationModule — presentation-модуль (фасад для ролі SELLER)
-│   └── controller/    контролери, що КОМПОНУЮТЬ api інших модулів (stores.api тощо)
-│       ├── dto/in/    Request-DTO (вхідні)
-│       ├── dto/out/   Response-DTO (вихідні)
-│       └── mapper/    MapStruct DTO ↔ domain
-│
-├── buyer/         @ApplicationModule — presentation-модуль для ролі BUYER
-├── catalog/       @ApplicationModule — бізнес-модуль (api/ — заготовка контракту)
-└── orders/        @ApplicationModule — бізнес-модуль (api/ — заготовка контракту)
+└── seller/        @ApplicationModule — вертикаль продавця (власний домен + REST /seller/**)
+    ├── controller/    seller-facing контролери (@PreAuthorize hasAuthority('role_seller'))
+    │                  (+ dto/in/, dto/out/, mapper/)
+    ├── account/       вкладений модуль: seller_accounts + онбординг
+    │                  (SellerAccountsApi, POST /seller/accounts)
+    ├── stores/        вкладений модуль: Store, StoreSettings, contacts/ (StoreContact);
+    │                  StoresApi, StoreView, CurrentStoreHolder (резолвить через CurrentAccountHolder)
+    ├── catalog/       вкладені модулі: categories/, manufacturers/, products/ (store-scoped)
+    └── orders/        вкладений модуль: замовлення продавця (OrdersApi, order_statuses довідник)
 ```
+
+> `buyer/` — порожня заготовка presentation-модуля, слейтед на видалення.
+> Платформенний `catalog` (глобальні категорії/виробники) та `supplier` — заплановані, ще не реалізовані.
 
 **Типи модулів:**
 
 - **`shared`** — `@ApplicationModule(type = OPEN)`. Інфраструктура без власної бізнес-логіки;
   з нього можна імпортувати будь-де. Сюди НЕ кладемо бізнес-правила чи доменні моделі.
-- **Бізнес-модулі** (`users`, `stores`, `catalog`, `orders`) — володіють своїми даними
+- **Бізнес-модулі** (`identity`, `access`, `seller` та його вкладені) — володіють своїми даними
   (entity, таблиці) та доменом. Назовні віддають лише `api`.
-- **Presentation-модулі** (`seller`, `buyer`) — лише HTTP-фасад під конкретну роль/аудиторію;
-  не мають власного домену чи persistence, лише оркеструють `api` бізнес-модулів.
+- **`seller`** — вертикаль: має власний домен/persistence (магазини, товари, замовлення) І
+  REST-контролери під роль SELLER; вкладені під-модулі — окремі агрегати з власними `api`.
+- **`access`** — крос-катінг для авторизації: інші модулі беруть поточний акаунт/права через
+  `access.api` (`CurrentAccountHolder`, `AccessApi`) + `AccessPermissionEvaluator`.
 
 **Правила залежностей:**
 
 - Модуль звертається до іншого модуля **тільки через його `api`** (`<Other>Api` + `*View` + events).
   Імпорт `*.persistence.*`, `*.domain.*` (якщо не позначений як named interface), `*Service`
   чужого модуля — заборонений.
-- `presentation` (seller/buyer) → `api` бізнес-модулів. Власного domain/persistence не має.
+- `seller` бере поточний акаунт/права та ідентичність через `access.api` / `identity.api`;
+  усередині `seller` контролери оркеструють вкладені `<sub>Api`/`<sub>Service`.
 - Усередині модуля: `controller` → `<Module>Service` → `domain` / `persistence`.
 - `domain` НЕ залежить від `persistence`, `controller`, presentation — це чиста бізнес-логіка.
 - `persistence.entity` ніколи не «витікає» з модуля — назовні віддаємо `*View`-record (api)
@@ -94,9 +93,9 @@ ua.com.bravi.bravi
   **Схему цієї таблиці тримай у Flyway-міграції актуальною під версію Spring Modulith**
   (у 2.x таблиця має колонки `status`, `completion_attempts`, `last_resubmission_date`);
   розбіжність ловиться на старті як `SchemaManagementException` (бо `ddl-auto: validate`).
-- Request-scope «місток» між шарами (наприклад `CurrentStoreHolder`) тримай в `api/`,
-  щоб presentation-модуль міг ним користуватись, а інжекцію `<Module>Api` роби `@Lazy`,
-  якщо це request-scope бін.
+- Request-scope «місток» між шарами (наприклад `CurrentAccountHolder` в access,
+  `CurrentStoreHolder` в seller.stores) тримай в `api/`, щоб інші модулі могли ним
+  користуватись, а інжекцію `<Module>Api` роби `@Lazy`, якщо це request-scope бін.
 
 ## 3. Lombok
 
@@ -168,7 +167,7 @@ DI — через constructor injection (`@RequiredArgsConstructor`), а не `@
   успадковані від `RuntimeException`
 - **Кросовий fallback** — `shared/exception/GlobalExceptionHandler` (`@RestControllerAdvice`)
 - **Per-module handler'и** — `<Module>ExceptionHandler` (`@RestControllerAdvice`) для специфічних
-  exception'ів модуля (`UsersExceptionHandler`, `StoresExceptionHandler`, `StoreContactsExceptionHandler`)
+  exception'ів модуля (`SellerAccountExceptionHandler`, `StoreContactsExceptionHandler`, `ProductsExceptionHandler`)
 - **Порядок advice'ів обов'язково задавай через `@Order`** — глобальний `GlobalExceptionHandler`
   з catch-all `@ExceptionHandler(Exception.class)` має `@Order(Ordered.LOWEST_PRECEDENCE)` (останній,
   fallback), а кожен модульний handler — вищий пріоритет (`@Order(Ordered.LOWEST_PRECEDENCE - 100)`).
@@ -223,7 +222,7 @@ order  filter                          відповідальність
 - **Глобальні фільтри — через `FilterRegistrationBean`** у `shared/config/WebConfig.java`;
   самі класи фільтрів НЕ позначені `@Component`, щоб уникнути подвійної автореєстрації
 - **Module-local MVC-розширення** — у `<module>/config/*WebConfig` (`WebMvcConfigurer`):
-  напр. `StoresWebConfig`/`UsersWebConfig` реєструють свої interceptor'и з
+  напр. `StoresWebConfig`/`IdentityWebConfig` реєструють свої interceptor'и з
   `excludePathPatterns(HttpConstants.EXCLUDED_PATHS)`
 - **Маркер-анотації доступу до стану** (`shared/component`): `@RequireStore` (на класі/методі)
   вимагає наявності магазину в `CurrentStoreHolder`, `@PermitNoStore` — точкове виключення
