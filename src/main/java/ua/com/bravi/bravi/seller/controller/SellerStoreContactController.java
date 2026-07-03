@@ -28,7 +28,6 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/seller/stores/contacts")
-@PreAuthorize("hasAuthority('role_seller')")
 @Tag(name = "SellerStoreContactController")
 @RequireStore
 public class SellerStoreContactController {
@@ -39,12 +38,14 @@ public class SellerStoreContactController {
 
     @Operation(summary = "Get store contacts", description = "Returns all contacts of the current user's store")
     @GetMapping
+    @PreAuthorize("hasPermission('STORE', 'READ')")
     public List<StoreContactResponse> getContacts() {
         return storeContactDtoMapper.toResponses(storeContactsApi.findByStoreId(currentStoreHolder.get()));
     }
 
     @Operation(summary = "Add store contacts", description = "Adds one or more contacts to the current user's store")
     @PostMapping
+    @PreAuthorize("hasPermission('STORE', 'WRITE')")
     public ResponseEntity<Void> addContacts(
             @Valid @RequestBody List<@Valid StoreContactCreateRequest> requests
     ) {
@@ -54,6 +55,7 @@ public class SellerStoreContactController {
 
     @Operation(summary = "Update store contact", description = "Partially updates a contact of the current user's store")
     @PatchMapping("/{contactId}")
+    @PreAuthorize("hasPermission('STORE', 'WRITE')")
     public ResponseEntity<Void> updateContact(
             @PathVariable Long contactId,
             @Valid @RequestBody StoreContactUpdateRequest request
@@ -64,6 +66,7 @@ public class SellerStoreContactController {
 
     @Operation(summary = "Delete store contact", description = "Deletes a contact of the current user's store")
     @DeleteMapping("/{contactId}")
+    @PreAuthorize("hasPermission('STORE', 'WRITE')")
     public ResponseEntity<Void> deleteContact(@PathVariable Long contactId) {
         storeContactsApi.deleteContact(currentStoreHolder.get(), contactId);
         return ResponseEntity.noContent().build();

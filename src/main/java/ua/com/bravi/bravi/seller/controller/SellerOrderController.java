@@ -39,7 +39,6 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/seller/orders")
-@PreAuthorize("hasAuthority('role_seller')")
 @Tag(name = "SellerOrderController")
 @RequireStore
 public class SellerOrderController {
@@ -51,6 +50,7 @@ public class SellerOrderController {
     @Operation(summary = "Search orders",
             description = "Returns a paginated, filtered and sorted list of the current store's orders")
     @GetMapping
+    @PreAuthorize("hasPermission('ORDER', 'READ')")
     public OrderPageResponse searchOrders(
             @RequestParam(required = false) String search,
             @RequestParam(name = "buyer_ids", required = false) List<Long> buyerIds,
@@ -82,18 +82,21 @@ public class SellerOrderController {
 
     @Operation(summary = "List order statuses", description = "Returns the extensible list of order statuses")
     @GetMapping("/statuses")
+    @PreAuthorize("hasPermission('ORDER', 'READ')")
     public List<OrderStatusResponse> getStatuses() {
         return orderDtoMapper.toStatusResponses(ordersApi.listStatuses());
     }
 
     @Operation(summary = "Get order", description = "Returns a single order of the current store")
     @GetMapping("/{orderId}")
+    @PreAuthorize("hasPermission('ORDER', 'READ')")
     public OrderResponse getOrder(@PathVariable Long orderId) {
         return orderDtoMapper.toResponse(ordersApi.getById(currentStoreHolder.get(), orderId));
     }
 
     @Operation(summary = "Create order", description = "Creates an order in the current store")
     @PostMapping
+    @PreAuthorize("hasPermission('ORDER', 'WRITE')")
     public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody OrderCreateRequest request) {
         Long storeId = currentStoreHolder.get();
         Long orderId = ordersApi.create(storeId, orderDtoMapper.toDomain(request));
@@ -104,6 +107,7 @@ public class SellerOrderController {
     @Operation(summary = "Update order",
             description = "Partially updates an order: status, recipient, delivery, shipment or comments")
     @PatchMapping("/{orderId}")
+    @PreAuthorize("hasPermission('ORDER', 'WRITE')")
     public OrderResponse updateOrder(
             @PathVariable Long orderId,
             @Valid @RequestBody OrderUpdateRequest request
@@ -115,6 +119,7 @@ public class SellerOrderController {
 
     @Operation(summary = "Delete order", description = "Deletes an order of the current store with its items")
     @DeleteMapping("/{orderId}")
+    @PreAuthorize("hasPermission('ORDER', 'WRITE')")
     public ResponseEntity<Void> deleteOrder(@PathVariable Long orderId) {
         ordersApi.delete(currentStoreHolder.get(), orderId);
         return ResponseEntity.noContent().build();
@@ -122,6 +127,7 @@ public class SellerOrderController {
 
     @Operation(summary = "Add order item", description = "Adds a product line to the order; totals are recalculated")
     @PostMapping("/{orderId}/items")
+    @PreAuthorize("hasPermission('ORDER', 'WRITE')")
     public ResponseEntity<OrderResponse> addItem(
             @PathVariable Long orderId,
             @Valid @RequestBody OrderItemRequest request
@@ -135,6 +141,7 @@ public class SellerOrderController {
     @Operation(summary = "Update order item",
             description = "Changes quantity / sale price, or replaces the product of a line; totals are recalculated")
     @PatchMapping("/{orderId}/items/{itemId}")
+    @PreAuthorize("hasPermission('ORDER', 'WRITE')")
     public OrderResponse updateItem(
             @PathVariable Long orderId,
             @PathVariable Long itemId,
@@ -148,6 +155,7 @@ public class SellerOrderController {
     @Operation(summary = "Delete order item",
             description = "Removes a line from the order (at least one line must remain); totals are recalculated")
     @DeleteMapping("/{orderId}/items/{itemId}")
+    @PreAuthorize("hasPermission('ORDER', 'WRITE')")
     public OrderResponse deleteItem(@PathVariable Long orderId, @PathVariable Long itemId) {
         Long storeId = currentStoreHolder.get();
         ordersApi.deleteItem(storeId, orderId, itemId);

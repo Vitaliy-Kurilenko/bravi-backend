@@ -10,9 +10,9 @@ import java.io.Serializable;
 
 /**
  * DB-backed permission evaluator: resolves {@code hasPermission(resource, action)}
- * against the current account's permission set. Registered as a bean so Spring
- * Security wires it into method security; not referenced by any controller yet
- * (enforcement is switched on in a later step — see plan).
+ * against the current account's permission set. Wired into method security via the
+ * {@code MethodSecurityExpressionHandler} bean (SecurityConfig), so seller controllers
+ * gate each endpoint with {@code @PreAuthorize("hasPermission('STORE','WRITE')")} etc.
  */
 @Component
 @RequiredArgsConstructor

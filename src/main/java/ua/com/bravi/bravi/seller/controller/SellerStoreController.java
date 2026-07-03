@@ -27,7 +27,6 @@ import ua.com.bravi.bravi.shared.component.RequireStore;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/seller/stores")
-@PreAuthorize("hasAuthority('role_seller')")
 @Tag(name = "SellerStoreController")
 @RequireStore
 public class SellerStoreController {
@@ -39,6 +38,7 @@ public class SellerStoreController {
 
     @Operation(summary = "Get store", description = "Returns the current user's store")
     @GetMapping
+    @PreAuthorize("hasPermission('STORE', 'READ')")
     public StoreResponse getStore() {
         Long storeId = currentStoreHolder.get();
         return storesApi.getStoreById(storeId)
@@ -49,6 +49,7 @@ public class SellerStoreController {
     @Operation(summary = "Create store", description = "Creates a store for the current user")
     @PostMapping
     @PermitNoStore
+    @PreAuthorize("hasPermission('STORE', 'WRITE')")
     public ResponseEntity<Void> createStore(@Valid @RequestBody StoreCreateRequest request) {
         Long sellerAccountId = currentAccountHolder.getAccountId();
         if (sellerAccountId == null) {
@@ -61,6 +62,7 @@ public class SellerStoreController {
 
     @Operation(summary = "Update store", description = "Partially updates the current user's store")
     @PatchMapping
+    @PreAuthorize("hasPermission('STORE', 'WRITE')")
     public ResponseEntity<Void> updateStore(@Valid @RequestBody StoreUpdateRequest request) {
         storesApi.updateStore(currentStoreHolder.get(), storeDtoMapper.toDomain(request));
         return ResponseEntity.noContent().build();

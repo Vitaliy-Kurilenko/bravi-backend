@@ -3,6 +3,9 @@ package ua.com.bravi.bravi.shared.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.PermissionEvaluator;
+import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -55,6 +58,18 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler)
                 )
                 .build();
+    }
+
+    /**
+     * Routes SpEL {@code hasPermission(resource, action)} in {@code @PreAuthorize} to the
+     * DB-backed {@link PermissionEvaluator} (access module's AccessPermissionEvaluator).
+     * Injected by interface so this cross-cutting config stays free of access-module imports.
+     */
+    @Bean
+    MethodSecurityExpressionHandler methodSecurityExpressionHandler(PermissionEvaluator permissionEvaluator) {
+        DefaultMethodSecurityExpressionHandler handler = new DefaultMethodSecurityExpressionHandler();
+        handler.setPermissionEvaluator(permissionEvaluator);
+        return handler;
     }
 
     private JwtAuthenticationConverter keycloakJwtConverter() {

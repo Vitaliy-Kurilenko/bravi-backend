@@ -45,7 +45,6 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/seller/products")
-@PreAuthorize("hasAuthority('role_seller')")
 @Tag(name = "SellerProductController")
 @RequireStore
 public class SellerProductController {
@@ -57,6 +56,7 @@ public class SellerProductController {
     @Operation(summary = "Search products",
             description = "Returns a paginated, filtered and sorted list of the current store's products")
     @GetMapping
+    @PreAuthorize("hasPermission('PRODUCT', 'READ')")
     public ProductPageResponse searchProducts(
             @RequestParam(required = false) String search,
             @RequestParam(name = "category_ids", required = false) List<Long> categoryIds,
@@ -84,12 +84,14 @@ public class SellerProductController {
 
     @Operation(summary = "Get product", description = "Returns a single product of the current store")
     @GetMapping("/{productId}")
+    @PreAuthorize("hasPermission('PRODUCT', 'READ')")
     public ProductResponse getProduct(@PathVariable Long productId) {
         return productDtoMapper.toResponse(productsApi.getById(currentStoreHolder.get(), productId));
     }
 
     @Operation(summary = "Create product", description = "Creates a product in the current store")
     @PostMapping
+    @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody ProductCreateRequest request) {
         Long storeId = currentStoreHolder.get();
         Long productId = productsApi.create(storeId, productDtoMapper.toDomain(request));
@@ -99,6 +101,7 @@ public class SellerProductController {
 
     @Operation(summary = "Update product", description = "Partially updates a product of the current store")
     @PatchMapping("/{productId}")
+    @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<Void> updateProduct(
             @PathVariable Long productId,
             @Valid @RequestBody ProductUpdateRequest request
@@ -109,6 +112,7 @@ public class SellerProductController {
 
     @Operation(summary = "Delete product", description = "Deletes a product of the current store with its images")
     @DeleteMapping("/{productId}")
+    @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long productId) {
         productsApi.delete(currentStoreHolder.get(), productId);
         return ResponseEntity.noContent().build();
@@ -116,12 +120,14 @@ public class SellerProductController {
 
     @Operation(summary = "List product images", description = "Returns the image gallery of a product")
     @GetMapping("/{productId}/images")
+    @PreAuthorize("hasPermission('PRODUCT', 'READ')")
     public List<ProductImageResponse> getImages(@PathVariable Long productId) {
         return productDtoMapper.toImageResponses(productsApi.listImages(currentStoreHolder.get(), productId));
     }
 
     @Operation(summary = "Upload product image", description = "Adds an image to the product gallery")
     @PostMapping(value = "/{productId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<ProductImageResponse> addImage(
             @PathVariable Long productId,
             @RequestParam("file") MultipartFile file,
@@ -134,6 +140,7 @@ public class SellerProductController {
 
     @Operation(summary = "Replace product image", description = "Replaces the file of an existing product image")
     @PutMapping(value = "/{productId}/images/{imageId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ProductImageResponse replaceImage(
             @PathVariable Long productId,
             @PathVariable Long imageId,
@@ -145,6 +152,7 @@ public class SellerProductController {
 
     @Operation(summary = "Get product image content", description = "Streams the binary content of a product image")
     @GetMapping("/{productId}/images/{imageId}")
+    @PreAuthorize("hasPermission('PRODUCT', 'READ')")
     public ResponseEntity<byte[]> getImageContent(
             @PathVariable Long productId,
             @PathVariable Long imageId
@@ -158,6 +166,7 @@ public class SellerProductController {
 
     @Operation(summary = "Delete product image", description = "Removes an image from the product gallery")
     @DeleteMapping("/{productId}/images/{imageId}")
+    @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<Void> deleteImage(
             @PathVariable Long productId,
             @PathVariable Long imageId

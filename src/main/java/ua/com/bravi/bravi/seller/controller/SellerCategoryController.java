@@ -28,7 +28,6 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/seller/categories")
-@PreAuthorize("hasAuthority('role_seller')")
 @Tag(name = "SellerCategoryController")
 @RequireStore
 public class SellerCategoryController {
@@ -39,18 +38,21 @@ public class SellerCategoryController {
 
     @Operation(summary = "Get categories", description = "Returns the category tree of the current user's store")
     @GetMapping
+    @PreAuthorize("hasPermission('PRODUCT', 'READ')")
     public List<CategoryResponse> getCategories() {
         return categoryDtoMapper.toResponses(categoriesApi.findTreeByStoreId(currentStoreHolder.get()));
     }
 
     @Operation(summary = "Get category", description = "Returns a category subtree of the current user's store")
     @GetMapping("/{categoryId}")
+    @PreAuthorize("hasPermission('PRODUCT', 'READ')")
     public CategoryResponse getCategory(@PathVariable Long categoryId) {
         return categoryDtoMapper.toResponse(categoriesApi.getById(currentStoreHolder.get(), categoryId));
     }
 
     @Operation(summary = "Create category", description = "Creates a category in the current user's store")
     @PostMapping
+    @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<Void> createCategory(@Valid @RequestBody CategoryCreateRequest request) {
         categoriesApi.create(currentStoreHolder.get(), categoryDtoMapper.toDomain(request));
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -59,6 +61,7 @@ public class SellerCategoryController {
     @Operation(summary = "Update category",
             description = "Partially updates a category; a non-null parent_id reparents it within the tree")
     @PatchMapping("/{categoryId}")
+    @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<Void> updateCategory(
             @PathVariable Long categoryId,
             @Valid @RequestBody CategoryUpdateRequest request
@@ -70,6 +73,7 @@ public class SellerCategoryController {
     @Operation(summary = "Delete category",
             description = "Deletes a category of the current user's store; blocked if it has subcategories")
     @DeleteMapping("/{categoryId}")
+    @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long categoryId) {
         categoriesApi.delete(currentStoreHolder.get(), categoryId);
         return ResponseEntity.noContent().build();

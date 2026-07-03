@@ -42,7 +42,7 @@ ua.com.bravi.bravi
 │                      role/permission codes читаються native-запитами)
 │
 └── seller/        @ApplicationModule — вертикаль продавця (власний домен + REST /seller/**)
-    ├── controller/    seller-facing контролери (@PreAuthorize hasAuthority('role_seller'))
+    ├── controller/    seller-facing контролери (per-method @PreAuthorize hasPermission)
     │                  (+ dto/in/, dto/out/, mapper/)
     ├── account/       вкладений модуль: seller_accounts + онбординг
     │                  (SellerAccountsApi, POST /seller/accounts)
@@ -227,6 +227,21 @@ order  filter                          відповідальність
 - **Маркер-анотації доступу до стану** (`shared/component`): `@RequireStore` (на класі/методі)
   вимагає наявності магазину в `CurrentStoreHolder`, `@PermitNoStore` — точкове виключення
   (напр. створення першого магазину). Перевірку робить `StoreRequiredInterceptor`
+
+## 10a. Авторизація (RBAC)
+
+Двошарова: (1) грубий HTTP-гейт у `SecurityConfig` — `/seller/**` → `hasAuthority('role_seller')`
+(Keycloak realm-роль); (2) тонка per-method перевірка прав — `@PreAuthorize("hasPermission('RESOURCE','ACTION')")`
+на кожному ендпоінті контролера (READ на GET, WRITE на мутаціях).
+
+- `hasPermission(...)` маршрутизується в `access.security.AccessPermissionEvaluator` через
+  `MethodSecurityExpressionHandler`-бін (`SecurityConfig`); evaluator читає набір прав поточного
+  акаунта з `CurrentAccountHolder` (коди виду `STORE_WRITE`, `PRODUCT_READ`, `ORDER_WRITE`)
+- Коди прав і system-ролі (`SELLER_OWNER`/`SELLER_MEMBER`) засіяно Flyway-міграцією; ресурси
+  categories/manufacturers мапляться на `PRODUCT_*`, контакти магазину — на `STORE_*`
+- Онбординг (`POST /seller/accounts`) — виняток: акаунта ще нема, тож лишається на ролі
+  (`@PreAuthorize("hasAuthority('role_seller')")` + `@PermitNoStore`)
+- Новий ресурс → додай пару `*_READ/*_WRITE` у seed-міграцію і `@PreAuthorize` на методи
 
 ## 11. README
 

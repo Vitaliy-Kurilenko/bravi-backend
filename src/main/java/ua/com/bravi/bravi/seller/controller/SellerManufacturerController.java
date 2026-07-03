@@ -28,7 +28,6 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/seller/manufacturers")
-@PreAuthorize("hasAuthority('role_seller')")
 @Tag(name = "SellerManufacturerController")
 @RequireStore
 public class SellerManufacturerController {
@@ -39,18 +38,21 @@ public class SellerManufacturerController {
 
     @Operation(summary = "Get manufacturers", description = "Returns all manufacturers of the current user's store")
     @GetMapping
+    @PreAuthorize("hasPermission('PRODUCT', 'READ')")
     public List<ManufacturerResponse> getManufacturers() {
         return manufacturerDtoMapper.toResponses(manufacturersApi.findByStoreId(currentStoreHolder.get()));
     }
 
     @Operation(summary = "Get manufacturer", description = "Returns a manufacturer of the current user's store")
     @GetMapping("/{manufacturerId}")
+    @PreAuthorize("hasPermission('PRODUCT', 'READ')")
     public ManufacturerResponse getManufacturer(@PathVariable Long manufacturerId) {
         return manufacturerDtoMapper.toResponse(manufacturersApi.getById(currentStoreHolder.get(), manufacturerId));
     }
 
     @Operation(summary = "Create manufacturer", description = "Creates a manufacturer in the current user's store")
     @PostMapping
+    @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<Void> createManufacturer(@Valid @RequestBody ManufacturerCreateRequest request) {
         manufacturersApi.create(currentStoreHolder.get(), manufacturerDtoMapper.toDomain(request));
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -58,6 +60,7 @@ public class SellerManufacturerController {
 
     @Operation(summary = "Update manufacturer", description = "Partially updates a manufacturer of the current user's store")
     @PatchMapping("/{manufacturerId}")
+    @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<Void> updateManufacturer(
             @PathVariable Long manufacturerId,
             @Valid @RequestBody ManufacturerUpdateRequest request
@@ -68,6 +71,7 @@ public class SellerManufacturerController {
 
     @Operation(summary = "Delete manufacturer", description = "Deletes a manufacturer of the current user's store")
     @DeleteMapping("/{manufacturerId}")
+    @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<Void> deleteManufacturer(@PathVariable Long manufacturerId) {
         manufacturersApi.delete(currentStoreHolder.get(), manufacturerId);
         return ResponseEntity.noContent().build();
