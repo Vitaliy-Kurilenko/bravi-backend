@@ -1,0 +1,42 @@
+package ua.com.bravi.bravi.access.security;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.PermissionEvaluator;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Component;
+import ua.com.bravi.bravi.access.api.CurrentAccountHolder;
+
+import java.io.Serializable;
+
+/**
+ * DB-backed permission evaluator: resolves {@code hasPermission(resource, action)}
+ * against the current account's permission set. Registered as a bean so Spring
+ * Security wires it into method security; not referenced by any controller yet
+ * (enforcement is switched on in a later step — see plan).
+ */
+@Component
+@RequiredArgsConstructor
+public class AccessPermissionEvaluator implements PermissionEvaluator {
+
+    private final CurrentAccountHolder currentAccountHolder;
+
+    @Override
+    public boolean hasPermission(Authentication authentication, Object targetDomainObject, Object permission) {
+        if (targetDomainObject == null || permission == null) {
+            return false;
+        }
+        return currentAccountHolder.hasPermission(toCode(targetDomainObject.toString(), permission.toString()));
+    }
+
+    @Override
+    public boolean hasPermission(Authentication authentication, Serializable targetId, String targetType, Object permission) {
+        if (targetType == null || permission == null) {
+            return false;
+        }
+        return currentAccountHolder.hasPermission(toCode(targetType, permission.toString()));
+    }
+
+    private String toCode(String resource, String action) {
+        return (resource + "_" + action).toUpperCase();
+    }
+}
