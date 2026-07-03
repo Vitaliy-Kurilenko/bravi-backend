@@ -36,4 +36,7 @@ public interface AccessApi {
 
     /** True when the current account grants the given permission code (e.g. {@code STORE_WRITE}). */
     boolean currentUserHasPermission(String permissionCode);
+
+    /** Transitions an account to ACTIVE (seller onboarding completion). */
+    void activateAccount(Long accountId);
 }

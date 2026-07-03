@@ -56,7 +56,7 @@ class StoreEntityMapperTest {
                 99L, 77L, "Shop", "desc", "UA", "Kyiv obl.", "Kyiv",
                 "01001", "Khreschatyk", null,
                 KYIV, "https://logo", workingHours(), UAH, true,
-                StoreStatus.BLOCKED,
+                StoreStatus.DISABLED,
                 Instant.parse("2026-01-01T00:00:00Z"),
                 Instant.parse("2026-02-01T00:00:00Z")
         );
@@ -65,7 +65,7 @@ class StoreEntityMapperTest {
 
         assertThat(entity.getId()).isNull();
         assertThat(entity.getSellerAccountId()).isNull();
-        // status default from entity field initializer remains (ACTIVE), not the domain BLOCKED
+        // status default from entity field initializer remains (ACTIVE), not the domain DISABLED
         assertThat(entity.getStatus()).isEqualTo(StoreStatus.ACTIVE);
         assertThat(entity.getCreatedAt()).isNull();
         assertThat(entity.getUpdatedAt()).isNull();

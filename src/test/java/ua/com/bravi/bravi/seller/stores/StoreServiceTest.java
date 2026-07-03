@@ -3,9 +3,12 @@ package ua.com.bravi.bravi.seller.stores;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import ua.com.bravi.bravi.shared.exception.NotFoundException;
+import ua.com.bravi.bravi.seller.stores.api.StoreDraft;
+import ua.com.bravi.bravi.seller.stores.api.StoreView;
 import ua.com.bravi.bravi.seller.stores.api.event.StoreCreatedEvent;
 import ua.com.bravi.bravi.seller.stores.domain.Store;
 import ua.com.bravi.bravi.seller.stores.domain.StoreStatus;
@@ -72,24 +75,30 @@ class StoreServiceTest {
     }
 
     @Test
-    void createStorePersistsEntityWithAccountAndSettingsAndPublishesEvent() {
-        Store store = newStore();
-        StoreEntity entity = new StoreEntity();
+    void createDraftStorePersistsDraftWithDefaultsSettingsAndPublishesEvent() {
+        StoreDraft draft = new StoreDraft("Shop", "desc", "logo");
         StoreEntity saved = new StoreEntity();
         saved.setId(STORE_ID);
         saved.setSellerAccountId(ACCOUNT_ID);
-        saved.setCurrency(Currency.getInstance("UAH"));
-        saved.setTimezone(ZoneId.of("UTC"));
+        StoreView view = mock(StoreView.class);
 
-        when(storeEntityMapper.toEntity(store)).thenReturn(entity);
-        when(storeRepository.save(entity)).thenReturn(saved);
+        when(storeRepository.save(any(StoreEntity.class))).thenReturn(saved);
+        when(storeEntityMapper.toView(saved)).thenReturn(view);
 
-        Long resultId = service.createStore(ACCOUNT_ID, store);
+        StoreView result = service.createDraftStore(ACCOUNT_ID, draft);
 
-        assertThat(resultId).isEqualTo(STORE_ID);
-        assertThat(entity.getSellerAccountId()).isEqualTo(ACCOUNT_ID);
-        assertThat(entity.getPublicId()).isNotBlank();
-        verify(storeRepository).save(entity);
+        assertThat(result).isSameAs(view);
+
+        ArgumentCaptor<StoreEntity> captor = ArgumentCaptor.forClass(StoreEntity.class);
+        verify(storeRepository).save(captor.capture());
+        StoreEntity persisted = captor.getValue();
+        assertThat(persisted.getSellerAccountId()).isEqualTo(ACCOUNT_ID);
+        assertThat(persisted.getName()).isEqualTo("Shop");
+        assertThat(persisted.getPublicId()).isNotBlank();
+        assertThat(persisted.getStatus()).isEqualTo(StoreStatus.DRAFT);
+        assertThat(persisted.getCurrency()).isEqualTo(Currency.getInstance("EUR"));
+        assertThat(persisted.getTimezone()).isEqualTo(ZoneId.of("Europe/Lisbon"));
+
         verify(storeSettingsRepository).save(any(StoreSettingsEntity.class));
         verify(eventPublisher).publishEvent(any(StoreCreatedEvent.class));
     }

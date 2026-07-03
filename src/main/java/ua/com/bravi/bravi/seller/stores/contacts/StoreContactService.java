@@ -44,6 +44,24 @@ public class StoreContactService implements StoreContactsApi {
 
     @Override
     @Transactional
+    public List<StoreContactView> replaceContacts(Long storeId, List<StoreContact> contacts) {
+        contacts.forEach(c -> StoreContactPolicy.validate(c.type(), c.value()));
+
+        contactRepository.deleteByStoreId(storeId);
+
+        List<StoreContactEntity> entities = contacts.stream()
+                .map(contact -> {
+                    StoreContactEntity entity = contactEntityMapper.toEntity(contact);
+                    entity.setStoreId(storeId);
+                    return entity;
+                })
+                .toList();
+
+        return contactEntityMapper.toViews(contactRepository.saveAll(entities));
+    }
+
+    @Override
+    @Transactional
     public void updateContact(Long storeId, Long contactId, StoreContact patch) {
         StoreContactEntity entity = contactRepository.findById(contactId)
                 .orElseThrow(() -> new NotFoundException("Contact not found"));

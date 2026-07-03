@@ -21,16 +21,24 @@ Backend-застосунок на **Spring Boot 4.x / Java 26**, PostgreSQL, і�
   onboarding-статусом; невідомий користувач → 404.
 - **`access`** — tenancy + RBAC: акаунти, членства (memberships), ролі та права (permissions).
   Резолвить поточний акаунт користувача та його права.
-- **`seller`** — вертикаль продавця: реєстрація seller-акаунта, магазини, товари/категорії/виробники
-  магазину, замовлення продавця. REST під префіксом `/seller/**`.
+- **`seller`** — вертикаль продавця: реєстрація seller-акаунта, онбординг, магазини,
+  товари/категорії/виробники магазину, замовлення продавця. REST під префіксами `/seller/**`
+  (day-to-day) та `/accounts/{accountId}/seller/onboarding/**` (онбординг).
 
 **Реєстрація:** зовнішній Auth Service створює користувача в Keycloak і викликає внутрішній
 `POST /internal/registrations/seller`, який створює бізнес-контекст (User + Account + SellerAccount +
 Membership, ідемпотентно за `keycloakUserId`). Цей ендпоінт захищений — токен має нести роль
 `service_registration` (Keycloak service-account Auth-сервісу).
 
-**Мультитенантність:** користувач належить до акаунта через membership; магазини належать
-seller-акаунту (1..N).
+**Онбординг продавця** (після реєстрації + верифікації email, `role_seller`): фронт веде
+користувача через `/accounts/{accountId}/seller/onboarding` —
+`GET` (стан), `POST /store` (створює DRAFT-магазин + дефолтні settings + manual sales-channel,
+onboarding → IN_PROGRESS), `PATCH /store`, `PATCH /store/settings`, `PUT /store/contacts`,
+`POST /complete` (перевіряє `email_verified`, наявність магазину й manual-каналу, далі
+account → ACTIVE, onboarding → COMPLETED, store → ACTIVE). Один магазин на seller-акаунт.
+
+**Мультитенантність:** користувач належить до акаунта через membership; seller-акаунт має
+рівно один магазин.
 
 **Аутентифікація:** Spring Security OAuth2 resource server — валідація JWT Keycloak через JWKS;
 ролі беруться з claim'а `realm_access.roles`. Формат помилок — RFC 9457 `ProblemDetail`.

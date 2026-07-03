@@ -50,6 +50,7 @@ public class SecurityConfig {
                         .requestMatchers(permitted).permitAll()
                         .requestMatchers(HttpConstants.INTERNAL_PATHS).hasAuthority(securityProperties.internalRole())
                         .requestMatchers("/seller/**").hasAuthority("role_seller")
+                        .requestMatchers("/accounts/**").hasAuthority("role_seller")
                         .requestMatchers("/buyer/**").hasAuthority("role_buyer")
                         .anyRequest().authenticated()
                 )

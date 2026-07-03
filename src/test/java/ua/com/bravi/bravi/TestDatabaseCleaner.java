@@ -21,6 +21,7 @@ public final class TestDatabaseCleaner {
             "manufacturers",
             "store_contacts",
             "store_settings",
+            "sales_channels",
             "stores",
             "seller_accounts",
             "membership_roles",

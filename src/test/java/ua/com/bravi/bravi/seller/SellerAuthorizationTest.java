@@ -42,8 +42,7 @@ class SellerAuthorizationTest extends AbstractPostgresIT {
     private static final String SERVICE_TOKEN = "service";
     private static final String USER_TOKEN = "user";
 
-    private static final String STORE_BODY =
-            "{\"name\":\"Shop\",\"timezone\":\"UTC\",\"currency\":\"UAH\",\"allow_return\":true}";
+    private static final String STORE_BODY = "{\"name\":\"Shop\"}";
     private static final String REGISTRATION_BODY =
             "{\"keycloakUserId\":\"" + SELLER_EXT_ID + "\",\"email\":\"owner@example.com\","
                     + "\"firstName\":\"Olga\",\"lastName\":\"Owner\"}";
@@ -90,19 +89,20 @@ class SellerAuthorizationTest extends AbstractPostgresIT {
 
     @Test
     void writesAreDeniedUntilTheSellerIsRegistered() {
-        // 1. A role_seller token with no registered business context cannot write.
-        assertThat(post("/seller/stores", STORE_BODY, USER_TOKEN).getStatusCode())
+        // 1. A role_seller token with no registered business context has no STORE permission → 403.
+        assertThat(post("/accounts/acc_missing/seller/onboarding/store", STORE_BODY, USER_TOKEN).getStatusCode())
                 .isEqualTo(HttpStatus.FORBIDDEN);
 
         // 2. Auth Service registers the seller (service-account token) → account + SELLER_OWNER membership.
         assertThat(post("/internal/registrations/seller", REGISTRATION_BODY, SERVICE_TOKEN).getStatusCode())
                 .isEqualTo(HttpStatus.CREATED);
+        String accountId = jdbcTemplate.queryForObject("SELECT public_id FROM accounts", String.class);
 
-        // 3. The same user token is now authorized for writes and reads.
-        assertThat(post("/seller/stores", STORE_BODY, USER_TOKEN).getStatusCode())
+        // 3. The same user token now carries STORE_READ/STORE_WRITE via the SELLER_OWNER role.
+        String onboarding = "/accounts/" + accountId + "/seller/onboarding";
+        assertThat(get(onboarding, USER_TOKEN).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(post(onboarding + "/store", STORE_BODY, USER_TOKEN).getStatusCode())
                 .isEqualTo(HttpStatus.CREATED);
-        assertThat(get("/seller/stores", USER_TOKEN).getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(get("/seller/products", USER_TOKEN).getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test

@@ -7,8 +7,11 @@ import ua.com.bravi.bravi.access.api.AccessApi;
 import ua.com.bravi.bravi.access.api.AccountView;
 import ua.com.bravi.bravi.seller.account.api.SellerAccountView;
 import ua.com.bravi.bravi.seller.account.api.SellerAccountsApi;
+import ua.com.bravi.bravi.seller.account.domain.SellerOnboardingStatus;
 import ua.com.bravi.bravi.seller.account.persistence.ISellerAccountRepository;
+import ua.com.bravi.bravi.seller.account.persistence.entity.SellerAccountEntity;
 import ua.com.bravi.bravi.seller.account.persistence.mapper.SellerAccountEntityMapper;
+import ua.com.bravi.bravi.shared.exception.NotFoundException;
 
 import java.util.Optional;
 
@@ -27,5 +30,13 @@ public class SellerAccountService implements SellerAccountsApi {
                 .map(entity -> sellerAccountEntityMapper.toView(
                         entity,
                         accessApi.findAccountById(accountId).map(AccountView::publicId).orElse(null)));
+    }
+
+    @Override
+    @Transactional
+    public void updateOnboardingStatus(Long accountId, String onboardingStatus) {
+        SellerAccountEntity entity = sellerAccountRepository.findById(accountId)
+                .orElseThrow(() -> new NotFoundException("Seller account not found"));
+        entity.setOnboardingStatus(SellerOnboardingStatus.valueOf(onboardingStatus));
     }
 }

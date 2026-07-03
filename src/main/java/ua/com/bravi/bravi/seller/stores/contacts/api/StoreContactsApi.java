@@ -10,6 +10,9 @@ public interface StoreContactsApi {
 
     void addContacts(Long storeId, List<StoreContact> contacts);
 
+    /** Replaces all contacts of a store with the given set (onboarding PUT). */
+    List<StoreContactView> replaceContacts(Long storeId, List<StoreContact> contacts);
+
     void updateContact(Long storeId, Long contactId, StoreContact patch);
 
     void deleteContact(Long storeId, Long contactId);

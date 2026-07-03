@@ -8,4 +8,6 @@ import java.util.List;
 public interface IStoreContactEntityRepository extends JpaRepository<StoreContactEntity, Long> {
 
     List<StoreContactEntity> findByStoreId(Long storeId);
+
+    void deleteByStoreId(Long storeId);
 }

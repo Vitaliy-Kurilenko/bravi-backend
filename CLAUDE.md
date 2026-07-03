@@ -42,18 +42,28 @@ ua.com.bravi.bravi
 │                      role/permission codes читаються native-запитами)
 │
 └── seller/        @ApplicationModule — вертикаль продавця (власний домен + REST /seller/**)
-    ├── MeService.java  агрегує /me/accounts (identity + access + seller.account)
+    ├── MeService.java              агрегує /me/accounts (identity + access + seller.account)
+    ├── SellerOnboardingService.java оркеструє онбординг (§5): DRAFT-store + settings + manual-channel,
+    │                  replace-contacts, complete → account ACTIVE / onboarding COMPLETED / store ACTIVE
     ├── controller/    seller-facing контролери (per-method @PreAuthorize hasPermission)
     │                  + InternalSellerRegistrationController (POST /internal/registrations/seller)
     │                  + MeController (GET /me/accounts, authenticated)
+    │                  + SellerOnboardingController (/accounts/{accountId}/seller/onboarding/**)
     │                  (+ dto/in/, dto/out/, mapper/)
+    ├── exception/     онбординг-винятки (EmailNotVerified, OnboardingIncomplete, StoreAlreadyExists)
+    │                  + SellerOnboardingExceptionHandler
     ├── account/       вкладений модуль: seller_accounts; SellerRegistrationApi (реєстрація від
     │                  Auth Service: User+Account+SellerAccount+Membership) + SellerAccountsApi
-    ├── stores/        вкладений модуль: Store, StoreSettings, contacts/ (StoreContact);
-    │                  StoresApi, StoreView, CurrentStoreHolder (резолвить через CurrentAccountHolder)
+    ├── stores/        вкладений модуль: Store (DRAFT/ACTIVE/DISABLED/ARCHIVED), StoreSettings,
+    │                  contacts/ (StoreContact); StoresApi, StoreView, StoreDraft, CurrentStoreHolder
+    ├── channels/      вкладений модуль: sales_channels (MANUAL); SalesChannelsApi.createManualChannel
     ├── catalog/       вкладені модулі: categories/, manufacturers/, products/ (store-scoped)
     └── orders/        вкладений модуль: замовлення продавця (OrdersApi, order_statuses довідник)
 ```
+
+> Створення магазину — **тільки через онбординг** (`SellerOnboardingController`); `/seller/stores`
+> лишає GET/PATCH для day-to-day. Онбординг обмежений одним магазином на seller-акаунт
+> (`unique(stores.seller_account_id)`).
 
 > `buyer/` — порожня заготовка presentation-модуля, слейтед на видалення.
 > Платформенний `catalog` (глобальні категорії/виробники) та `supplier` — заплановані, ще не реалізовані.
@@ -235,9 +245,10 @@ order  filter                          відповідальність
 
 Тришарова: (1) service-to-service гейт — `/internal/**` → `hasAuthority(<internal-role>)` (за
 замовч. `service_registration`, конфігуровано `bravi.security.internal-role`); токен видає Keycloak
-service-account Auth-сервісу; (2) грубий HTTP-гейт `/seller/**` → `hasAuthority('role_seller')`
-(Keycloak realm-роль); (3) тонка per-method перевірка прав — `@PreAuthorize("hasPermission('RESOURCE','ACTION')")`
-на кожному ендпоінті контролера (READ на GET, WRITE на мутаціях).
+service-account Auth-сервісу; (2) грубий HTTP-гейт `/seller/**` та `/accounts/**` (онбординг) →
+`hasAuthority('role_seller')` (Keycloak realm-роль); (3) тонка per-method перевірка прав —
+`@PreAuthorize("hasPermission('RESOURCE','ACTION')")` на кожному ендпоінті контролера (READ на GET,
+WRITE на мутаціях).
 
 - `hasPermission(...)` маршрутизується в `access.security.AccessPermissionEvaluator` через
   `MethodSecurityExpressionHandler`-бін (`SecurityConfig`); evaluator читає набір прав поточного
@@ -248,6 +259,9 @@ service-account Auth-сервісу; (2) грубий HTTP-гейт `/seller/**`
   токен не резолвиться в кінцевого користувача; реєстрація бере `keycloakUserId` з тіла запиту
 - Провіженінг користувача — **тільки явний** (`IdentityApi.provisionUser` через реєстрацію);
   `resolveCurrentUser` — lookup-only, не створює. JIT-провіженінгу немає
+- Онбординг (`/accounts/{accountId}/seller/onboarding/**`): `SellerOnboardingService` звіряє path
+  `{accountId}` (public id) з поточним акаунтом (`resolveCurrentContext`) і кидає 403 при розбіжності
+  чи не-SELLER акаунті — на додачу до per-method `hasPermission('STORE', ...)`
 - Новий ресурс → додай пару `*_READ/*_WRITE` у seed-міграцію і `@PreAuthorize` на методи
 
 ## 11. README

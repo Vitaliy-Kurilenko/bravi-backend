@@ -17,6 +17,7 @@ import ua.com.bravi.bravi.access.persistence.entity.AccountEntity;
 import ua.com.bravi.bravi.access.persistence.entity.MembershipEntity;
 import ua.com.bravi.bravi.access.persistence.mapper.AccountEntityMapper;
 import ua.com.bravi.bravi.shared.component.InvocationContext;
+import ua.com.bravi.bravi.shared.exception.NotFoundException;
 import ua.com.bravi.bravi.shared.util.PublicIdGenerator;
 
 import java.time.Instant;
@@ -155,5 +156,13 @@ public class AccessService implements AccessApi {
         return resolveCurrentContext()
                 .map(ctx -> ctx.permissionCodes().contains(permissionCode))
                 .orElse(false);
+    }
+
+    @Override
+    @Transactional
+    public void activateAccount(Long accountId) {
+        AccountEntity account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new NotFoundException("Account not found"));
+        account.setStatus(AccountStatus.ACTIVE);
     }
 }

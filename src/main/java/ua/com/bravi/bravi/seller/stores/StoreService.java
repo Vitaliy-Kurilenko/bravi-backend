@@ -4,28 +4,36 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ua.com.bravi.bravi.seller.stores.api.StoreDraft;
+import ua.com.bravi.bravi.seller.stores.api.StoreSettings;
 import ua.com.bravi.bravi.seller.stores.api.StoreView;
 import ua.com.bravi.bravi.seller.stores.api.StoresApi;
 import ua.com.bravi.bravi.seller.stores.api.event.StoreCreatedEvent;
 import ua.com.bravi.bravi.seller.stores.domain.Store;
+import ua.com.bravi.bravi.seller.stores.domain.StoreStatus;
 import ua.com.bravi.bravi.seller.stores.persistence.IStoreEntityRepository;
 import ua.com.bravi.bravi.seller.stores.persistence.IStoreSettingsRepository;
 import ua.com.bravi.bravi.seller.stores.persistence.entity.StoreEntity;
 import ua.com.bravi.bravi.seller.stores.persistence.entity.StoreSettingsEntity;
 import ua.com.bravi.bravi.seller.stores.persistence.mapper.StoreEntityMapper;
 import ua.com.bravi.bravi.shared.exception.NotFoundException;
+import ua.com.bravi.bravi.shared.util.PublicIdGenerator;
 
 import java.time.Instant;
+import java.time.ZoneId;
+import java.util.Currency;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class StoreService implements StoresApi {
 
-    private static final String DEFAULT_WEIGHT_UNIT = "g";
-    private static final String DEFAULT_DIMENSION_UNIT = "mm";
-    private static final String DEFAULT_LANGUAGE = "uk";
+    // Onboarding defaults (see spec §5.2).
+    private static final Currency DEFAULT_CURRENCY = Currency.getInstance("EUR");
+    private static final ZoneId DEFAULT_TIMEZONE = ZoneId.of("Europe/Lisbon");
+    private static final String DEFAULT_WEIGHT_UNIT = "KG";
+    private static final String DEFAULT_DIMENSION_UNIT = "CM";
+    private static final String DEFAULT_LANGUAGE = "en";
 
     private final IStoreEntityRepository storeRepository;
     private final IStoreSettingsRepository storeSettingsRepository;
@@ -44,33 +52,92 @@ public class StoreService implements StoresApi {
 
     @Override
     @Transactional
-    public Long createStore(Long sellerAccountId, Store store) {
-        StoreEntity entity = storeEntityMapper.toEntity(store);
-        entity.setPublicId(UUID.randomUUID().toString());
+    public StoreView createDraftStore(Long sellerAccountId, StoreDraft draft) {
+        StoreEntity entity = new StoreEntity();
+        entity.setPublicId(PublicIdGenerator.generate(PublicIdGenerator.STORE_PREFIX));
         entity.setSellerAccountId(sellerAccountId);
+        entity.setName(draft.name());
+        entity.setDescription(draft.description());
+        entity.setLogoUrl(draft.logoUrl());
+        entity.setCurrency(DEFAULT_CURRENCY);
+        entity.setTimezone(DEFAULT_TIMEZONE);
+        entity.setAllowReturn(false);
+        entity.setStatus(StoreStatus.DRAFT);
 
         StoreEntity saved = storeRepository.save(entity);
-        createDefaultSettings(saved);
+        createDefaultSettings(saved.getId());
         eventPublisher.publishEvent(new StoreCreatedEvent(saved.getId(), sellerAccountId, Instant.now()));
-        return saved.getId();
+        return storeEntityMapper.toView(saved);
+    }
+
+    @Override
+    @Transactional
+    public void updateDraftStore(Long storeId, StoreDraft draft) {
+        StoreEntity entity = requireStore(storeId);
+        if (draft.name() != null) {
+            entity.setName(draft.name());
+        }
+        entity.setDescription(draft.description());
+        entity.setLogoUrl(draft.logoUrl());
     }
 
     @Override
     @Transactional
     public void updateStore(Long storeId, Store patch) {
-        StoreEntity entity = storeRepository.findById(storeId)
-                .orElseThrow(() -> new NotFoundException("Store not found"));
-        storeEntityMapper.updateEntity(entity, patch);
+        storeEntityMapper.updateEntity(requireStore(storeId), patch);
     }
 
-    private void createDefaultSettings(StoreEntity store) {
+    @Override
+    @Transactional(readOnly = true)
+    public StoreSettings getSettings(Long storeId) {
+        return storeSettingsRepository.findById(storeId)
+                .map(s -> new StoreSettings(
+                        s.getDefaultCurrency(), s.getDefaultLanguage(),
+                        s.getDefaultWeightUnit(), s.getDefaultDimensionUnit(), s.getTimezone()))
+                .orElseThrow(() -> new NotFoundException("Store settings not found"));
+    }
+
+    @Override
+    @Transactional
+    public void updateSettings(Long storeId, StoreSettings patch) {
+        StoreSettingsEntity settings = storeSettingsRepository.findById(storeId)
+                .orElseThrow(() -> new NotFoundException("Store settings not found"));
+        if (patch.defaultCurrency() != null) {
+            settings.setDefaultCurrency(patch.defaultCurrency());
+        }
+        if (patch.defaultLanguage() != null) {
+            settings.setDefaultLanguage(patch.defaultLanguage());
+        }
+        if (patch.defaultWeightUnit() != null) {
+            settings.setDefaultWeightUnit(patch.defaultWeightUnit());
+        }
+        if (patch.defaultDimensionUnit() != null) {
+            settings.setDefaultDimensionUnit(patch.defaultDimensionUnit());
+        }
+        if (patch.timezone() != null) {
+            settings.setTimezone(patch.timezone());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void activateStore(Long storeId) {
+        requireStore(storeId).setStatus(StoreStatus.ACTIVE);
+    }
+
+    private StoreEntity requireStore(Long storeId) {
+        return storeRepository.findById(storeId)
+                .orElseThrow(() -> new NotFoundException("Store not found"));
+    }
+
+    private void createDefaultSettings(Long storeId) {
         StoreSettingsEntity settings = new StoreSettingsEntity();
-        settings.setStoreId(store.getId());
+        settings.setStoreId(storeId);
         settings.setDefaultWeightUnit(DEFAULT_WEIGHT_UNIT);
         settings.setDefaultDimensionUnit(DEFAULT_DIMENSION_UNIT);
-        settings.setDefaultCurrency(store.getCurrency() == null ? null : store.getCurrency().getCurrencyCode());
+        settings.setDefaultCurrency(DEFAULT_CURRENCY.getCurrencyCode());
         settings.setDefaultLanguage(DEFAULT_LANGUAGE);
-        settings.setTimezone(store.getTimezone() == null ? null : store.getTimezone().getId());
+        settings.setTimezone(DEFAULT_TIMEZONE.getId());
         storeSettingsRepository.save(settings);
     }
 }

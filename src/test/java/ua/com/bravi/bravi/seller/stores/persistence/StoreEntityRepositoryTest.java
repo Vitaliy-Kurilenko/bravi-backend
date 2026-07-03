@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.dao.DataIntegrityViolationException;
 import ua.com.bravi.bravi.AbstractPostgresIT;
 import ua.com.bravi.bravi.seller.stores.domain.StoreStatus;
 import ua.com.bravi.bravi.seller.stores.domain.WorkingHours;
@@ -16,6 +17,7 @@ import java.util.Currency;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -37,7 +39,7 @@ class StoreEntityRepositoryTest extends AbstractPostgresIT {
         Long id = ((Number) accountId).longValue();
         entityManager.createNativeQuery(
                         "INSERT INTO seller_accounts (account_id, onboarding_status, created_at) " +
-                                "VALUES (:aid, 'ACTIVE', now())")
+                                "VALUES (:aid, 'NOT_STARTED', now())")
                 .setParameter("aid", id)
                 .executeUpdate();
         return id;
@@ -88,12 +90,12 @@ class StoreEntityRepositoryTest extends AbstractPostgresIT {
     }
 
     @Test
-    void allowsMultipleStoresPerAccount() {
+    void enforcesSingleStorePerAccount() {
         Long sellerAccountId = persistSellerAccount();
         storeRepository.saveAndFlush(newStore(sellerAccountId));
-        storeRepository.saveAndFlush(newStore(sellerAccountId));
 
-        assertThat(storeRepository.findAll()).hasSize(2);
+        assertThatThrownBy(() -> storeRepository.saveAndFlush(newStore(sellerAccountId)))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test
