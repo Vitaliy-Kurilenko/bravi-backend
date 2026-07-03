@@ -28,6 +28,7 @@ public class InvocationContextFilter extends OncePerRequestFilter {
     private static final String ROLE_PREFIX = "ROLE_";
     private static final String PREFERRED_USERNAME_CLAIM = "preferred_username";
     private static final String EMAIL_CLAIM = "email";
+    private static final String EMAIL_VERIFIED_CLAIM = "email_verified";
     private static final String GIVEN_NAME_CLAIM = "given_name";
     private static final String FAMILY_NAME_CLAIM = "family_name";
 
@@ -54,6 +55,7 @@ public class InvocationContextFilter extends OncePerRequestFilter {
             context.setUserExtId(UUID.fromString(jwt.getSubject()));
             context.setUsername(jwt.getClaimAsString(PREFERRED_USERNAME_CLAIM));
             context.setEmail(jwt.getClaimAsString(EMAIL_CLAIM));
+            context.setTokenEmailVerified(Boolean.TRUE.equals(jwt.getClaimAsBoolean(EMAIL_VERIFIED_CLAIM)));
             context.setRoles(extractRoles(jwtAuth));
             context.setFirstName(resolveFirstName(jwt));
             context.setLastName(jwt.getClaimAsString(FAMILY_NAME_CLAIM));

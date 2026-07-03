@@ -42,8 +42,10 @@ ua.com.bravi.bravi
 │                      role/permission codes читаються native-запитами)
 │
 └── seller/        @ApplicationModule — вертикаль продавця (власний домен + REST /seller/**)
+    ├── MeService.java  агрегує /me/accounts (identity + access + seller.account)
     ├── controller/    seller-facing контролери (per-method @PreAuthorize hasPermission)
     │                  + InternalSellerRegistrationController (POST /internal/registrations/seller)
+    │                  + MeController (GET /me/accounts, authenticated)
     │                  (+ dto/in/, dto/out/, mapper/)
     ├── account/       вкладений модуль: seller_accounts; SellerRegistrationApi (реєстрація від
     │                  Auth Service: User+Account+SellerAccount+Membership) + SellerAccountsApi

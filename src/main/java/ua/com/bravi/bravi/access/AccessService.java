@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ua.com.bravi.bravi.access.api.AccessApi;
 import ua.com.bravi.bravi.access.api.AccessContextView;
+import ua.com.bravi.bravi.access.api.AccountMembershipView;
 import ua.com.bravi.bravi.access.api.AccountView;
 import ua.com.bravi.bravi.access.api.OwnerAccountView;
 import ua.com.bravi.bravi.access.domain.AccountStatus;
@@ -72,6 +73,24 @@ public class AccessService implements AccessApi {
                 .flatMap(Optional::stream)
                 .map(accountEntityMapper::toDomain)
                 .map(accountEntityMapper::toView)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AccountMembershipView> findAccountMembershipsByCurrentUser() {
+        Long userId = invocationContext.getUserId();
+        if (userId == null) {
+            return List.of();
+        }
+        return membershipRepository.findByUserIdAndStatusOrderByIdAsc(userId, MembershipStatus.ACTIVE).stream()
+                .flatMap(membership -> accountRepository.findById(membership.getAccountId()).stream()
+                        .map(account -> new AccountMembershipView(
+                                account.getId(),
+                                account.getPublicId(),
+                                account.getType().name(),
+                                account.getStatus().name(),
+                                membershipRepository.findRoleCodes(userId, account.getId()))))
                 .toList();
     }
 

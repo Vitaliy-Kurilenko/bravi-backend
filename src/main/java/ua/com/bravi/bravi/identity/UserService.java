@@ -14,6 +14,7 @@ import ua.com.bravi.bravi.identity.api.event.UserProvisionedEvent;
 import ua.com.bravi.bravi.identity.domain.User;
 import ua.com.bravi.bravi.identity.persistence.IUserEntityRepository;
 import ua.com.bravi.bravi.identity.persistence.IUserEntityRepository.UserContextProjection;
+import ua.com.bravi.bravi.identity.persistence.entity.UserEntity;
 import ua.com.bravi.bravi.identity.persistence.mapper.UserEntityMapper;
 
 import java.time.Instant;
@@ -77,6 +78,18 @@ public class UserService implements IdentityApi {
                 .map(userEntityMapper::toDomain)
                 .map(this::toView)
                 .orElseThrow(() -> new NotFoundException("User not found"));
+    }
+
+    @Override
+    @Transactional
+    public CurrentUserView syncEmailVerified(Long userId, boolean tokenEmailVerified) {
+        UserEntity entity = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+        if (tokenEmailVerified && !entity.isEmailVerified()) {
+            entity.setEmailVerified(true);
+            userRepository.save(entity);
+        }
+        return toView(userEntityMapper.toDomain(entity));
     }
 
     public CurrentUserView getCurrentUserContext() {

@@ -27,6 +27,7 @@ public class InvocationContext {
     private String lastName;
     private String userStatus;
     private boolean emailVerified;
+    private boolean tokenEmailVerified;
 
     public String toString(){
         return "InvocationContext{" +

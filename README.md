@@ -16,7 +16,9 @@ Backend-застосунок на **Spring Boot 4.x / Java 26**, PostgreSQL, і�
 - **`shared`** — крос-катінг інфраструктура (фільтри, `SecurityConfig`, `InvocationContext`,
   базові винятки, утиліти). OPEN-модуль, доступний усім.
 - **`identity`** — користувачі. Явний провіженінг: користувач створюється лише під час реєстрації
-  (Keycloak `sub` → `ext_id`), не JIT. `GET /me/accounts` резолвить користувача lookup-only.
+  (Keycloak `sub` → `ext_id`), не JIT. `GET /me/accounts` (authenticated) резолвить користувача
+  lookup-only, синхронізує `email_verified` з JWT (false→true) і повертає його акаунти з ролями та
+  onboarding-статусом; невідомий користувач → 404.
 - **`access`** — tenancy + RBAC: акаунти, членства (memberships), ролі та права (permissions).
   Резолвить поточний акаунт користувача та його права.
 - **`seller`** — вертикаль продавця: реєстрація seller-акаунта, магазини, товари/категорії/виробники

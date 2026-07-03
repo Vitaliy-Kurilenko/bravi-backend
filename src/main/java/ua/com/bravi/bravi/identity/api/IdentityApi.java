@@ -19,4 +19,10 @@ public interface IdentityApi {
     Optional<CurrentUserView> findByEmail(String email);
 
     CurrentUserView getById(Long id);
+
+    /**
+     * Upgrade-only email-verification sync: sets {@code email_verified=true} when the token reports
+     * verified and the stored flag is still false. Never downgrades true→false. Returns the fresh view.
+     */
+    CurrentUserView syncEmailVerified(Long userId, boolean tokenEmailVerified);
 }

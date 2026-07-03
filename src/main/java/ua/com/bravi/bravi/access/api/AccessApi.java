@@ -19,6 +19,9 @@ public interface AccessApi {
 
     List<AccountView> findAccountsByCurrentUser();
 
+    /** Accounts the current user belongs to (active memberships), each with the user's role codes. */
+    List<AccountMembershipView> findAccountMembershipsByCurrentUser();
+
     Optional<AccountView> findAccountById(Long id);
 
     /** The account + owner membership of the given type owned by the user, if any (explicit userId; no request context). */
