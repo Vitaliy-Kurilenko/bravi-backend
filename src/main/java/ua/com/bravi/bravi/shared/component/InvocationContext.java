@@ -24,7 +24,6 @@ public class InvocationContext {
     private Long userId;
     private String firstName;
     private String lastName;
-    private String userType;
     private String userStatus;
 
     public String toString(){
@@ -38,7 +37,6 @@ public class InvocationContext {
             ", userId=" + userId +
             ", firstName='" + firstName + '\'' +
             ", lastName='" + lastName + '\'' +
-            ", userType=" + userType +
             ", userStatus=" + userStatus +
             '}';
     }

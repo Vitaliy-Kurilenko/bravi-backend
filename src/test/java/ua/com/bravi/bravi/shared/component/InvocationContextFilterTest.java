@@ -43,7 +43,6 @@ class InvocationContextFilterTest {
                 .claim("email", "john@example.com")
                 .claim("given_name", "John")
                 .claim("family_name", "Doe")
-                .claim("user_type", "seller")
                 .issuedAt(Instant.now())
                 .expiresAt(Instant.now().plusSeconds(60))
                 .build();
@@ -72,17 +71,15 @@ class InvocationContextFilterTest {
         assertThat(context.getDevice()).isSameAs(device);
         assertThat(context.getFirstName()).isEqualTo("John");
         assertThat(context.getLastName()).isEqualTo("Doe");
-        assertThat(context.getUserType()).isEqualTo("SELLER");
         verify(chain).doFilter(request, response);
     }
 
     @Test
-    void firstNameFallsBackToUsernameAndKeepsUnknownUserType() throws Exception {
+    void firstNameFallsBackToUsername() throws Exception {
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "none")
                 .subject(SUBJECT.toString())
                 .claim("preferred_username", "john.doe")
-                .claim("user_type", "manager")
                 .build();
         SecurityContextHolder.getContext().setAuthentication(
                 new JwtAuthenticationToken(jwt, List.of()));
@@ -97,7 +94,6 @@ class InvocationContextFilterTest {
 
         assertThat(context.getFirstName()).isEqualTo("john.doe");
         assertThat(context.getLastName()).isNull();
-        assertThat(context.getUserType()).isEqualTo("MANAGER");
     }
 
     @Test

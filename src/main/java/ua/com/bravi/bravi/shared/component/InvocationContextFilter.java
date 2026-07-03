@@ -17,7 +17,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import ua.com.bravi.bravi.shared.common.HttpConstants;
 
 import java.io.IOException;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -31,7 +30,6 @@ public class InvocationContextFilter extends OncePerRequestFilter {
     private static final String EMAIL_CLAIM = "email";
     private static final String GIVEN_NAME_CLAIM = "given_name";
     private static final String FAMILY_NAME_CLAIM = "family_name";
-    private static final String USER_TYPE_CLAIM = "user_type";
 
     private final InvocationContext context;
     private final UserAgentParser userAgentParser;
@@ -59,7 +57,6 @@ public class InvocationContextFilter extends OncePerRequestFilter {
             context.setRoles(extractRoles(jwtAuth));
             context.setFirstName(resolveFirstName(jwt));
             context.setLastName(jwt.getClaimAsString(FAMILY_NAME_CLAIM));
-            context.setUserType(parseUserType(jwt.getClaimAsString(USER_TYPE_CLAIM)));
         }
 
         context.setDevice(userAgentParser.parse(request.getHeader(HttpConstants.USER_AGENT_HEADER)));
@@ -72,13 +69,6 @@ public class InvocationContextFilter extends OncePerRequestFilter {
         return StringUtils.hasText(givenName)
                 ? givenName
                 : jwt.getClaimAsString(PREFERRED_USERNAME_CLAIM);
-    }
-
-    private String parseUserType(String rawUserType) {
-        if (!StringUtils.hasText(rawUserType)) {
-            return null;
-        }
-        return rawUserType.trim().toUpperCase(Locale.ROOT);
     }
 
     private Set<String> extractRoles(JwtAuthenticationToken auth) {

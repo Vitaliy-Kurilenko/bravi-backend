@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 import ua.com.bravi.bravi.identity.domain.User;
 import ua.com.bravi.bravi.identity.domain.UserStatus;
-import ua.com.bravi.bravi.identity.domain.UserType;
 import ua.com.bravi.bravi.identity.persistence.entity.UserEntity;
 
 import java.util.UUID;
@@ -20,7 +19,6 @@ class UserEntityMapperTest {
         UUID extId = UUID.randomUUID();
         UserEntity entity = new UserEntity();
         entity.setExtId(extId);
-        entity.setType(UserType.BUYER);
         entity.setFirstName("Jane");
         entity.setLastName("Roe");
         entity.setEmail("jane@example.com");
@@ -29,7 +27,6 @@ class UserEntityMapperTest {
         User user = mapper.toDomain(entity);
 
         assertThat(user.extId()).isEqualTo(extId);
-        assertThat(user.type()).isEqualTo(UserType.BUYER);
         assertThat(user.firstName()).isEqualTo("Jane");
         assertThat(user.lastName()).isEqualTo("Roe");
         assertThat(user.email()).isEqualTo("jane@example.com");
@@ -38,7 +35,7 @@ class UserEntityMapperTest {
 
     @Test
     void toEntityIgnoresIdAndTimestamps() {
-        User user = new User(99L, UUID.randomUUID(), UserType.SELLER,
+        User user = new User(99L, UUID.randomUUID(),
                 "John", "Doe", "john@example.com", UserStatus.ACTIVE);
 
         UserEntity entity = mapper.toEntity(user);
@@ -47,7 +44,6 @@ class UserEntityMapperTest {
         assertThat(entity.getCreatedAt()).isNull();
         assertThat(entity.getUpdatedAt()).isNull();
         assertThat(entity.getExtId()).isEqualTo(user.extId());
-        assertThat(entity.getType()).isEqualTo(UserType.SELLER);
         assertThat(entity.getStatus()).isEqualTo(UserStatus.ACTIVE);
     }
 }

@@ -15,7 +15,6 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.web.client.RestTemplate;
 import ua.com.bravi.bravi.identity.domain.UserStatus;
-import ua.com.bravi.bravi.identity.domain.UserType;
 import ua.com.bravi.bravi.identity.persistence.IUserEntityRepository;
 import ua.com.bravi.bravi.identity.persistence.entity.UserEntity;
 import ua.com.bravi.bravi.shared.common.HttpConstants;
@@ -42,7 +41,6 @@ class UserProvisioningTest extends AbstractPostgresIT {
                     .claim("email", "jit@example.com")
                     .claim("given_name", "Jit")
                     .claim("family_name", "User")
-                    .claim("user_type", "SELLER")
                     .issuedAt(Instant.now())
                     .expiresAt(Instant.now().plusSeconds(300))
                     .build();
@@ -83,10 +81,8 @@ class UserProvisioningTest extends AbstractPostgresIT {
 
         UserEntity created = repository.findByExtId(EXT_ID).orElseThrow();
         assertThat(created.getStatus()).isEqualTo(UserStatus.ACTIVE);
-        assertThat(created.getType()).isEqualTo(UserType.SELLER);
         assertThat(created.getFirstName()).isEqualTo("Jit");
         assertThat(first.getBody())
-                .contains("\"type\":\"SELLER\"")
                 .contains("\"first_name\":\"Jit\"")
                 .contains("\"status\":\"ACTIVE\"");
 

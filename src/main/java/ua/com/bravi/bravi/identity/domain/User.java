@@ -5,7 +5,6 @@ import java.util.UUID;
 public record User(
         Long id,
         UUID extId,
-        UserType type,
         String firstName,
         String lastName,
         String email,
@@ -15,8 +14,7 @@ public record User(
     public static User provisionNew(UUID extId,
                                     String firstName,
                                     String lastName,
-                                    String email,
-                                    UserType type) {
-        return new User(null, extId, type, firstName, lastName, email, UserStatus.ACTIVE);
+                                    String email) {
+        return new User(null, extId, firstName, lastName, email, UserStatus.ACTIVE);
     }
 }

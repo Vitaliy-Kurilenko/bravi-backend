@@ -7,7 +7,6 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.dao.DataIntegrityViolationException;
 import ua.com.bravi.bravi.AbstractPostgresIT;
 import ua.com.bravi.bravi.identity.domain.UserStatus;
-import ua.com.bravi.bravi.identity.domain.UserType;
 import ua.com.bravi.bravi.identity.persistence.entity.UserEntity;
 
 import java.util.UUID;
@@ -25,7 +24,6 @@ class UserEntityRepositoryTest extends AbstractPostgresIT {
     private static UserEntity newUser(UUID extId) {
         UserEntity user = new UserEntity();
         user.setExtId(extId);
-        user.setType(UserType.SELLER);
         user.setFirstName("John");
         user.setEmail("john@example.com");
         user.setStatus(UserStatus.PENDING_ACTIVATION);
@@ -38,7 +36,6 @@ class UserEntityRepositoryTest extends AbstractPostgresIT {
 
         UserEntity loaded = repository.findById(saved.getId()).orElseThrow();
         assertThat(loaded.getFirstName()).isEqualTo("John");
-        assertThat(loaded.getType()).isEqualTo(UserType.SELLER);
         assertThat(loaded.getStatus()).isEqualTo(UserStatus.PENDING_ACTIVATION);
     }
 

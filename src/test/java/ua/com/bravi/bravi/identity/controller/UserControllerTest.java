@@ -21,9 +21,9 @@ class UserControllerTest {
 
     @Test
     void getUserContextMapsServiceResultToResponse() {
-        CurrentUserView view = new CurrentUserView(5L, UUID.randomUUID(), "SELLER", "ACTIVE",
+        CurrentUserView view = new CurrentUserView(5L, UUID.randomUUID(), "ACTIVE",
                 "John", "Doe", "john@example.com");
-        UserResponse response = new UserResponse("SELLER", "John", "Doe", "john@example.com", "ACTIVE");
+        UserResponse response = new UserResponse("John", "Doe", "john@example.com", "ACTIVE");
         when(userService.getCurrentUserContext()).thenReturn(view);
         when(userDtoMapper.toUserResponse(view)).thenReturn(response);
 
