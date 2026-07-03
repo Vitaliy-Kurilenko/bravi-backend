@@ -32,8 +32,8 @@ import ua.com.bravi.bravi.shared.common.SortOrder;
 import ua.com.bravi.bravi.shared.exception.NotFoundException;
 import ua.com.bravi.bravi.stores.delivery.api.DeliveryApi;
 import ua.com.bravi.bravi.stores.payments.api.PaymentsApi;
-import ua.com.bravi.bravi.users.api.CurrentUserView;
-import ua.com.bravi.bravi.users.api.UsersApi;
+import ua.com.bravi.bravi.identity.api.CurrentUserView;
+import ua.com.bravi.bravi.identity.api.IdentityApi;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -50,7 +50,7 @@ public class OrderService implements OrdersApi {
     private final IOrderEntityRepository orderRepository;
     private final IOrderStatusRepository orderStatusRepository;
     private final OrderEntityMapper orderEntityMapper;
-    private final UsersApi usersApi;
+    private final IdentityApi usersApi;
     private final ProductsApi productsApi;
     private final PaymentsApi paymentsApi;
     private final DeliveryApi deliveryApi;

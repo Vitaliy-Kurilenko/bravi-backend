@@ -14,10 +14,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.web.client.RestTemplate;
-import ua.com.bravi.bravi.users.domain.UserStatus;
-import ua.com.bravi.bravi.users.domain.UserType;
-import ua.com.bravi.bravi.users.persistence.IUserEntityRepository;
-import ua.com.bravi.bravi.users.persistence.entity.UserEntity;
+import ua.com.bravi.bravi.identity.domain.UserStatus;
+import ua.com.bravi.bravi.identity.domain.UserType;
+import ua.com.bravi.bravi.identity.persistence.IUserEntityRepository;
+import ua.com.bravi.bravi.identity.persistence.entity.UserEntity;
 import ua.com.bravi.bravi.shared.common.HttpConstants;
 
 import java.time.Instant;
