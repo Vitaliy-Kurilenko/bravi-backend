@@ -21,6 +21,7 @@ import ua.com.bravi.bravi.shared.component.ProblemDetailAccessDeniedHandler;
 import ua.com.bravi.bravi.shared.component.ProblemDetailAuthenticationEntryPoint;
 import ua.com.bravi.bravi.shared.config.props.SecurityProperties;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,8 @@ import java.util.Map;
 public class SecurityConfig {
 
     private static final String REALM_ACCESS_CLAIM = "realm_access";
+    private static final String RESOURCE_ACCESS_CLAIM = "resource_access";
+    private static final String BACKEND_SERVICE_CLAIM = "backend-service";
     private static final String ROLES_CLAIM = "roles";
     private static final String ROLE_PREFIX = "";
 
@@ -81,14 +84,23 @@ public class SecurityConfig {
     private JwtAuthenticationConverter keycloakJwtConverter() {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            Map<String, Object> realmAccess = jwt.getClaim(REALM_ACCESS_CLAIM);
-            if (realmAccess == null) {
-                return List.of();
+            Collection<GrantedAuthority> authorities = new ArrayList<>();
+
+            Map<String, Object> resourceAccess = jwt.getClaim(RESOURCE_ACCESS_CLAIM);
+            if (resourceAccess == null) {
+                return authorities;
             }
-            Object rolesClaim = realmAccess.get(ROLES_CLAIM);
+
+            Object backendServiceAccess = resourceAccess.get(BACKEND_SERVICE_CLAIM);
+            if (!(backendServiceAccess instanceof Map<?,?> backendServiceMap)) {
+                return authorities;
+            }
+
+            Object rolesClaim = backendServiceMap.get(ROLES_CLAIM);
             if (!(rolesClaim instanceof Collection<?> rolesCollection)) {
                 return List.of();
             }
+
             return rolesCollection.stream()
                     .map(String::valueOf)
                     .map(role -> (GrantedAuthority) new SimpleGrantedAuthority(ROLE_PREFIX + role))

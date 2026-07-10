@@ -55,7 +55,7 @@ class SellerAuthorizationTest extends AbstractPostgresIT {
             Jwt serviceToken = Jwt.withTokenValue(SERVICE_TOKEN)
                     .header("alg", "none")
                     .subject(UUID.fromString("99999999-9999-9999-9999-999999999999").toString())
-                    .claim("realm_access", Map.of("roles", List.of("service_registration")))
+                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("registration.write"))))
                     .issuedAt(Instant.now())
                     .expiresAt(Instant.now().plusSeconds(300))
                     .build();
@@ -66,7 +66,7 @@ class SellerAuthorizationTest extends AbstractPostgresIT {
                     .claim("email", "owner@example.com")
                     .claim("given_name", "Olga")
                     .claim("family_name", "Owner")
-                    .claim("realm_access", Map.of("roles", List.of("role_seller")))
+                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("role_seller"))))
                     .issuedAt(Instant.now())
                     .expiresAt(Instant.now().plusSeconds(300))
                     .build();

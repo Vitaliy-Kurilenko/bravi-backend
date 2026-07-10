@@ -13,7 +13,7 @@ public record SecurityProperties(String internalRole) {
 
     public SecurityProperties {
         if (internalRole == null || internalRole.isBlank()) {
-            internalRole = "service_registration";
+            internalRole = "registration.write";
         }
     }
 }

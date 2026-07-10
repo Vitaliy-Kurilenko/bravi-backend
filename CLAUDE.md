@@ -42,12 +42,12 @@ ua.com.bravi.bravi
 │                      role/permission codes читаються native-запитами)
 │
 └── seller/        @ApplicationModule — вертикаль продавця (власний домен + REST /seller/**)
-    ├── MeService.java              агрегує /me/accounts (identity + access + seller.account)
+    ├── AccountService.java         агрегує /accounts (identity + access + seller.account)
     ├── SellerOnboardingService.java оркеструє онбординг (§5): DRAFT-store + settings + manual-channel,
     │                  replace-contacts, complete → account ACTIVE / onboarding COMPLETED / store ACTIVE
     ├── controller/    seller-facing контролери (per-method @PreAuthorize hasPermission)
     │                  + InternalSellerRegistrationController (POST /internal/registrations/seller)
-    │                  + MeController (GET /me/accounts, authenticated)
+    │                  + AccountController (GET /accounts, authenticated)
     │                  + SellerOnboardingController (/accounts/{accountId}/seller/onboarding/**)
     │                  (+ dto/in/, dto/out/, mapper/)
     ├── exception/     онбординг-винятки (EmailNotVerified, OnboardingIncomplete, StoreAlreadyExists)
