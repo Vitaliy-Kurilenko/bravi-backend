@@ -53,17 +53,17 @@ class AccountsTest extends AbstractPostgresIT {
         JwtDecoder jwtDecoder() {
             Jwt service = Jwt.withTokenValue(SERVICE_TOKEN).header("alg", "none")
                     .subject(UUID.fromString("99999999-9999-9999-9999-999999999999").toString())
-                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("registration.write"))))
+                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("auth_service"))))
                     .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(300)).build();
             Jwt user = Jwt.withTokenValue(USER_TOKEN).header("alg", "none")
                     .subject(SELLER_EXT_ID.toString())
                     .claim("email", "me@example.com").claim("email_verified", true)
                     .claim("given_name", "Mia").claim("family_name", "Owner")
-                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("role_seller"))))
+                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("bravi_user"))))
                     .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(300)).build();
             Jwt unknown = Jwt.withTokenValue(UNKNOWN_TOKEN).header("alg", "none")
                     .subject(UUID.fromString("88888888-8888-8888-8888-888888888888").toString())
-                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("role_seller"))))
+                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("bravi_user"))))
                     .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(300)).build();
             return token -> switch (token) {
                 case SERVICE_TOKEN -> service;

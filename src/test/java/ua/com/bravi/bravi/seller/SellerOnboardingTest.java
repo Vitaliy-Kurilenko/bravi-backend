@@ -54,17 +54,17 @@ class SellerOnboardingTest extends AbstractPostgresIT {
         JwtDecoder jwtDecoder() {
             Jwt service = Jwt.withTokenValue(SERVICE_TOKEN).header("alg", "none")
                     .subject(UUID.fromString("99999999-9999-9999-9999-999999999999").toString())
-                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("registration.write"))))
+                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("auth_service"))))
                     .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(300)).build();
             Jwt verified = Jwt.withTokenValue(VERIFIED_TOKEN).header("alg", "none")
                     .subject(SELLER_EXT_ID.toString())
                     .claim("email", "onb@example.com").claim("email_verified", true)
-                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("role_seller"))))
+                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("bravi_user"))))
                     .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(300)).build();
             Jwt unverified = Jwt.withTokenValue(UNVERIFIED_TOKEN).header("alg", "none")
                     .subject(SELLER_EXT_ID.toString())
                     .claim("email", "onb@example.com").claim("email_verified", false)
-                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("role_seller"))))
+                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("bravi_user"))))
                     .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(300)).build();
             return token -> switch (token) {
                 case SERVICE_TOKEN -> service;

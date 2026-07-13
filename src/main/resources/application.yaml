@@ -55,12 +55,12 @@ logging:
 keycloack:
   base-url: http://localhost:8080
   realm: bravi
-  client-id: user-token-proxy
+  client-id: backend-service
 
 bravi:
   security:
-    # Keycloak realm role the Auth Service's service-account token must carry to reach /internal/**
-    internal-role: ${INTERNAL_API_ROLE:registration.write}
+    internal-role: ${INTERNAL_API_ROLE:auth_service}
+    user-role: ${USER_API_ROLE:bravi_user}
 
 catalog:
   products:

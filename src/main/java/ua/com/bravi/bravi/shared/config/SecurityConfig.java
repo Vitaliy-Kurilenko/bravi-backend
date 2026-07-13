@@ -14,6 +14,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import ua.com.bravi.bravi.shared.common.HttpConstants;
@@ -21,7 +22,6 @@ import ua.com.bravi.bravi.shared.component.ProblemDetailAccessDeniedHandler;
 import ua.com.bravi.bravi.shared.component.ProblemDetailAuthenticationEntryPoint;
 import ua.com.bravi.bravi.shared.config.props.SecurityProperties;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +33,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private static final String REALM_ACCESS_CLAIM = "realm_access";
     private static final String RESOURCE_ACCESS_CLAIM = "resource_access";
     private static final String BACKEND_SERVICE_CLAIM = "backend-service";
     private static final String ROLES_CLAIM = "roles";
@@ -52,10 +51,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(permitted).permitAll()
                         .requestMatchers(HttpConstants.INTERNAL_PATHS).hasAuthority(securityProperties.internalRole())
-                        .requestMatchers("/seller/**").hasAuthority("role_seller")
-                        .requestMatchers("/accounts/**").hasAuthority("role_seller")
-                        .requestMatchers("/buyer/**").hasAuthority("role_buyer")
-                        .anyRequest().authenticated()
+                        .anyRequest().hasAuthority(securityProperties.userRole())
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(keycloakJwtConverter()))
@@ -83,29 +79,25 @@ public class SecurityConfig {
 
     private JwtAuthenticationConverter keycloakJwtConverter() {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            Collection<GrantedAuthority> authorities = new ArrayList<>();
-
-            Map<String, Object> resourceAccess = jwt.getClaim(RESOURCE_ACCESS_CLAIM);
-            if (resourceAccess == null) {
-                return authorities;
-            }
-
-            Object backendServiceAccess = resourceAccess.get(BACKEND_SERVICE_CLAIM);
-            if (!(backendServiceAccess instanceof Map<?,?> backendServiceMap)) {
-                return authorities;
-            }
-
-            Object rolesClaim = backendServiceMap.get(ROLES_CLAIM);
-            if (!(rolesClaim instanceof Collection<?> rolesCollection)) {
-                return List.of();
-            }
-
-            return rolesCollection.stream()
-                    .map(String::valueOf)
-                    .map(role -> (GrantedAuthority) new SimpleGrantedAuthority(ROLE_PREFIX + role))
-                    .toList();
-        });
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> backendServiceRoles(jwt).stream()
+                .map(role -> (GrantedAuthority) new SimpleGrantedAuthority(ROLE_PREFIX + role))
+                .toList());
         return converter;
+    }
+
+    /**
+     * All authorities come from the {@code backend-service} client roles: {@code auth_service}
+     * for the Auth Service's service account, {@code bravi_user} (the "may call backend" pass) for
+     * human users. Both token kinds address this backend, so both carry its client roles — Keycloak's
+     * default {@code roles} scope surfaces them in {@code resource_access.backend-service.roles}.
+     */
+    private Collection<String> backendServiceRoles(Jwt jwt) {
+        Object resourceAccess = jwt.getClaim(RESOURCE_ACCESS_CLAIM);
+        if (resourceAccess instanceof Map<?, ?> resourceAccessMap
+                && resourceAccessMap.get(BACKEND_SERVICE_CLAIM) instanceof Map<?, ?> backendServiceMap
+                && backendServiceMap.get(ROLES_CLAIM) instanceof Collection<?> roles) {
+            return roles.stream().map(String::valueOf).toList();
+        }
+        return List.of();
     }
 }

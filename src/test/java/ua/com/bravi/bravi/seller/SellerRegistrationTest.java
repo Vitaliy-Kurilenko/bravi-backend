@@ -32,7 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Verifies the internal seller-registration endpoint: a Keycloak service-account token
- * ({@code registration.write}) creates User + SELLER Account (PENDING_ONBOARDING) +
+ * ({@code auth_service}) creates User + SELLER Account (PENDING_ONBOARDING) +
  * SellerAccount (NOT_STARTED) + owner Membership, and repeat calls are idempotent.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -51,7 +51,7 @@ class SellerRegistrationTest extends AbstractPostgresIT {
             Jwt serviceToken = Jwt.withTokenValue("service")
                     .header("alg", "none")
                     .subject(UUID.fromString("99999999-9999-9999-9999-999999999999").toString())
-                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("registration.write"))))
+                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("auth_service"))))
                     .issuedAt(Instant.now())
                     .expiresAt(Instant.now().plusSeconds(300))
                     .build();

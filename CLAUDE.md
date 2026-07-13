@@ -244,12 +244,24 @@ order  filter                          відповідальність
 ## 10a. Авторизація (RBAC)
 
 Тришарова: (1) service-to-service гейт — `/internal/**` → `hasAuthority(<internal-role>)` (за
-замовч. `service_registration`, конфігуровано `bravi.security.internal-role`); токен видає Keycloak
-service-account Auth-сервісу; (2) грубий HTTP-гейт `/seller/**` та `/accounts/**` (онбординг) →
-`hasAuthority('role_seller')` (Keycloak realm-роль); (3) тонка per-method перевірка прав —
-`@PreAuthorize("hasPermission('RESOURCE','ACTION')")` на кожному ендпоінті контролера (READ на GET,
-WRITE на мутаціях).
+замовч. `auth_service`, конфігуровано `bravi.security.internal-role`); це Keycloak **client**-роль
+на клієнті `backend-service`, токен видає service-account Auth-сервісу (client credentials); (2) грубий
+HTTP-гейт для решти запитів — `anyRequest().hasAuthority(<user-role>)` (за замовч. `bravi_user`,
+конфігуровано `bravi.security.user-role`); це єдина Keycloak **client**-роль на `backend-service`,
+спільна для всіх людей-користувачів — вона лише дозволяє стукати в backend і **не несе типу**
+(seller/buyer). Розділення на вертикалі та права на конкретний ресурс — виключно рівень (3); (3) тонка
+per-method перевірка прав — `@PreAuthorize("hasPermission('RESOURCE','ACTION')")` на кожному ендпоінті
+контролера (READ на GET, WRITE на мутаціях).
 
+- **Keycloak не розрізняє seller/buyer** — на його рівні є лише дві client-ролі `backend-service`:
+  `bravi_user` (default, автоматично кожній людині) та `auth_service` (service-account
+  Auth-сервісу). Тому кожен людський ендпоінт **обов'язково** мусить мати `@PreAuthorize hasPermission`:
+  рівень (2) — це fail-closed «мережа» (немає `bravi_user` → 403), а бізнес-авторизація повністю в РМ.
+  Забута анотація = будь-який `bravi_user` дістанеться методу
+- **Єдине джерело ролей** — `SecurityConfig.keycloakJwtConverter()` читає лише
+  `resource_access.backend-service.roles`; і людина, і сервіс звертаються до `backend-service`, тож
+  обидва носять його client-ролі (дефолтний Keycloak-scope `roles` кладе їх у токен будь-якого клієнта).
+  Розрізняє їх назва ролі; обидві ролі-пропуски конфігуровані через `SecurityProperties`
 - `hasPermission(...)` маршрутизується в `access.security.AccessPermissionEvaluator` через
   `MethodSecurityExpressionHandler`-бін (`SecurityConfig`); evaluator читає набір прав поточного
   акаунта з `CurrentAccountHolder` (коди виду `STORE_WRITE`, `PRODUCT_READ`, `ORDER_WRITE`)

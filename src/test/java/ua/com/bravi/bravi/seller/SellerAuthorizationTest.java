@@ -32,7 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * End-to-end DB-backed RBAC on the seller vertical after the explicit-registration switch:
- * a role_seller user can only write once the Auth Service has registered them (service token
+ * a bravi_user can only write once the Auth Service has registered them (service token
  * → {@code /internal/registrations/seller}), which creates the account + SELLER_OWNER membership.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -55,7 +55,7 @@ class SellerAuthorizationTest extends AbstractPostgresIT {
             Jwt serviceToken = Jwt.withTokenValue(SERVICE_TOKEN)
                     .header("alg", "none")
                     .subject(UUID.fromString("99999999-9999-9999-9999-999999999999").toString())
-                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("registration.write"))))
+                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("auth_service"))))
                     .issuedAt(Instant.now())
                     .expiresAt(Instant.now().plusSeconds(300))
                     .build();
@@ -66,7 +66,7 @@ class SellerAuthorizationTest extends AbstractPostgresIT {
                     .claim("email", "owner@example.com")
                     .claim("given_name", "Olga")
                     .claim("family_name", "Owner")
-                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("role_seller"))))
+                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("bravi_user"))))
                     .issuedAt(Instant.now())
                     .expiresAt(Instant.now().plusSeconds(300))
                     .build();
@@ -89,7 +89,7 @@ class SellerAuthorizationTest extends AbstractPostgresIT {
 
     @Test
     void writesAreDeniedUntilTheSellerIsRegistered() {
-        // 1. A role_seller token with no registered business context has no STORE permission → 403.
+        // 1. A bravi_user token with no registered business context has no STORE permission → 403.
         assertThat(post("/accounts/acc_missing/seller/onboarding/store", STORE_BODY, USER_TOKEN).getStatusCode())
                 .isEqualTo(HttpStatus.FORBIDDEN);
 
