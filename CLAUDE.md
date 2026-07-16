@@ -41,6 +41,18 @@ ua.com.bravi.bravi
 │   └── persistence/   accounts, memberships (+ roles/permissions/join-таблиці;
 │                      role/permission codes читаються native-запитами)
 │
+├── dictionaries/  @ApplicationModule — системні довідники (CURRENCY, LANGUAGE, WEIGHT_UNIT,
+│   │              DIMENSION_UNIT, TIMEZONE, COUNTRY) у парі таблиць dictionaries + dictionary_items
+│   │              (JSONB meta для тип-специфічних атрибутів); наповнення — Flyway seed,
+│   │              керування — майбутня адмін-панель. Read-only API; без domain/ (немає інваріантів)
+│   ├── api/           @NamedInterface("api"): DictionariesApi (listDictionaries, listItems,
+│   │                  isActiveItem — для валідації кодів іншими модулями), *View records
+│   ├── DictionaryService.java  implements DictionariesApi
+│   ├── controller/    DictionaryController: GET /dictionaries, GET /dictionaries/{code}
+│   │                  (автентифіковані, без hasPermission — прецедент AccountController)
+│   ├── exception/     DictionaryNotFoundException + DictionariesExceptionHandler (404)
+│   └── persistence/   dictionaries, dictionary_items (+ mapper/)
+│
 └── seller/        @ApplicationModule — вертикаль продавця (власний домен + REST /seller/**)
     ├── AccountService.java         агрегує /accounts (identity + access + seller.account)
     ├── SellerOnboardingService.java оркеструє онбординг (§5): DRAFT-store + settings + manual-channel,
