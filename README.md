@@ -92,6 +92,15 @@ export DB_PASSWORD=secret
 
 Flyway-міграції застосовуються автоматично при старті.
 
+### Зовнішній вхід через API-gateway
+
+У проді/локальному стеку клієнти не ходять на `8083` напряму, а через **nginx API-gateway**
+(`http://localhost/api/...`), який фронтить `bravi` та `auth-service` за одним портом. Gateway живе
+в docker-compose auth-репо (`../auth/docker-compose.yml`, сервіс `gateway`); `bravi` при цьому
+піднімається окремо з IDE на `8083`, і gateway дістає його через `host.docker.internal:8083`.
+Маршрутизація за шляхом: `/api/auth/**`, `/api/registration/**` → auth-service; решта `/api/**` →
+bravi. Деталі — у README auth-репо.
+
 ## Тести
 
 ```bash
