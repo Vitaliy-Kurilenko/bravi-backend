@@ -1,6 +1,7 @@
 package ua.com.bravi.bravi.seller.controller.dto.out;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import ua.com.bravi.bravi.seller.stores.domain.WorkingHours;
 
 import java.time.ZoneId;
@@ -25,6 +26,7 @@ public record StoreResponse(
         Currency currency,
         @JsonProperty("allow_return")
         Boolean allowReturn,
+        @Schema(allowableValues = {"DRAFT", "ACTIVE", "DISABLED", "ARCHIVED"})
         String status
 ) {
 }
