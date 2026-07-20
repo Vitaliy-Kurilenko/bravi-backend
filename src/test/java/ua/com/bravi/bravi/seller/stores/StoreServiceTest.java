@@ -6,6 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import ua.com.bravi.bravi.dictionaries.api.DictionariesApi;
 import ua.com.bravi.bravi.seller.stores.api.LogoUpload;
 import ua.com.bravi.bravi.shared.exception.NotFoundException;
 import ua.com.bravi.bravi.seller.stores.api.StoreDraft;
@@ -29,6 +30,7 @@ import ua.com.bravi.bravi.shared.media.exception.MediaObjectNotFoundException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Currency;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -51,13 +53,23 @@ class StoreServiceTest {
     private final StoreEntityMapper storeEntityMapper = mock(StoreEntityMapper.class);
     private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
     private final MediaStorage mediaStorage = mock(MediaStorage.class);
+    private final DictionariesApi dictionariesApi = mock(DictionariesApi.class);
 
     private StoreService service;
 
     @BeforeEach
     void setUp() {
         service = new StoreService(storeRepository, storeSettingsRepository, storeEntityMapper,
-                eventPublisher, mediaStorage);
+                eventPublisher, mediaStorage, dictionariesApi);
+    }
+
+    /** Views join the store row with its settings row, so both must be stubbed. */
+    private StoreView stubView(StoreEntity entity) {
+        StoreSettingsEntity settings = new StoreSettingsEntity();
+        StoreView view = mock(StoreView.class);
+        when(storeSettingsRepository.findById(STORE_ID)).thenReturn(Optional.of(settings));
+        when(storeEntityMapper.toView(entity, settings)).thenReturn(view);
+        return view;
     }
 
     private static Store newStore() {
@@ -92,10 +104,12 @@ class StoreServiceTest {
         StoreEntity saved = new StoreEntity();
         saved.setId(STORE_ID);
         saved.setSellerAccountId(ACCOUNT_ID);
+        StoreSettingsEntity savedSettings = new StoreSettingsEntity();
         StoreView view = mock(StoreView.class);
 
         when(storeRepository.save(any(StoreEntity.class))).thenReturn(saved);
-        when(storeEntityMapper.toView(saved)).thenReturn(view);
+        when(storeSettingsRepository.save(any(StoreSettingsEntity.class))).thenReturn(savedSettings);
+        when(storeEntityMapper.toView(saved, savedSettings)).thenReturn(view);
 
         StoreView result = service.createDraftStore(ACCOUNT_ID, draft);
 
@@ -109,10 +123,17 @@ class StoreServiceTest {
         assertThat(persisted.getCountry()).isEqualTo("UA");
         assertThat(persisted.getPublicId()).isNotBlank();
         assertThat(persisted.getStatus()).isEqualTo(StoreStatus.DRAFT);
-        assertThat(persisted.getCurrency()).isEqualTo(Currency.getInstance("EUR"));
-        assertThat(persisted.getTimezone()).isEqualTo(ZoneId.of("Europe/Lisbon"));
 
-        verify(storeSettingsRepository).save(any(StoreSettingsEntity.class));
+        // Currency/timezone defaults now land on the settings row, not the store row.
+        ArgumentCaptor<StoreSettingsEntity> settingsCaptor = ArgumentCaptor.forClass(StoreSettingsEntity.class);
+        verify(storeSettingsRepository).save(settingsCaptor.capture());
+        StoreSettingsEntity persistedSettings = settingsCaptor.getValue();
+        assertThat(persistedSettings.getDefaultCurrency()).isEqualTo(Currency.getInstance("EUR"));
+        assertThat(persistedSettings.getTimezone()).isEqualTo(ZoneId.of("Europe/Lisbon"));
+        assertThat(persistedSettings.getDefaultLanguage()).isEqualTo(Locale.ENGLISH);
+        assertThat(persistedSettings.getDefaultWeightUnit()).isEqualTo("KG");
+        assertThat(persistedSettings.getDefaultDimensionUnit()).isEqualTo("CM");
+
         verify(eventPublisher).publishEvent(any(StoreCreatedEvent.class));
     }
 
@@ -126,11 +147,14 @@ class StoreServiceTest {
         StoreEntity entity = new StoreEntity();
         entity.setName("Old");
         entity.setStatus(StoreStatus.ACTIVE);
+        StoreSettingsEntity settings = new StoreSettingsEntity();
         when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(entity));
+        when(storeSettingsRepository.findById(STORE_ID)).thenReturn(Optional.of(settings));
 
         service.updateStore(STORE_ID, patch);
 
         verify(storeEntityMapper).updateEntity(entity, patch);
+        verify(storeEntityMapper).updateSettings(settings, patch);
     }
 
     @Test
@@ -176,7 +200,7 @@ class StoreServiceTest {
         when(mediaStorage.stat("store-logos/7/new.png"))
                 .thenReturn(Optional.of(new StoredObject("store-logos/7/new.png", "image/png", 1000)));
         when(mediaStorage.publicUrl("store-logos/7/new.png")).thenReturn("http://pub/new.png");
-        when(storeEntityMapper.toView(entity)).thenReturn(mock(StoreView.class));
+        stubView(entity);
 
         service.confirmLogo(STORE_ID, "store-logos/7/new.png");
 
@@ -210,7 +234,7 @@ class StoreServiceTest {
         entity.setLogoKey("store-logos/7/x.png");
         entity.setLogoUrl("http://pub/x.png");
         when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(entity));
-        when(storeEntityMapper.toView(entity)).thenReturn(mock(StoreView.class));
+        stubView(entity);
 
         service.removeLogo(STORE_ID);
 

@@ -48,8 +48,8 @@ class ProductEntityRepositoryTest extends AbstractPostgresIT {
                 .setParameter("aid", sellerAccountId)
                 .executeUpdate();
         Object storeId = entityManager.createNativeQuery(
-                        "INSERT INTO stores (public_id, seller_account_id, name, timezone, currency, allow_return, status, created_at) " +
-                                "VALUES (:spid, :sellerAccountId, 'Shop', 'Europe/Kyiv', 'UAH', true, 'ACTIVE', now()) RETURNING id")
+                        "INSERT INTO stores (public_id, seller_account_id, name, status, created_at) " +
+                                "VALUES (:spid, :sellerAccountId, 'Shop', 'ACTIVE', now()) RETURNING id")
                 .setParameter("spid", UUID.randomUUID().toString())
                 .setParameter("sellerAccountId", sellerAccountId)
                 .getSingleResult();

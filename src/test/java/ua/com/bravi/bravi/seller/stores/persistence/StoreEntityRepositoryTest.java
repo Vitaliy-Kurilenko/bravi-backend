@@ -10,10 +10,12 @@ import ua.com.bravi.bravi.AbstractPostgresIT;
 import ua.com.bravi.bravi.seller.stores.domain.StoreStatus;
 import ua.com.bravi.bravi.seller.stores.domain.WorkingHours;
 import ua.com.bravi.bravi.seller.stores.persistence.entity.StoreEntity;
+import ua.com.bravi.bravi.seller.stores.persistence.entity.StoreSettingsEntity;
 
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.Currency;
+import java.util.Locale;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,6 +27,9 @@ class StoreEntityRepositoryTest extends AbstractPostgresIT {
 
     @Autowired
     private IStoreEntityRepository storeRepository;
+
+    @Autowired
+    private IStoreSettingsRepository storeSettingsRepository;
 
     @Autowired
     private EntityManager entityManager;
@@ -50,26 +55,44 @@ class StoreEntityRepositoryTest extends AbstractPostgresIT {
         store.setPublicId(UUID.randomUUID().toString());
         store.setSellerAccountId(sellerAccountId);
         store.setName("Shop");
-        store.setTimezone(ZoneId.of("Europe/Kyiv"));
-        store.setCurrency(Currency.getInstance("UAH"));
-        store.setAllowReturn(true);
-        WorkingHours.DayInterval interval =
-                new WorkingHours.DayInterval(LocalTime.of(9, 0), LocalTime.of(18, 0), false);
-        store.setWorkingHours(new WorkingHours(
-                interval, interval, interval, interval, interval, null, null));
         return store;
     }
 
     @Test
-    void savesAndLoadsStoreWithJsonAndZoneId() {
+    void savesAndLoadsStore() {
         Long sellerAccountId = persistSellerAccount();
 
         StoreEntity saved = storeRepository.saveAndFlush(newStore(sellerAccountId));
 
         StoreEntity loaded = storeRepository.findById(saved.getId()).orElseThrow();
-        assertThat(loaded.getTimezone()).isEqualTo(ZoneId.of("Europe/Kyiv"));
-        assertThat(loaded.getCurrency()).isEqualTo(Currency.getInstance("UAH"));
         assertThat(loaded.getStatus()).isEqualTo(StoreStatus.ACTIVE);
+        assertThat(loaded.getName()).isEqualTo("Shop");
+    }
+
+    /** JSONB working hours and the ZoneId converter now round-trip through store_settings. */
+    @Test
+    void savesAndLoadsSettingsWithJsonAndZoneId() {
+        Long sellerAccountId = persistSellerAccount();
+        StoreEntity store = storeRepository.saveAndFlush(newStore(sellerAccountId));
+
+        WorkingHours.DayInterval interval =
+                new WorkingHours.DayInterval(LocalTime.of(9, 0), LocalTime.of(18, 0), false);
+        StoreSettingsEntity settings = new StoreSettingsEntity();
+        settings.setStoreId(store.getId());
+        settings.setTimezone(ZoneId.of("Europe/Kyiv"));
+        settings.setDefaultCurrency(Currency.getInstance("UAH"));
+        settings.setDefaultLanguage(Locale.ENGLISH);
+        settings.setDefaultWeightUnit("KG");
+        settings.setDefaultDimensionUnit("CM");
+        settings.setAllowReturn(true);
+        settings.setWorkingHours(new WorkingHours(
+                interval, interval, interval, interval, interval, null, null));
+        storeSettingsRepository.saveAndFlush(settings);
+        entityManager.clear();
+
+        StoreSettingsEntity loaded = storeSettingsRepository.findById(store.getId()).orElseThrow();
+        assertThat(loaded.getTimezone()).isEqualTo(ZoneId.of("Europe/Kyiv"));
+        assertThat(loaded.getDefaultCurrency()).isEqualTo(Currency.getInstance("UAH"));
         assertThat(loaded.getAllowReturn()).isTrue();
         assertThat(loaded.getWorkingHours()).isNotNull();
         assertThat(loaded.getWorkingHours().monday().from()).isEqualTo(LocalTime.of(9, 0));
