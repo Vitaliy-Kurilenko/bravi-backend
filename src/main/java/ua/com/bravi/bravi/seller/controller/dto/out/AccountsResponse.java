@@ -6,11 +6,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
 public record AccountsResponse(
-        UserResponse user,
+        AccountUserResponse user,
         List<AccountItemResponse> accounts
 ) {
 
-    public record UserResponse(
+    public record AccountUserResponse(
             @JsonProperty("user_id")
             String userId,
             String email,
