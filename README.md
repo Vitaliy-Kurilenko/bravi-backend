@@ -144,3 +144,6 @@ bravi. Деталі — у README auth-репо.
 
 Інтеграційні тести підіймають реальний PostgreSQL через Testcontainers (потрібен Docker);
 unit-тести доменної/інфра-логіки виконуються без Spring-контексту.
+
+Тести з суфіксом `*IT` (напр. `S3MediaStorageIT`, який піднімає MinIO) запускає **failsafe**
+у фазі `verify` — `./mvnw test` їх НЕ виконує, тільки `./mvnw verify`.
