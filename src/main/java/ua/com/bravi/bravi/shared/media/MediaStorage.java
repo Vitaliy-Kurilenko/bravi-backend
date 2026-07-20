@@ -1,5 +1,6 @@
 package ua.com.bravi.bravi.shared.media;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -13,6 +14,9 @@ public interface MediaStorage {
 
     /** Метадані об'єкта за ключем (HEAD); {@code empty}, якщо об'єкта немає. */
     Optional<StoredObject> stat(String key);
+
+    /** Ключі всіх об'єктів під префіксом; порожній список, якщо немає жодного. */
+    List<String> list(String prefix);
 
     /** Видаляє об'єкт за ключем (ідемпотентно). */
     void delete(String key);

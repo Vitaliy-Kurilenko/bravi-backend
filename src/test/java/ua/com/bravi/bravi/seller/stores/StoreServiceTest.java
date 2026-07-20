@@ -30,6 +30,7 @@ import ua.com.bravi.bravi.shared.media.exception.MediaObjectNotFoundException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Currency;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -180,6 +181,25 @@ class StoreServiceTest {
         verify(mediaStorage).presignUpload(captor.capture());
         assertThat(captor.getValue().category()).isEqualTo(MediaCategory.STORE_LOGO);
         assertThat(captor.getValue().scope()).isEqualTo("7");
+    }
+
+    @Test
+    void presignLogoUploadSweepsOrphansButKeepsAttachedLogo() {
+        StoreEntity entity = new StoreEntity();
+        entity.setLogoKey("store-logos/7/attached.png");
+        when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(entity));
+        when(mediaStorage.list("store-logos/7/")).thenReturn(List.of(
+                "store-logos/7/attached.png",
+                "store-logos/7/orphan-a.png",
+                "store-logos/7/orphan-b.png"));
+        when(mediaStorage.presignUpload(any()))
+                .thenReturn(new PresignedUpload("http://put", "store-logos/7/new.png", Map.of(), Instant.now()));
+
+        service.presignLogoUpload(STORE_ID, new LogoUpload("image/png", 1024, "logo.png"));
+
+        verify(mediaStorage).delete("store-logos/7/orphan-a.png");
+        verify(mediaStorage).delete("store-logos/7/orphan-b.png");
+        verify(mediaStorage, never()).delete("store-logos/7/attached.png");
     }
 
     @Test

@@ -145,8 +145,9 @@ public class StoreService implements StoresApi {
     @Override
     @Transactional(readOnly = true)
     public PresignedUpload presignLogoUpload(Long storeId, LogoUpload upload) {
-        requireStore(storeId);
+        StoreEntity entity = requireStore(storeId);
         MediaCategory.STORE_LOGO.validate(upload.contentType(), upload.size());
+        sweepOrphanedLogos(storeId, entity.getLogoKey());
         return mediaStorage.presignUpload(new MediaUploadRequest(
                 MediaCategory.STORE_LOGO, logoScope(storeId), upload.contentType(), upload.size(), upload.originalFilename()));
     }
@@ -205,6 +206,17 @@ public class StoreService implements StoresApi {
 
     private static String logoScope(Long storeId) {
         return String.valueOf(storeId);
+    }
+
+    /**
+     * An object appears only after the client PUTs it, and is attached by a separate PATCH — a seller
+     * who abandons the form in between leaves it behind. Sweeping the store prefix on every presign
+     * caps that at one stray object per store instead of unbounded growth; the attached logo is kept.
+     */
+    private void sweepOrphanedLogos(Long storeId, String attachedKey) {
+        mediaStorage.list(MediaCategory.STORE_LOGO.keyPrefix(logoScope(storeId)) + "/").stream()
+                .filter(key -> !key.equals(attachedKey))
+                .forEach(mediaStorage::delete);
     }
 
     /** Guards that a confirmed key was minted for this store (presign always keys under its prefix). */

@@ -86,4 +86,26 @@ class S3MediaStorageIT {
         storage.delete(presigned.storageKey());
         assertThat(storage.stat(presigned.storageKey())).isEmpty();
     }
+
+    @Test
+    void listReturnsOnlyKeysUnderThePrefix() throws Exception {
+        String own = upload("2", "own.png");
+        String other = upload("3", "other.png");
+
+        assertThat(storage.list("store-logos/2/")).containsExactly(own);
+        assertThat(storage.list("store-logos/2/")).doesNotContain(other);
+        assertThat(storage.list("store-logos/nothing-here/")).isEmpty();
+    }
+
+    /** Presigns and actually PUTs an object, returning its storage key. */
+    private String upload(String scope, String filename) throws Exception {
+        byte[] content = "fake-png-bytes".getBytes(StandardCharsets.UTF_8);
+        PresignedUpload presigned = storage.presignUpload(
+                new MediaUploadRequest(MediaCategory.STORE_LOGO, scope, "image/png", content.length, filename));
+        HttpRequest.Builder put = HttpRequest.newBuilder(URI.create(presigned.uploadUrl()))
+                .PUT(HttpRequest.BodyPublishers.ofByteArray(content));
+        presigned.requiredHeaders().forEach(put::header);
+        HttpClient.newHttpClient().send(put.build(), HttpResponse.BodyHandlers.discarding());
+        return presigned.storageKey();
+    }
 }

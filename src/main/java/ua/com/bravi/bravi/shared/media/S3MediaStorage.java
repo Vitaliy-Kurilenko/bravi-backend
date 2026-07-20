@@ -6,11 +6,13 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 import ua.com.bravi.bravi.shared.config.props.MediaStorageProperties;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -48,6 +50,14 @@ public class S3MediaStorage implements MediaStorage {
         } catch (NoSuchKeyException e) {
             return Optional.empty();
         }
+    }
+
+    @Override
+    public List<String> list(String prefix) {
+        return s3Client.listObjectsV2Paginator(b -> b.bucket(properties.getBucket()).prefix(prefix))
+                .contents().stream()
+                .map(S3Object::key)
+                .toList();
     }
 
     @Override
