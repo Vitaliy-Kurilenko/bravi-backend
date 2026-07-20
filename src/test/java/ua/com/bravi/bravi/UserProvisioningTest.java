@@ -20,6 +20,8 @@ import ua.com.bravi.bravi.identity.persistence.entity.UserEntity;
 import ua.com.bravi.bravi.shared.common.HttpConstants;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,6 +47,7 @@ class UserProvisioningTest extends AbstractPostgresIT {
                     .claim("email", "jit@example.com")
                     .claim("given_name", "Jit")
                     .claim("family_name", "User")
+                    .claim("resource_access", Map.of("backend-service", Map.of("roles", List.of("bravi_user"))))
                     .issuedAt(Instant.now())
                     .expiresAt(Instant.now().plusSeconds(300))
                     .build();
