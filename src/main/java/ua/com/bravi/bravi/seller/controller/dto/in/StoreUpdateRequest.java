@@ -18,12 +18,12 @@ public record StoreUpdateRequest(
         @JsonProperty("address_additional")
         String addressAdditional,
         ZoneId timezone,
-        @JsonProperty("logo_url")
-        String logoUrl,
         @JsonProperty("working_hours")
         WorkingHours workingHours,
         Currency currency,
         @JsonProperty("allow_return")
-        Boolean allowReturn
+        Boolean allowReturn,
+        @JsonProperty("logo_storage_key")
+        String logoStorageKey
 ) {
 }

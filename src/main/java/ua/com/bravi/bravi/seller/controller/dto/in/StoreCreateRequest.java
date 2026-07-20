@@ -22,8 +22,6 @@ public record StoreCreateRequest(
         String addressAdditional,
         @NotNull
         ZoneId timezone,
-        @JsonProperty("logo_url")
-        String logoUrl,
         @JsonProperty("working_hours")
         WorkingHours workingHours,
         @NotNull

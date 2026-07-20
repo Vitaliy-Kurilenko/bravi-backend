@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ua.com.bravi.bravi.seller.stores.api.LogoUpload;
 import ua.com.bravi.bravi.seller.stores.api.StoreDraft;
 import ua.com.bravi.bravi.seller.stores.api.StoreSettings;
 import ua.com.bravi.bravi.seller.stores.api.StoreView;
@@ -17,6 +18,13 @@ import ua.com.bravi.bravi.seller.stores.persistence.entity.StoreEntity;
 import ua.com.bravi.bravi.seller.stores.persistence.entity.StoreSettingsEntity;
 import ua.com.bravi.bravi.seller.stores.persistence.mapper.StoreEntityMapper;
 import ua.com.bravi.bravi.shared.exception.NotFoundException;
+import ua.com.bravi.bravi.shared.media.MediaCategory;
+import ua.com.bravi.bravi.shared.media.MediaStorage;
+import ua.com.bravi.bravi.shared.media.MediaUploadRequest;
+import ua.com.bravi.bravi.shared.media.PresignedUpload;
+import ua.com.bravi.bravi.shared.media.StoredObject;
+import ua.com.bravi.bravi.shared.media.exception.InvalidMediaUploadException;
+import ua.com.bravi.bravi.shared.media.exception.MediaObjectNotFoundException;
 import ua.com.bravi.bravi.shared.util.PublicIdGenerator;
 
 import java.time.Instant;
@@ -39,6 +47,7 @@ public class StoreService implements StoresApi {
     private final IStoreSettingsRepository storeSettingsRepository;
     private final StoreEntityMapper storeEntityMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final MediaStorage mediaStorage;
 
     @Override
     public Optional<Long> findFirstStoreIdByAccountId(Long sellerAccountId) {
@@ -58,7 +67,7 @@ public class StoreService implements StoresApi {
         entity.setSellerAccountId(sellerAccountId);
         entity.setName(draft.name());
         entity.setDescription(draft.description());
-        entity.setLogoUrl(draft.logoUrl());
+        entity.setCountry(draft.country());
         entity.setCurrency(DEFAULT_CURRENCY);
         entity.setTimezone(DEFAULT_TIMEZONE);
         entity.setAllowReturn(false);
@@ -78,7 +87,9 @@ public class StoreService implements StoresApi {
             entity.setName(draft.name());
         }
         entity.setDescription(draft.description());
-        entity.setLogoUrl(draft.logoUrl());
+        if (draft.country() != null) {
+            entity.setCountry(draft.country());
+        }
     }
 
     @Override
@@ -125,9 +136,61 @@ public class StoreService implements StoresApi {
         requireStore(storeId).setStatus(StoreStatus.ACTIVE);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PresignedUpload presignLogoUpload(Long storeId, LogoUpload upload) {
+        requireStore(storeId);
+        MediaCategory.STORE_LOGO.validate(upload.contentType(), upload.size());
+        return mediaStorage.presignUpload(new MediaUploadRequest(
+                MediaCategory.STORE_LOGO, logoScope(storeId), upload.contentType(), upload.size(), upload.originalFilename()));
+    }
+
+    @Override
+    @Transactional
+    public StoreView confirmLogo(Long storeId, String storageKey) {
+        StoreEntity entity = requireStore(storeId);
+        requireOwnedKey(storeId, storageKey);
+        StoredObject object = mediaStorage.stat(storageKey)
+                .orElseThrow(() -> new MediaObjectNotFoundException("Logo upload not found or expired; upload again"));
+        MediaCategory.STORE_LOGO.validate(object.contentType(), object.size());
+
+        String previousKey = entity.getLogoKey();
+        entity.setLogoKey(storageKey);
+        entity.setLogoUrl(mediaStorage.publicUrl(storageKey));
+        if (previousKey != null && !previousKey.equals(storageKey)) {
+            mediaStorage.delete(previousKey);
+        }
+        return storeEntityMapper.toView(entity);
+    }
+
+    @Override
+    @Transactional
+    public StoreView removeLogo(Long storeId) {
+        StoreEntity entity = requireStore(storeId);
+        String key = entity.getLogoKey();
+        entity.setLogoKey(null);
+        entity.setLogoUrl(null);
+        if (key != null) {
+            mediaStorage.delete(key);
+        }
+        return storeEntityMapper.toView(entity);
+    }
+
     private StoreEntity requireStore(Long storeId) {
         return storeRepository.findById(storeId)
                 .orElseThrow(() -> new NotFoundException("Store not found"));
+    }
+
+    private static String logoScope(Long storeId) {
+        return String.valueOf(storeId);
+    }
+
+    /** Guards that a confirmed key was minted for this store (presign always keys under its prefix). */
+    private static void requireOwnedKey(Long storeId, String storageKey) {
+        String expectedPrefix = MediaCategory.STORE_LOGO.keyPrefix(logoScope(storeId)) + "/";
+        if (storageKey == null || !storageKey.startsWith(expectedPrefix)) {
+            throw new InvalidMediaUploadException("storage_key", "Storage key does not belong to this store");
+        }
     }
 
     private void createDefaultSettings(Long storeId) {

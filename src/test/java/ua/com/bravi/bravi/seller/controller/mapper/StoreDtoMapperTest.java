@@ -59,7 +59,7 @@ class StoreDtoMapperTest {
         StoreCreateRequest req = new StoreCreateRequest(
                 "Shop", "desc", "UA", "Kyiv obl.", "Kyiv",
                 "01001", "Address", "extra",
-                KYIV, "https://logo", workingHours(), UAH, true
+                KYIV, workingHours(), UAH, true
         );
 
         Store store = mapper.toDomain(req);

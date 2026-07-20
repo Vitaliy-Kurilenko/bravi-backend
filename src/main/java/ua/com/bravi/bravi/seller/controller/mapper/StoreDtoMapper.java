@@ -15,6 +15,7 @@ public interface StoreDtoMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "sellerAccountId", ignore = true)
+    @Mapping(target = "logoUrl", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
@@ -22,6 +23,7 @@ public interface StoreDtoMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "sellerAccountId", ignore = true)
+    @Mapping(target = "logoUrl", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)

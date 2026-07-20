@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,10 +17,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ua.com.bravi.bravi.seller.SellerOnboardingService;
+import ua.com.bravi.bravi.seller.controller.dto.in.LogoUploadUrlRequest;
 import ua.com.bravi.bravi.seller.controller.dto.in.OnboardingContactsRequest;
 import ua.com.bravi.bravi.seller.controller.dto.in.OnboardingSettingsRequest;
 import ua.com.bravi.bravi.seller.controller.dto.in.OnboardingStorePatchRequest;
 import ua.com.bravi.bravi.seller.controller.dto.in.OnboardingStoreRequest;
+import ua.com.bravi.bravi.seller.controller.dto.out.LogoUploadUrlResponse;
 import ua.com.bravi.bravi.seller.controller.dto.out.OnboardingStateResponse;
 import ua.com.bravi.bravi.seller.controller.dto.out.StoreContactResponse;
 import ua.com.bravi.bravi.seller.controller.dto.out.StoreResponse;
@@ -58,13 +61,28 @@ public class SellerOnboardingController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @Operation(summary = "Update draft store", description = "Partially updates the DRAFT store")
+    @Operation(summary = "Update draft store", description = "Partially updates the DRAFT store; a non-null logo_storage_key attaches an uploaded logo")
     @PatchMapping("/store")
     @PreAuthorize("hasPermission('STORE', 'WRITE')")
     public ResponseEntity<Void> updateStore(@PathVariable String accountId,
                                             @RequestBody OnboardingStorePatchRequest request) {
-        onboardingService.updateStore(accountId, onboardingDtoMapper.toDraft(request));
+        onboardingService.updateStore(accountId, onboardingDtoMapper.toDraft(request), request.logoStorageKey());
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Request logo upload URL", description = "Returns a presigned URL to upload the store logo directly to storage")
+    @PostMapping("/store/logo/upload-url")
+    @PreAuthorize("hasPermission('STORE', 'WRITE')")
+    public LogoUploadUrlResponse requestLogoUploadUrl(@PathVariable String accountId,
+                                                      @Valid @RequestBody LogoUploadUrlRequest request) {
+        return onboardingService.presignLogoUpload(accountId, request);
+    }
+
+    @Operation(summary = "Delete logo", description = "Removes the DRAFT store logo")
+    @DeleteMapping("/store/logo")
+    @PreAuthorize("hasPermission('STORE', 'WRITE')")
+    public StoreResponse deleteLogo(@PathVariable String accountId) {
+        return onboardingService.removeLogo(accountId);
     }
 
     @Operation(summary = "Update store settings", description = "Partially updates the store settings")

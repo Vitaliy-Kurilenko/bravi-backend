@@ -32,6 +32,7 @@
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
         <yauaa.version>7.30.0</yauaa.version>
         <spring-modulith.version>2.0.0</spring-modulith.version>
+        <awssdk.version>2.31.0</awssdk.version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -39,6 +40,13 @@
                 <groupId>org.springframework.modulith</groupId>
                 <artifactId>spring-modulith-bom</artifactId>
                 <version>${spring-modulith.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${awssdk.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -106,6 +114,10 @@
             <groupId>nl.basjes.parse.useragent</groupId>
             <artifactId>yauaa</artifactId>
             <version>${yauaa.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.modulith</groupId>
@@ -177,6 +189,11 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-minio</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

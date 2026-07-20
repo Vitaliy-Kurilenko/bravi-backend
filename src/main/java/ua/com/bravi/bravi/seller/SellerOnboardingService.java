@@ -12,12 +12,15 @@ import ua.com.bravi.bravi.identity.api.IdentityApi;
 import ua.com.bravi.bravi.seller.account.api.SellerAccountView;
 import ua.com.bravi.bravi.seller.account.api.SellerAccountsApi;
 import ua.com.bravi.bravi.seller.channels.api.SalesChannelsApi;
+import ua.com.bravi.bravi.seller.controller.dto.in.LogoUploadUrlRequest;
+import ua.com.bravi.bravi.seller.controller.dto.out.LogoUploadUrlResponse;
 import ua.com.bravi.bravi.seller.controller.dto.out.OnboardingStateResponse;
 import ua.com.bravi.bravi.seller.controller.dto.out.OnboardingStateResponse.OnboardingStepsResponse;
 import ua.com.bravi.bravi.seller.controller.dto.out.StoreContactResponse;
 import ua.com.bravi.bravi.seller.controller.dto.out.StoreResponse;
 import ua.com.bravi.bravi.seller.controller.mapper.StoreContactDtoMapper;
 import ua.com.bravi.bravi.seller.controller.mapper.StoreDtoMapper;
+import ua.com.bravi.bravi.seller.controller.mapper.StoreLogoDtoMapper;
 import ua.com.bravi.bravi.seller.exception.EmailNotVerifiedException;
 import ua.com.bravi.bravi.seller.exception.OnboardingIncompleteException;
 import ua.com.bravi.bravi.seller.exception.StoreAlreadyExistsException;
@@ -55,6 +58,7 @@ public class SellerOnboardingService {
     private final SellerAccountsApi sellerAccountsApi;
     private final InvocationContext invocationContext;
     private final StoreDtoMapper storeDtoMapper;
+    private final StoreLogoDtoMapper storeLogoDtoMapper;
     private final StoreContactDtoMapper storeContactDtoMapper;
 
     @Transactional(readOnly = true)
@@ -75,9 +79,28 @@ public class SellerOnboardingService {
     }
 
     @Transactional
-    public void updateStore(String accountPublicId, StoreDraft draft) {
+    public void updateStore(String accountPublicId, StoreDraft draft, String logoStorageKey) {
         Long accountId = resolveAccountId(accountPublicId);
-        storesApi.updateDraftStore(requireStoreId(accountId), draft);
+        Long storeId = requireStoreId(accountId);
+        storesApi.updateDraftStore(storeId, draft);
+        if (logoStorageKey != null) {
+            storesApi.confirmLogo(storeId, logoStorageKey);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public LogoUploadUrlResponse presignLogoUpload(String accountPublicId, LogoUploadUrlRequest request) {
+        Long accountId = resolveAccountId(accountPublicId);
+        Long storeId = requireStoreId(accountId);
+        return storeLogoDtoMapper.toResponse(
+                storesApi.presignLogoUpload(storeId, storeLogoDtoMapper.toUpload(request)));
+    }
+
+    @Transactional
+    public StoreResponse removeLogo(String accountPublicId) {
+        Long accountId = resolveAccountId(accountPublicId);
+        Long storeId = requireStoreId(accountId);
+        return storeDtoMapper.toResponse(storesApi.removeLogo(storeId));
     }
 
     @Transactional

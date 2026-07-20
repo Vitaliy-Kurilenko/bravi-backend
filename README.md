@@ -81,9 +81,37 @@ Swagger UI / OpenAPI (springdoc).
 | `INTERNAL_API_ROLE`   | Realm-роль для доступу до `/internal/**`            | `service_registration`  |
 | `SERVER_PORT`         | Порт HTTP-сервера                                  | `8083`                  |
 | `PRODUCT_IMAGE_PATH`  | Каталог локального сховища фото товарів            | `./data/product-images` |
+| `MEDIA_S3_ENDPOINT`   | Endpoint об'єктного сховища (S3/MinIO)             | `http://localhost:9000` |
+| `MEDIA_S3_REGION`     | Регіон сховища                                     | `us-east-1`             |
+| `MEDIA_S3_BUCKET`     | Bucket для медіа (логотипи магазинів)              | `bravi-media`           |
+| `MEDIA_S3_ACCESS_KEY` | Access key сховища                                 | `minioadmin`            |
+| `MEDIA_S3_SECRET_KEY` | Secret key сховища                                 | `minioadmin`            |
+| `MEDIA_S3_PATH_STYLE` | Path-style-доступ (`true` для MinIO)               | `true`                  |
+| `MEDIA_PUBLIC_BASE_URL` | База публічних URL медіа-об'єктів                | `http://localhost:9000/bravi-media` |
 
 > JWT `issuer-uri` збирається як `${KEYCLOACK_BASE_URL}/realms/${KEYCLOACK_REALM}`.
-> Секрети (`DB_PASSWORD` тощо) не комітяться — лише через env або зовнішній vault.
+> Секрети (`DB_PASSWORD`, `MEDIA_S3_SECRET_KEY` тощо) не комітяться — лише через env або зовнішній vault.
+> Дефолти `minioadmin/minioadmin` — це кореневі креденшали локального MinIO, не для проду.
+
+### Об'єктне сховище (логотипи магазинів)
+
+Логотип магазину завантажується не на backend, а **напряму в S3/MinIO** за presigned-посиланням:
+`POST .../store/logo/upload-url` (backend валідує тип/розмір і видає presigned PUT URL) → клієнт
+`PUT`-ить файл у сховище → `PATCH .../store { "logo_storage_key": "<key>" }` чіпляє об'єкт до магазину
+(backend звіряє існування об'єкта, власника, розмір і прибирає старий). `logo_url` у магазині —
+стабільне публічне посилання на об'єкт. Видалення — `DELETE .../store/logo`. Один bucket, розкладка за
+префіксом ключа централізована в `shared/media/MediaCategory` (лого → `store-logos/{storeId}/…`).
+
+Локально MinIO піднімається через `docker-compose.yml` (сервіс `minio` + одноразовий `minio-init`,
+який створює bucket `bravi-media` і вмикає анонімне читання):
+
+```bash
+docker compose up -d
+```
+
+- API: `http://localhost:9000`, консоль: `http://localhost:9001` (логін/пароль — `minioadmin`
+  за замовчуванням або значення `MEDIA_S3_ACCESS_KEY` / `MEDIA_S3_SECRET_KEY`, якщо задані в `.env`).
+- Дані зберігаються у volume `minio-data` (переживає `docker compose down`; `down -v` — скидає).
 
 Базовий контекст-шлях API: `/api` (наприклад, `http://localhost:8083/api`).
 

@@ -65,6 +65,9 @@ public class StoreEntity {
     @Column(name = "logo_url", length = 512)
     private String logoUrl;
 
+    @Column(name = "logo_key", length = 512)
+    private String logoKey;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "working_hours", columnDefinition = "jsonb")
     private WorkingHours workingHours;
