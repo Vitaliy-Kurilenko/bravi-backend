@@ -15,6 +15,8 @@ public interface IMembershipRepository extends JpaRepository<MembershipEntity, L
 
     List<MembershipEntity> findByUserIdAndStatusOrderByIdAsc(Long userId, MembershipStatus status);
 
+    boolean existsByUserIdAndAccountIdAndStatus(Long userId, Long accountId, MembershipStatus status);
+
     @Query(value = """
             SELECT DISTINCT r.code
             FROM memberships m

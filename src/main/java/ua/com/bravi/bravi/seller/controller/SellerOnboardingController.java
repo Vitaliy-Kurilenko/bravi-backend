@@ -33,11 +33,11 @@ import java.util.List;
 
 /**
  * Seller onboarding surface (spec §5). Authenticated; each method requires the STORE permission
- * of the current account, and the path {@code accountId} must match the caller's active account.
+ * of the current account, and the path {@code accountPublicId} must match the caller's active account.
  */
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/accounts/{accountId}/seller/onboarding")
+@RequestMapping("/accounts/{accountPublicId}/seller/onboarding")
 @Tag(name = "SellerOnboardingController")
 public class SellerOnboardingController {
 
@@ -48,65 +48,65 @@ public class SellerOnboardingController {
     @Operation(summary = "Onboarding state", description = "Current onboarding progress for the account")
     @GetMapping
     @PreAuthorize("hasPermission('STORE', 'READ')")
-    public OnboardingStateResponse getState(@PathVariable String accountId) {
-        return onboardingService.getState(accountId);
+    public OnboardingStateResponse getState(@PathVariable String accountPublicId) {
+        return onboardingService.getState(accountPublicId);
     }
 
     @Operation(summary = "Create draft store", description = "Creates the DRAFT store, default settings and manual channel")
     @PostMapping("/store")
     @PreAuthorize("hasPermission('STORE', 'WRITE')")
-    public ResponseEntity<StoreResponse> createStore(@PathVariable String accountId,
+    public ResponseEntity<StoreResponse> createStore(@PathVariable String accountPublicId,
                                                      @Valid @RequestBody OnboardingStoreRequest request) {
-        StoreResponse response = onboardingService.createStore(accountId, onboardingDtoMapper.toDraft(request));
+        StoreResponse response = onboardingService.createStore(accountPublicId, onboardingDtoMapper.toDraft(request));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @Operation(summary = "Update draft store", description = "Partially updates the DRAFT store; a non-null logo_storage_key attaches an uploaded logo")
     @PatchMapping("/store")
     @PreAuthorize("hasPermission('STORE', 'WRITE')")
-    public ResponseEntity<Void> updateStore(@PathVariable String accountId,
+    public ResponseEntity<Void> updateStore(@PathVariable String accountPublicId,
                                             @RequestBody OnboardingStorePatchRequest request) {
-        onboardingService.updateStore(accountId, onboardingDtoMapper.toDraft(request), request.logoStorageKey());
+        onboardingService.updateStore(accountPublicId, onboardingDtoMapper.toDraft(request), request.logoStorageKey());
         return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Request logo upload URL", description = "Returns a presigned URL to upload the store logo directly to storage")
     @PostMapping("/store/logo/upload-url")
     @PreAuthorize("hasPermission('STORE', 'WRITE')")
-    public LogoUploadUrlResponse requestLogoUploadUrl(@PathVariable String accountId,
+    public LogoUploadUrlResponse requestLogoUploadUrl(@PathVariable String accountPublicId,
                                                       @Valid @RequestBody LogoUploadUrlRequest request) {
-        return onboardingService.presignLogoUpload(accountId, request);
+        return onboardingService.presignLogoUpload(accountPublicId, request);
     }
 
     @Operation(summary = "Delete logo", description = "Removes the DRAFT store logo")
     @DeleteMapping("/store/logo")
     @PreAuthorize("hasPermission('STORE', 'WRITE')")
-    public StoreResponse deleteLogo(@PathVariable String accountId) {
-        return onboardingService.removeLogo(accountId);
+    public StoreResponse deleteLogo(@PathVariable String accountPublicId) {
+        return onboardingService.removeLogo(accountPublicId);
     }
 
     @Operation(summary = "Update store settings", description = "Partially updates the store settings")
     @PatchMapping("/store/settings")
     @PreAuthorize("hasPermission('STORE', 'WRITE')")
-    public ResponseEntity<Void> updateSettings(@PathVariable String accountId,
+    public ResponseEntity<Void> updateSettings(@PathVariable String accountPublicId,
                                                @RequestBody OnboardingSettingsRequest request) {
-        onboardingService.updateSettings(accountId, onboardingDtoMapper.toSettings(request));
+        onboardingService.updateSettings(accountPublicId, onboardingDtoMapper.toSettings(request));
         return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Replace store contacts", description = "Replaces the full set of store contacts")
     @PutMapping("/store/contacts")
     @PreAuthorize("hasPermission('STORE', 'WRITE')")
-    public List<StoreContactResponse> replaceContacts(@PathVariable String accountId,
+    public List<StoreContactResponse> replaceContacts(@PathVariable String accountPublicId,
                                                       @Valid @RequestBody OnboardingContactsRequest request) {
-        return onboardingService.replaceContacts(accountId,
+        return onboardingService.replaceContacts(accountPublicId,
                 storeContactDtoMapper.toDomainFromCreate(request.contacts()));
     }
 
     @Operation(summary = "Complete onboarding", description = "Finalizes onboarding: account ACTIVE, store ACTIVE")
     @PostMapping("/complete")
     @PreAuthorize("hasPermission('STORE', 'WRITE')")
-    public OnboardingStateResponse complete(@PathVariable String accountId) {
-        return onboardingService.complete(accountId);
+    public OnboardingStateResponse complete(@PathVariable String accountPublicId) {
+        return onboardingService.complete(accountPublicId);
     }
 }

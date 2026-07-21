@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ua.com.bravi.bravi.seller.stores.api.LogoUpload;
 import ua.com.bravi.bravi.seller.stores.api.StoreDraft;
+import ua.com.bravi.bravi.seller.stores.api.StoreRef;
 import ua.com.bravi.bravi.seller.stores.api.StoreSettings;
 import ua.com.bravi.bravi.seller.stores.api.StoreView;
 import ua.com.bravi.bravi.seller.stores.api.StoresApi;
@@ -59,6 +60,12 @@ public class StoreService implements StoresApi {
     @Override
     public Optional<Long> findFirstStoreIdByAccountId(Long sellerAccountId) {
         return storeRepository.findFirstBySellerAccountIdOrderByIdAsc(sellerAccountId).map(StoreEntity::getId);
+    }
+
+    @Override
+    public Optional<StoreRef> findStoreRefByPublicId(String storePublicId) {
+        return storeRepository.findByPublicId(storePublicId)
+                .map(entity -> new StoreRef(entity.getId(), entity.getSellerAccountId()));
     }
 
     @Override

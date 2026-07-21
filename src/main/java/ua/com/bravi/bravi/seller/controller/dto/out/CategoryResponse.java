@@ -7,9 +7,10 @@ import java.time.Instant;
 import java.util.List;
 
 public record CategoryResponse(
-        Long id,
-        @JsonProperty("parent_id")
-        Long parentId,
+        @JsonProperty("public_id")
+        String publicId,
+        @JsonProperty("parent_public_id")
+        String parentPublicId,
         String name,
         String description,
         CategoryStatus status,

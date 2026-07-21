@@ -27,7 +27,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/seller/categories")
+@RequestMapping("/stores/{storePublicId}/categories")
 @Tag(name = "SellerCategoryController")
 @RequireStore
 public class SellerCategoryController {
@@ -44,38 +44,39 @@ public class SellerCategoryController {
     }
 
     @Operation(summary = "Get category", description = "Returns a category subtree of the current user's store")
-    @GetMapping("/{categoryId}")
+    @GetMapping("/{publicId}")
     @PreAuthorize("hasPermission('PRODUCT', 'READ')")
-    public CategoryResponse getCategory(@PathVariable Long categoryId) {
-        return categoryDtoMapper.toResponse(categoriesApi.getById(currentStoreHolder.get(), categoryId));
+    public CategoryResponse getCategory(@PathVariable String publicId) {
+        return categoryDtoMapper.toResponse(categoriesApi.getByPublicId(currentStoreHolder.get(), publicId));
     }
 
     @Operation(summary = "Create category", description = "Creates a category in the current user's store")
     @PostMapping
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
-    public ResponseEntity<Void> createCategory(@Valid @RequestBody CategoryCreateRequest request) {
-        categoriesApi.create(currentStoreHolder.get(), categoryDtoMapper.toDomain(request));
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+    public ResponseEntity<CategoryResponse> createCategory(@Valid @RequestBody CategoryCreateRequest request) {
+        CategoryResponse created = categoryDtoMapper.toResponse(
+                categoriesApi.create(currentStoreHolder.get(), categoryDtoMapper.toDomain(request)));
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @Operation(summary = "Update category",
-            description = "Partially updates a category; a non-null parent_id reparents it within the tree")
-    @PatchMapping("/{categoryId}")
+            description = "Partially updates a category; a non-null parent_public_id reparents it within the tree")
+    @PatchMapping("/{publicId}")
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<Void> updateCategory(
-            @PathVariable Long categoryId,
+            @PathVariable String publicId,
             @Valid @RequestBody CategoryUpdateRequest request
     ) {
-        categoriesApi.update(currentStoreHolder.get(), categoryId, categoryDtoMapper.toDomain(request));
+        categoriesApi.update(currentStoreHolder.get(), publicId, categoryDtoMapper.toDomain(request));
         return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Delete category",
             description = "Deletes a category of the current user's store; blocked if it has subcategories")
-    @DeleteMapping("/{categoryId}")
+    @DeleteMapping("/{publicId}")
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
-    public ResponseEntity<Void> deleteCategory(@PathVariable Long categoryId) {
-        categoriesApi.delete(currentStoreHolder.get(), categoryId);
+    public ResponseEntity<Void> deleteCategory(@PathVariable String publicId) {
+        categoriesApi.delete(currentStoreHolder.get(), publicId);
         return ResponseEntity.noContent().build();
     }
 }

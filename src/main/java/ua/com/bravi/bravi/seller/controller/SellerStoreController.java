@@ -30,7 +30,7 @@ import ua.com.bravi.bravi.shared.component.RequireStore;
  */
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/seller/stores")
+@RequestMapping("/stores/{storePublicId}")
 @Tag(name = "SellerStoreController")
 @RequireStore
 public class SellerStoreController {

@@ -22,15 +22,19 @@ import java.time.Instant;
 @Getter
 @Setter
 @Entity
-@Table(name = "categories", indexes = {
-        @Index(name = "idx_categories_store_id", columnList = "store_id"),
-        @Index(name = "idx_categories_parent_id", columnList = "parent_id")
+@Table(name = "store_categories", indexes = {
+        @Index(name = "idx_store_categories_store_id", columnList = "store_id"),
+        @Index(name = "idx_store_categories_parent_id", columnList = "parent_id")
 })
 public class CategoryEntity implements StoreOwned {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @NotNull
+    @Column(name = "public_id", nullable = false, unique = true)
+    private String publicId;
 
     @NotNull
     @Column(name = "store_id", nullable = false)
