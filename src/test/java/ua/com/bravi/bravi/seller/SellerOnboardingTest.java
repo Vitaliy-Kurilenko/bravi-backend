@@ -108,11 +108,13 @@ class SellerOnboardingTest extends AbstractPostgresIT {
         assertThat(contacts.getStatusCode()).isEqualTo(HttpStatus.OK);
 
         // Complete.
+        String storePublicId = jdbcTemplate.queryForObject("SELECT public_id FROM stores", String.class);
         ResponseEntity<String> completed = post(onboarding(accountId) + "/complete", "", VERIFIED_TOKEN);
         assertThat(completed.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(completed.getBody())
                 .contains("\"account_status\":\"ACTIVE\"")
-                .contains("\"onboarding_status\":\"COMPLETED\"");
+                .contains("\"onboarding_status\":\"COMPLETED\"")
+                .contains("\"public_id\":\"" + storePublicId + "\"");
 
         assertThat(jdbcTemplate.queryForObject("SELECT status FROM accounts", String.class)).isEqualTo("ACTIVE");
         assertThat(jdbcTemplate.queryForObject("SELECT onboarding_status FROM seller_accounts", String.class))

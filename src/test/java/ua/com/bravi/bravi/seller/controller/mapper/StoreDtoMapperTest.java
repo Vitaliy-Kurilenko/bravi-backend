@@ -38,6 +38,7 @@ class StoreDtoMapperTest {
 
         StoreResponse response = mapper.toResponse(view);
 
+        assertThat(response.publicId()).isEqualTo("pub-1");
         assertThat(response.name()).isEqualTo("Shop");
         assertThat(response.description()).isEqualTo("Cool shop");
         assertThat(response.country()).isEqualTo("UA");
