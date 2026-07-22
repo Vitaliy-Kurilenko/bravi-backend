@@ -7,8 +7,11 @@ import java.util.Optional;
 
 public interface StoresApi {
 
-    /** First store of a seller account (MVP single-store resolution). */
+    /** First store of a seller account (used by onboarding, which owns a single store). */
     Optional<Long> findFirstStoreIdByAccountId(Long sellerAccountId);
+
+    /** Store id + owning account for a store public id; the caller then validates the user's membership. */
+    Optional<StoreRef> findStoreRefByPublicId(String storePublicId);
 
     Optional<StoreView> getStoreById(Long storeId);
 

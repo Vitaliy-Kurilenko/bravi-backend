@@ -4,8 +4,10 @@ import java.time.Instant;
 
 public record Category(
         Long id,
+        String publicId,
         Long storeId,
         Long parentId,
+        String parentPublicId,
         String name,
         String description,
         CategoryStatus status,

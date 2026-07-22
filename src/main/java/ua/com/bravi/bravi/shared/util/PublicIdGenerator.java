@@ -12,6 +12,7 @@ public final class PublicIdGenerator {
     public static final String ACCOUNT_PREFIX = "acc";
     public static final String MEMBERSHIP_PREFIX = "mem";
     public static final String STORE_PREFIX = "st";
+    public static final String CATEGORY_PREFIX = "cat";
 
     private static final char[] ALPHABET =
             "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".toCharArray();

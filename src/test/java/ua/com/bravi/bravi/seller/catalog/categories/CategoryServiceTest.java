@@ -32,6 +32,7 @@ class CategoryServiceTest {
     private static final Long STORE_ID = 7L;
     private static final Long OTHER_STORE_ID = 99L;
     private static final Long CATEGORY_ID = 42L;
+    private static final String PUBLIC_ID = "cat_00000000000000ct";
 
     private final ICategoryEntityRepository repository = mock(ICategoryEntityRepository.class);
     private final CategoryEntityMapper mapper = mock(CategoryEntityMapper.class);
@@ -46,13 +47,14 @@ class CategoryServiceTest {
     private static CategoryEntity entityOwnedBy(Long storeId) {
         CategoryEntity entity = new CategoryEntity();
         entity.setId(CATEGORY_ID);
+        entity.setPublicId(PUBLIC_ID);
         entity.setStoreId(storeId);
         entity.setName("Shoes");
         return entity;
     }
 
-    private static Category request(Long parentId, CategoryStatus status) {
-        return new Category(null, null, parentId, "Shoes", null, status, null, null);
+    private static Category request(String parentPublicId, CategoryStatus status) {
+        return new Category(null, null, null, null, parentPublicId, "Shoes", null, status, null, null);
     }
 
     @Test
@@ -66,6 +68,17 @@ class CategoryServiceTest {
 
         assertThat(entity.getStatus()).isEqualTo(CategoryStatus.ACTIVE);
         assertThat(entity.getStoreId()).isEqualTo(STORE_ID);
+    }
+
+    @Test
+    void createGeneratesPrefixedPublicId() {
+        CategoryEntity entity = new CategoryEntity();
+        when(mapper.toEntity(any())).thenReturn(entity);
+        when(repository.save(entity)).thenReturn(entity);
+
+        service.create(STORE_ID, request(null, null));
+
+        assertThat(entity.getPublicId()).startsWith("cat_");
     }
 
     @Test
@@ -84,7 +97,7 @@ class CategoryServiceTest {
     void createMapsDuplicateNameToConflict() {
         CategoryEntity entity = new CategoryEntity();
         when(mapper.toEntity(any())).thenReturn(entity);
-        when(repository.save(entity)).thenThrow(new DataIntegrityViolationException("uq_categories_child_name"));
+        when(repository.save(entity)).thenThrow(new DataIntegrityViolationException("uq_store_categories_child_name"));
 
         assertThatThrownBy(() -> service.create(STORE_ID, request(null, null)))
                 .isInstanceOf(CategoryAlreadyExistsException.class);
@@ -93,9 +106,8 @@ class CategoryServiceTest {
     @Test
     void createUnderUnknownParentThrowsNotFound() {
         when(repository.findByStoreId(STORE_ID)).thenReturn(List.of());
-        when(mapper.toDomain(List.of())).thenReturn(List.of());
 
-        assertThatThrownBy(() -> service.create(STORE_ID, request(123L, null)))
+        assertThatThrownBy(() -> service.create(STORE_ID, request("cat_missing", null)))
                 .isInstanceOf(NotFoundException.class);
 
         verify(repository, never()).save(any());
@@ -104,9 +116,9 @@ class CategoryServiceTest {
     @Test
     void updateWithoutParentDoesNotResolveStoreTree() {
         CategoryEntity entity = entityOwnedBy(STORE_ID);
-        when(repository.findById(CATEGORY_ID)).thenReturn(Optional.of(entity));
+        when(repository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID)).thenReturn(Optional.of(entity));
 
-        service.update(STORE_ID, CATEGORY_ID, request(null, CategoryStatus.INACTIVE));
+        service.update(STORE_ID, PUBLIC_ID, request(null, CategoryStatus.INACTIVE));
 
         verify(mapper).updateEntity(entity, request(null, CategoryStatus.INACTIVE));
         verify(repository).flush();
@@ -115,12 +127,20 @@ class CategoryServiceTest {
 
     @Test
     void updateRejectsCategoryOfAnotherStore() {
-        when(repository.findById(CATEGORY_ID)).thenReturn(Optional.of(entityOwnedBy(OTHER_STORE_ID)));
+        when(repository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.update(STORE_ID, CATEGORY_ID, request(null, null)))
-                .isInstanceOf(ForbiddenException.class);
+        assertThatThrownBy(() -> service.update(STORE_ID, PUBLIC_ID, request(null, null)))
+                .isInstanceOf(NotFoundException.class);
 
         verify(mapper, never()).updateEntity(any(), any());
+    }
+
+    @Test
+    void getByPublicIdThrowsWhenAbsent() {
+        when(repository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getByPublicId(STORE_ID, PUBLIC_ID))
+                .isInstanceOf(NotFoundException.class);
     }
 
     @Test
@@ -141,10 +161,10 @@ class CategoryServiceTest {
 
     @Test
     void deleteBlockedWhenCategoryHasChildren() {
-        when(repository.findById(CATEGORY_ID)).thenReturn(Optional.of(entityOwnedBy(STORE_ID)));
+        when(repository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID)).thenReturn(Optional.of(entityOwnedBy(STORE_ID)));
         when(repository.existsByParentId(CATEGORY_ID)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.delete(STORE_ID, CATEGORY_ID))
+        assertThatThrownBy(() -> service.delete(STORE_ID, PUBLIC_ID))
                 .isInstanceOf(CategoryHasChildrenException.class);
 
         verify(repository, never()).delete(any());
@@ -153,10 +173,10 @@ class CategoryServiceTest {
     @Test
     void deleteRemovesLeafCategory() {
         CategoryEntity entity = entityOwnedBy(STORE_ID);
-        when(repository.findById(CATEGORY_ID)).thenReturn(Optional.of(entity));
+        when(repository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID)).thenReturn(Optional.of(entity));
         when(repository.existsByParentId(CATEGORY_ID)).thenReturn(false);
 
-        service.delete(STORE_ID, CATEGORY_ID);
+        service.delete(STORE_ID, PUBLIC_ID);
 
         verify(repository).delete(entity);
     }

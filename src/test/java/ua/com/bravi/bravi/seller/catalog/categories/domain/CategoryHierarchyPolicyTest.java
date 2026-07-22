@@ -22,7 +22,7 @@ class CategoryHierarchyPolicyTest {
     );
 
     private static Category cat(Long id, Long parentId) {
-        return new Category(id, 7L, parentId, "c" + id, null, CategoryStatus.ACTIVE, null, null);
+        return new Category(id, null, 7L, parentId, null, "c" + id, null, CategoryStatus.ACTIVE, null, null);
     }
 
     @Test

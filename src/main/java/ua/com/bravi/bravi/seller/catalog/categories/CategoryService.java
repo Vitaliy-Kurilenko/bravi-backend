@@ -15,9 +15,12 @@ import ua.com.bravi.bravi.seller.catalog.categories.persistence.ICategoryEntityR
 import ua.com.bravi.bravi.seller.catalog.categories.persistence.entity.CategoryEntity;
 import ua.com.bravi.bravi.seller.catalog.categories.persistence.mapper.CategoryEntityMapper;
 import ua.com.bravi.bravi.shared.exception.NotFoundException;
+import ua.com.bravi.bravi.shared.util.PublicIdGenerator;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,35 +35,46 @@ public class CategoryService implements CategoriesApi {
     @Override
     public List<CategoryView> findTreeByStoreId(Long storeId) {
         List<CategoryEntity> all = categoryRepository.findByStoreId(storeId);
+        Map<Long, CategoryEntity> byId = indexById(all);
         Map<Long, List<CategoryEntity>> byParent = childrenByParent(all);
         return all.stream()
                 .filter(entity -> entity.getParentId() == null)
-                .map(root -> toTree(root, byParent))
+                .map(root -> toTree(root, byId, byParent))
                 .toList();
     }
 
     @Override
     public CategoryView getById(Long storeId, Long categoryId) {
-        CategoryEntity node = requireOwned(storeId, categoryId);
-        Map<Long, List<CategoryEntity>> byParent = childrenByParent(categoryRepository.findByStoreId(storeId));
-        return toTree(node, byParent);
+        CategoryEntity node = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new NotFoundException("Category not found"));
+        node.requireOwnedBy(storeId);
+        return toSubtree(storeId, node);
+    }
+
+    @Override
+    public CategoryView getByPublicId(Long storeId, String publicId) {
+        return toSubtree(storeId, requireOwned(storeId, publicId));
     }
 
     @Override
     @Transactional
-    public Long create(Long storeId, Category category) {
-        if (category.parentId() != null) {
-            List<Category> storeCategories = categoryEntityMapper.toDomain(categoryRepository.findByStoreId(storeId));
-            requireParentPresent(storeCategories, category.parentId());
-            CategoryHierarchyPolicy.validateCreate(storeCategories, category.parentId());
+    public CategoryView create(Long storeId, Category category) {
+        Long parentId = null;
+        if (category.parentPublicId() != null) {
+            List<CategoryEntity> storeCategories = categoryRepository.findByStoreId(storeId);
+            parentId = resolveParentId(storeCategories, category.parentPublicId());
+            CategoryHierarchyPolicy.validateCreate(categoryEntityMapper.toDomain(storeCategories), parentId);
         }
         CategoryEntity entity = categoryEntityMapper.toEntity(category);
         entity.setStoreId(storeId);
+        entity.setParentId(parentId);
+        entity.setPublicId(PublicIdGenerator.generate(PublicIdGenerator.CATEGORY_PREFIX));
         if (entity.getStatus() == null) {
             entity.setStatus(CategoryStatus.ACTIVE);
         }
         try {
-            return categoryRepository.save(entity).getId();
+            CategoryEntity saved = categoryRepository.save(entity);
+            return categoryEntityMapper.toView(saved, category.parentPublicId(), List.of());
         } catch (DataIntegrityViolationException duplicateName) {
             throw new CategoryAlreadyExistsException(DUPLICATE_NAME);
         }
@@ -68,13 +82,13 @@ public class CategoryService implements CategoriesApi {
 
     @Override
     @Transactional
-    public void update(Long storeId, Long categoryId, Category patch) {
-        CategoryEntity entity = requireOwned(storeId, categoryId);
-        if (patch.parentId() != null) {
-            List<Category> storeCategories = categoryEntityMapper.toDomain(categoryRepository.findByStoreId(storeId));
-            requireParentPresent(storeCategories, patch.parentId());
-            CategoryHierarchyPolicy.validateMove(storeCategories, categoryId, patch.parentId());
-            entity.setParentId(patch.parentId());
+    public void update(Long storeId, String publicId, Category patch) {
+        CategoryEntity entity = requireOwned(storeId, publicId);
+        if (patch.parentPublicId() != null) {
+            List<CategoryEntity> storeCategories = categoryRepository.findByStoreId(storeId);
+            Long parentId = resolveParentId(storeCategories, patch.parentPublicId());
+            CategoryHierarchyPolicy.validateMove(categoryEntityMapper.toDomain(storeCategories), entity.getId(), parentId);
+            entity.setParentId(parentId);
         }
         categoryEntityMapper.updateEntity(entity, patch);
         try {
@@ -86,19 +100,33 @@ public class CategoryService implements CategoriesApi {
 
     @Override
     @Transactional
-    public void delete(Long storeId, Long categoryId) {
-        CategoryEntity entity = requireOwned(storeId, categoryId);
-        if (categoryRepository.existsByParentId(categoryId)) {
+    public void delete(Long storeId, String publicId) {
+        CategoryEntity entity = requireOwned(storeId, publicId);
+        if (categoryRepository.existsByParentId(entity.getId())) {
             throw new CategoryHasChildrenException("Category has subcategories and cannot be deleted");
         }
         categoryRepository.delete(entity);
     }
 
-    private CategoryView toTree(CategoryEntity node, Map<Long, List<CategoryEntity>> byParent) {
+    private CategoryView toSubtree(Long storeId, CategoryEntity node) {
+        List<CategoryEntity> all = categoryRepository.findByStoreId(storeId);
+        return toTree(node, indexById(all), childrenByParent(all));
+    }
+
+    private CategoryView toTree(CategoryEntity node, Map<Long, CategoryEntity> byId,
+                                Map<Long, List<CategoryEntity>> byParent) {
         List<CategoryView> children = byParent.getOrDefault(node.getId(), List.of()).stream()
-                .map(child -> toTree(child, byParent))
+                .map(child -> toTree(child, byId, byParent))
                 .toList();
-        return categoryEntityMapper.toView(node, children);
+        String parentPublicId = node.getParentId() == null ? null
+                : Optional.ofNullable(byId.get(node.getParentId()))
+                        .map(CategoryEntity::getPublicId)
+                        .orElse(null);
+        return categoryEntityMapper.toView(node, parentPublicId, children);
+    }
+
+    private static Map<Long, CategoryEntity> indexById(List<CategoryEntity> all) {
+        return all.stream().collect(Collectors.toMap(CategoryEntity::getId, Function.identity()));
     }
 
     private static Map<Long, List<CategoryEntity>> childrenByParent(List<CategoryEntity> all) {
@@ -107,17 +135,16 @@ public class CategoryService implements CategoriesApi {
                 .collect(Collectors.groupingBy(CategoryEntity::getParentId));
     }
 
-    private void requireParentPresent(List<Category> storeCategories, Long parentId) {
-        boolean present = storeCategories.stream().anyMatch(category -> category.id().equals(parentId));
-        if (!present) {
-            throw new NotFoundException("Parent category not found");
-        }
+    private Long resolveParentId(List<CategoryEntity> storeCategories, String parentPublicId) {
+        return storeCategories.stream()
+                .filter(category -> parentPublicId.equals(category.getPublicId()))
+                .map(CategoryEntity::getId)
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Parent category not found"));
     }
 
-    private CategoryEntity requireOwned(Long storeId, Long categoryId) {
-        CategoryEntity entity = categoryRepository.findById(categoryId)
+    private CategoryEntity requireOwned(Long storeId, String publicId) {
+        return categoryRepository.findByStoreIdAndPublicId(storeId, publicId)
                 .orElseThrow(() -> new NotFoundException("Category not found"));
-        entity.requireOwnedBy(storeId);
-        return entity;
     }
 }

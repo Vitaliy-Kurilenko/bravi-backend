@@ -11,11 +11,15 @@ import java.util.Optional;
 public interface AccessApi {
 
     /**
-     * Authorization context of the current user's active account, if any.
-     * Resolved from {@code InvocationContext.userId}. Empty when the user has
-     * no active membership.
+     * Authorization context for the given account (by public id) and the current user.
+     * Resolved from {@code InvocationContext.userId}. Empty when the account does not
+     * exist or the user has no ACTIVE membership on it — the caller renders 403.
      */
-    Optional<AccessContextView> resolveCurrentContext();
+    Optional<AccessContextView> resolveContext(String accountPublicId);
+
+    /** Same as {@link #resolveContext(String)} but for an account already resolved to its internal id
+     *  (e.g. derived from a store). Empty when the user has no ACTIVE membership on it. */
+    Optional<AccessContextView> resolveContext(Long accountId);
 
     List<AccountView> findAccountsByCurrentUser();
 
@@ -33,9 +37,6 @@ public interface AccessApi {
      * system {@code <TYPE>_OWNER} role. Returns the created account + membership.
      */
     OwnerAccountView provisionOwnerAccount(Long userId, String accountType);
-
-    /** True when the current account grants the given permission code (e.g. {@code STORE_WRITE}). */
-    boolean currentUserHasPermission(String permissionCode);
 
     /** Transitions an account to ACTIVE (seller onboarding completion). */
     void activateAccount(Long accountId);

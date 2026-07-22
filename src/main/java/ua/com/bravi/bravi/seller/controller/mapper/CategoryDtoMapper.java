@@ -18,13 +18,17 @@ public interface CategoryDtoMapper {
     List<CategoryResponse> toResponses(List<CategoryView> categories);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "publicId", ignore = true)
     @Mapping(target = "storeId", ignore = true)
+    @Mapping(target = "parentId", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     Category toDomain(CategoryCreateRequest request);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "publicId", ignore = true)
     @Mapping(target = "storeId", ignore = true)
+    @Mapping(target = "parentId", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     Category toDomain(CategoryUpdateRequest request);

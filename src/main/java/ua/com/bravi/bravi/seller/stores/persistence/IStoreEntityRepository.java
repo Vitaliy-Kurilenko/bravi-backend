@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface IStoreEntityRepository extends JpaRepository<StoreEntity, Long> {
 
     Optional<StoreEntity> findFirstBySellerAccountIdOrderByIdAsc(Long sellerAccountId);
+
+    Optional<StoreEntity> findByPublicId(String publicId);
 }

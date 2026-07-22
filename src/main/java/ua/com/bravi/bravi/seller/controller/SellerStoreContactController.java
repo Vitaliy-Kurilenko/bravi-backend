@@ -27,7 +27,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/seller/stores/contacts")
+@RequestMapping("/stores/{storePublicId}/contacts")
 @Tag(name = "SellerStoreContactController")
 @RequireStore
 public class SellerStoreContactController {

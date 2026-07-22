@@ -44,7 +44,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/seller/products")
+@RequestMapping("/stores/{storePublicId}/products")
 @Tag(name = "SellerProductController")
 @RequireStore
 public class SellerProductController {

@@ -15,7 +15,7 @@ public final class CategoryHierarchyPolicy {
 
     public static final int MAX_DEPTH = 3;
 
-    private static final String FIELD_PARENT = "parentId";
+    private static final String FIELD_PARENT = "parent_public_id";
 
     private CategoryHierarchyPolicy() {
     }

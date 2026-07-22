@@ -7,8 +7,10 @@ import java.util.List;
 
 public record CategoryView(
         Long id,
+        String publicId,
         Long storeId,
         Long parentId,
+        String parentPublicId,
         String name,
         String description,
         CategoryStatus status,

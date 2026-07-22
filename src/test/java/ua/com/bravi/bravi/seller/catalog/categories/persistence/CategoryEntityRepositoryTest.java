@@ -51,6 +51,7 @@ class CategoryEntityRepositoryTest extends AbstractPostgresIT {
 
     private CategoryEntity newCategory(Long storeId, String name, Long parentId) {
         CategoryEntity entity = new CategoryEntity();
+        entity.setPublicId("cat_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16));
         entity.setStoreId(storeId);
         entity.setParentId(parentId);
         entity.setName(name);
@@ -100,6 +101,17 @@ class CategoryEntityRepositoryTest extends AbstractPostgresIT {
         repository.saveAndFlush(newCategory(storeId, "Child", rootId));
 
         assertThat(repository.existsByParentId(rootId)).isTrue();
+    }
+
+    @Test
+    void findByStoreIdAndPublicIdScopesToStore() {
+        Long storeId = persistStore();
+        Long otherStoreId = persistStore();
+        CategoryEntity saved = repository.saveAndFlush(newCategory(storeId, "A", null));
+        String publicId = saved.getPublicId();
+
+        assertThat(repository.findByStoreIdAndPublicId(storeId, publicId)).isPresent();
+        assertThat(repository.findByStoreIdAndPublicId(otherStoreId, publicId)).isEmpty();
     }
 
     @Test

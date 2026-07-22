@@ -35,29 +35,35 @@ public class AccessService implements AccessApi {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<AccessContextView> resolveCurrentContext() {
+    public Optional<AccessContextView> resolveContext(String accountPublicId) {
         Long userId = invocationContext.getUserId();
         if (userId == null) {
             return Optional.empty();
         }
+        return accountRepository.findByPublicId(accountPublicId).flatMap(account -> contextFor(userId, account));
+    }
 
-        List<MembershipEntity> activeMemberships =
-                membershipRepository.findByUserIdAndStatusOrderByIdAsc(userId, MembershipStatus.ACTIVE);
-        if (activeMemberships.isEmpty()) {
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<AccessContextView> resolveContext(Long accountId) {
+        Long userId = invocationContext.getUserId();
+        if (userId == null) {
             return Optional.empty();
         }
+        return accountRepository.findById(accountId).flatMap(account -> contextFor(userId, account));
+    }
 
-        // TODO(seller/supplier step): multi-account selection via request header.
-        // For now the first active membership is the current account.
-        Long accountId = activeMemberships.get(0).getAccountId();
-
-        return accountRepository.findById(accountId)
-                .map(account -> new AccessContextView(
-                        account.getId(),
-                        account.getPublicId(),
-                        account.getType().name(),
-                        membershipRepository.findRoleCodes(userId, accountId),
-                        membershipRepository.findPermissionCodes(userId, accountId)));
+    private Optional<AccessContextView> contextFor(Long userId, AccountEntity account) {
+        if (!membershipRepository.existsByUserIdAndAccountIdAndStatus(
+                userId, account.getId(), MembershipStatus.ACTIVE)) {
+            return Optional.empty();
+        }
+        return Optional.of(new AccessContextView(
+                account.getId(),
+                account.getPublicId(),
+                account.getType().name(),
+                membershipRepository.findRoleCodes(userId, account.getId()),
+                membershipRepository.findPermissionCodes(userId, account.getId())));
     }
 
     @Override
@@ -148,14 +154,6 @@ public class AccessService implements AccessApi {
                 savedAccount.getStatus().name(),
                 savedMembership.getId(),
                 savedMembership.getPublicId());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean currentUserHasPermission(String permissionCode) {
-        return resolveCurrentContext()
-                .map(ctx -> ctx.permissionCodes().contains(permissionCode))
-                .orElse(false);
     }
 
     @Override

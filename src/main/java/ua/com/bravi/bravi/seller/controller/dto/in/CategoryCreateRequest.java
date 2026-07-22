@@ -9,7 +9,7 @@ public record CategoryCreateRequest(
         String name,
         String description,
         CategoryStatus status,
-        @JsonProperty("parent_id")
-        Long parentId
+        @JsonProperty("parent_public_id")
+        String parentPublicId
 ) {
 }

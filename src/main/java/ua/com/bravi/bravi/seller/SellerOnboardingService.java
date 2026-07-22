@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ua.com.bravi.bravi.access.api.AccessApi;
 import ua.com.bravi.bravi.access.api.AccessContextView;
 import ua.com.bravi.bravi.access.api.AccountView;
+import ua.com.bravi.bravi.access.api.CurrentAccountHolder;
 import ua.com.bravi.bravi.identity.api.CurrentUserView;
 import ua.com.bravi.bravi.identity.api.IdentityApi;
 import ua.com.bravi.bravi.seller.account.api.SellerAccountView;
@@ -51,6 +52,7 @@ public class SellerOnboardingService {
     private static final String ONBOARDING_COMPLETED = "COMPLETED";
 
     private final AccessApi accessApi;
+    private final CurrentAccountHolder currentAccountHolder;
     private final IdentityApi identityApi;
     private final StoresApi storesApi;
     private final StoreContactsApi storeContactsApi;
@@ -168,10 +170,13 @@ public class SellerOnboardingService {
                 store.map(storeDtoMapper::toResponse).orElse(null));
     }
 
-    /** Resolves the path account id against the current context; 403 on mismatch or non-seller account. */
+    /**
+     * Returns the path account resolved by the seller-context interceptor (validated ACTIVE membership);
+     * 403 when no context or the account is not a seller account.
+     */
     private Long resolveAccountId(String accountPublicId) {
-        AccessContextView context = accessApi.resolveCurrentContext()
-                .orElseThrow(() -> new AccessDeniedException("No active account for the current user"));
+        AccessContextView context = currentAccountHolder.getContext()
+                .orElseThrow(() -> new AccessDeniedException("No access to this account"));
         if (!context.accountPublicId().equals(accountPublicId)) {
             throw new AccessDeniedException("Account does not match the current context");
         }

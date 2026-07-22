@@ -8,6 +8,8 @@ import java.time.ZoneId;
 import java.util.Currency;
 
 public record StoreResponse(
+        @JsonProperty("public_id")
+        String publicId,
         String name,
         String description,
         String country,
