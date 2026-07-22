@@ -33,7 +33,9 @@ Backend-застосунок на **Spring Boot 4.x / Java 26**, PostgreSQL, і�
   у шляху**: `/stores/{storePublicId}/**` (`/categories`, `/manufacturers`, `/products`, `/orders`,
   `/contacts`, а сам магазин — корінь `/stores/{storePublicId}`). Акаунт **виводиться з магазину**
   (`stores.seller_account_id`), окремо в URL не передається. Онбординг (магазину ще нема) —
-  `/accounts/{accountPublicId}/seller/onboarding/**`. `SellerContextInterceptor` резолвить магазин зі
+  `/accounts/{accountPublicId}/seller/onboarding/**`. Перелік магазинів акаунта —
+  `GET /accounts/{accountPublicId}/seller/stores` (account-scoped, `hasPermission('STORE','READ')`).
+  `SellerContextInterceptor` резолвить магазин зі
   шляху, виводить акаунт і перевіряє ACTIVE membership користувача (невідомий/чужий магазин → 404;
   для онбординг-акаунта без membership → 403) — перед `@PreAuthorize hasPermission(...)`.
   Жодного «першого акаунта/магазину».

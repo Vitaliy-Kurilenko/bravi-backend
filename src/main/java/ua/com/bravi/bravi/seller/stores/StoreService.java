@@ -33,8 +33,11 @@ import ua.com.bravi.bravi.shared.util.PublicIdGenerator;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Currency;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -71,6 +74,19 @@ public class StoreService implements StoresApi {
     @Override
     public Optional<StoreView> getStoreById(Long storeId) {
         return storeRepository.findById(storeId).map(entity -> toView(storeId, entity));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<StoreView> getStoresByAccountId(Long sellerAccountId) {
+        List<StoreEntity> stores = storeRepository.findAllBySellerAccountIdOrderByIdAsc(sellerAccountId);
+        // Batch-load settings by store id: toView requires the settings row, so avoid an N+1 lookup.
+        Map<Long, StoreSettingsEntity> settingsById = storeSettingsRepository
+                .findAllById(stores.stream().map(StoreEntity::getId).toList()).stream()
+                .collect(Collectors.toMap(StoreSettingsEntity::getStoreId, s -> s));
+        return stores.stream()
+                .map(entity -> storeEntityMapper.toView(entity, requireSettingsFrom(settingsById, entity.getId())))
+                .toList();
     }
 
     @Override
@@ -198,6 +214,14 @@ public class StoreService implements StoresApi {
     private StoreSettingsEntity requireSettings(Long storeId) {
         return storeSettingsRepository.findById(storeId)
                 .orElseThrow(() -> new NotFoundException("Store settings not found"));
+    }
+
+    private static StoreSettingsEntity requireSettingsFrom(Map<Long, StoreSettingsEntity> settingsById, Long storeId) {
+        StoreSettingsEntity settings = settingsById.get(storeId);
+        if (settings == null) {
+            throw new NotFoundException("Store settings not found");
+        }
+        return settings;
     }
 
     /** Store timezone/currency live in the settings row, so a view always joins the two. */

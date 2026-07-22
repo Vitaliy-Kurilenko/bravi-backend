@@ -100,6 +100,41 @@ class StoreServiceTest {
     }
 
     @Test
+    void getStoresByAccountIdReturnsEmptyWhenNoStores() {
+        when(storeRepository.findAllBySellerAccountIdOrderByIdAsc(ACCOUNT_ID)).thenReturn(List.of());
+        when(storeSettingsRepository.findAllById(List.of())).thenReturn(List.of());
+
+        assertThat(service.getStoresByAccountId(ACCOUNT_ID)).isEmpty();
+    }
+
+    @Test
+    void getStoresByAccountIdJoinsEachStoreWithItsSettings() {
+        StoreEntity entity = new StoreEntity();
+        entity.setId(STORE_ID);
+        entity.setSellerAccountId(ACCOUNT_ID);
+        StoreSettingsEntity settings = new StoreSettingsEntity();
+        settings.setStoreId(STORE_ID);
+        StoreView view = mock(StoreView.class);
+
+        when(storeRepository.findAllBySellerAccountIdOrderByIdAsc(ACCOUNT_ID)).thenReturn(List.of(entity));
+        when(storeSettingsRepository.findAllById(List.of(STORE_ID))).thenReturn(List.of(settings));
+        when(storeEntityMapper.toView(entity, settings)).thenReturn(view);
+
+        assertThat(service.getStoresByAccountId(ACCOUNT_ID)).containsExactly(view);
+    }
+
+    @Test
+    void getStoresByAccountIdThrowsNotFoundWhenSettingsMissing() {
+        StoreEntity entity = new StoreEntity();
+        entity.setId(STORE_ID);
+        when(storeRepository.findAllBySellerAccountIdOrderByIdAsc(ACCOUNT_ID)).thenReturn(List.of(entity));
+        when(storeSettingsRepository.findAllById(List.of(STORE_ID))).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.getStoresByAccountId(ACCOUNT_ID))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
     void createDraftStorePersistsDraftWithDefaultsSettingsAndPublishesEvent() {
         StoreDraft draft = new StoreDraft("Shop", "desc", "UA");
         StoreEntity saved = new StoreEntity();

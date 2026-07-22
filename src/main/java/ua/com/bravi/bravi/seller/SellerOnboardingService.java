@@ -1,17 +1,15 @@
 package ua.com.bravi.bravi.seller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ua.com.bravi.bravi.access.api.AccessApi;
-import ua.com.bravi.bravi.access.api.AccessContextView;
 import ua.com.bravi.bravi.access.api.AccountView;
-import ua.com.bravi.bravi.access.api.CurrentAccountHolder;
 import ua.com.bravi.bravi.identity.api.CurrentUserView;
 import ua.com.bravi.bravi.identity.api.IdentityApi;
 import ua.com.bravi.bravi.seller.account.api.SellerAccountView;
 import ua.com.bravi.bravi.seller.account.api.SellerAccountsApi;
+import ua.com.bravi.bravi.seller.component.SellerAccountResolver;
 import ua.com.bravi.bravi.seller.channels.api.SalesChannelsApi;
 import ua.com.bravi.bravi.seller.controller.dto.in.LogoUploadUrlRequest;
 import ua.com.bravi.bravi.seller.controller.dto.out.LogoUploadUrlResponse;
@@ -47,12 +45,11 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class SellerOnboardingService {
 
-    private static final String SELLER = "SELLER";
     private static final String ONBOARDING_IN_PROGRESS = "IN_PROGRESS";
     private static final String ONBOARDING_COMPLETED = "COMPLETED";
 
     private final AccessApi accessApi;
-    private final CurrentAccountHolder currentAccountHolder;
+    private final SellerAccountResolver sellerAccountResolver;
     private final IdentityApi identityApi;
     private final StoresApi storesApi;
     private final StoreContactsApi storeContactsApi;
@@ -175,15 +172,7 @@ public class SellerOnboardingService {
      * 403 when no context or the account is not a seller account.
      */
     private Long resolveAccountId(String accountPublicId) {
-        AccessContextView context = currentAccountHolder.getContext()
-                .orElseThrow(() -> new AccessDeniedException("No access to this account"));
-        if (!context.accountPublicId().equals(accountPublicId)) {
-            throw new AccessDeniedException("Account does not match the current context");
-        }
-        if (!SELLER.equals(context.accountType())) {
-            throw new AccessDeniedException("Not a seller account");
-        }
-        return context.accountId();
+        return sellerAccountResolver.resolveSellerAccountId(accountPublicId);
     }
 
     private Long requireStoreId(Long accountId) {
