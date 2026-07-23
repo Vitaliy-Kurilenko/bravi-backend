@@ -31,10 +31,10 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * End-to-end DB-backed verification that the store is resolved from the URL path
- * ({@code /stores/{storePublicId}/...}), its account derived from it, and access scoped to the
- * caller's ACTIVE membership: a seller reaches only their own store; a store of another account,
- * or an unknown store, both yield 404 (a store you cannot see is "not found").
+ * End-to-end DB-backed verification that the store is resolved from the {@code X-Store-Id} header,
+ * validated against the account from {@code X-Account-Id}, and access scoped to the caller's ACTIVE
+ * membership: a seller reaches only their own store; a store of another account, or an unknown store,
+ * both yield 404 (a store you cannot see is "not found").
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class StoreScopedAccessTest extends AbstractPostgresIT {
@@ -92,23 +92,22 @@ class StoreScopedAccessTest extends AbstractPostgresIT {
     @Test
     void categoriesAreScopedToTheCallersOwnStore() {
         // Two independent sellers, each with their own account + store.
-        registerAndCreateStore(EXT_A, "a@example.com", TOKEN_A);
+        String accountA = registerAndCreateStore(EXT_A, "a@example.com", TOKEN_A);
         String storeA = latestStorePublicId();
         registerAndCreateStore(EXT_B, "b@example.com", TOKEN_B);
         String storeB = storePublicIdOtherThan(storeA);
 
-        String ownCategories = "/stores/" + storeA + "/categories";
-
         // Owner reaches their own store: create + list.
-        assertThat(post(ownCategories, CATEGORY_BODY, TOKEN_A).getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(get(ownCategories, TOKEN_A).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(post("/sellers/categories", CATEGORY_BODY, TOKEN_A, accountA, storeA).getStatusCode())
+                .isEqualTo(HttpStatus.CREATED);
+        assertThat(get("/sellers/categories", TOKEN_A, accountA, storeA).getStatusCode()).isEqualTo(HttpStatus.OK);
 
-        // A store whose account the caller has no membership on → 404 (not yours = not found).
-        assertThat(get("/stores/" + storeB + "/categories", TOKEN_A).getStatusCode())
+        // A store of another account (caller has no membership on it) → 404 (not yours = not found).
+        assertThat(get("/sellers/categories", TOKEN_A, accountA, storeB).getStatusCode())
                 .isEqualTo(HttpStatus.NOT_FOUND);
 
         // Unknown store → 404.
-        assertThat(get("/stores/st_missing/categories", TOKEN_A).getStatusCode())
+        assertThat(get("/sellers/categories", TOKEN_A, accountA, "st_missing").getStatusCode())
                 .isEqualTo(HttpStatus.NOT_FOUND);
     }
 
@@ -120,7 +119,7 @@ class StoreScopedAccessTest extends AbstractPostgresIT {
         String accountPublicId = jdbcTemplate.queryForObject(
                 "SELECT a.public_id FROM accounts a JOIN memberships m ON m.account_id = a.id "
                         + "JOIN users u ON u.id = m.user_id WHERE u.ext_id = ?", String.class, extId);
-        assertThat(post("/accounts/" + accountPublicId + "/seller/onboarding/store", STORE_BODY, token).getStatusCode())
+        assertThat(post("/sellers/onboarding/store", STORE_BODY, token, accountPublicId, null).getStatusCode())
                 .isEqualTo(HttpStatus.CREATED);
         return accountPublicId;
     }
@@ -134,23 +133,35 @@ class StoreScopedAccessTest extends AbstractPostgresIT {
                 "SELECT public_id FROM stores WHERE public_id <> ? ORDER BY id DESC LIMIT 1", String.class, publicId);
     }
 
-    private ResponseEntity<String> get(String path, String token) {
-        return rest.exchange(url(path), HttpMethod.GET, new HttpEntity<>(headers(token)), String.class);
+    private ResponseEntity<String> get(String path, String token, String accountId, String storeId) {
+        return rest.exchange(url(path), HttpMethod.GET,
+                new HttpEntity<>(headers(token, accountId, storeId)), String.class);
     }
 
     private ResponseEntity<String> post(String path, String body, String token) {
-        return rest.exchange(url(path), HttpMethod.POST, new HttpEntity<>(body, headers(token)), String.class);
+        return post(path, body, token, null, null);
+    }
+
+    private ResponseEntity<String> post(String path, String body, String token, String accountId, String storeId) {
+        return rest.exchange(url(path), HttpMethod.POST,
+                new HttpEntity<>(body, headers(token, accountId, storeId)), String.class);
     }
 
     private String url(String path) {
         return "http://localhost:" + port + "/api" + path;
     }
 
-    private static HttpHeaders headers(String token) {
+    private static HttpHeaders headers(String token, String accountId, String storeId) {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.add(HttpConstants.REQUEST_ID_HEADER, "corr-scope");
+        if (accountId != null) {
+            headers.add(HttpConstants.ACCOUNT_ID_HEADER, accountId);
+        }
+        if (storeId != null) {
+            headers.add(HttpConstants.STORE_ID_HEADER, storeId);
+        }
         return headers;
     }
 

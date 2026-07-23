@@ -9,6 +9,11 @@ public final class HttpConstants {
     public static final String AUTHORIZATION_HEADER = "Authorization";
     public static final String USER_AGENT_HEADER = "User-Agent";
 
+    /** Public id of the account in scope (resolved into AccountContext). Present on almost all requests. */
+    public static final String ACCOUNT_ID_HEADER = "X-Account-Id";
+    /** Public id of the store in scope (resolved into StoreContext); only on store-scoped requests. */
+    public static final String STORE_ID_HEADER = "X-Store-Id";
+
     public static final String REQUEST_ID_MDC_KEY = "requestId";
 
     /** Service-to-service endpoints (Auth Service → Backend); no end-user context. */

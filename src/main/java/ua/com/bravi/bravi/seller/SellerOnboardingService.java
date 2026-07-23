@@ -37,9 +37,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Orchestrates seller onboarding (spec §5) under {@code /accounts/{accountId}/seller/onboarding}.
- * Resolves the path account against the current authorization context, drives the DRAFT store /
- * settings / contacts steps, and finalizes onboarding (account ACTIVE, onboarding COMPLETED, store ACTIVE).
+ * Orchestrates seller onboarding (spec §5) under {@code /seller/onboarding}. Resolves the account
+ * from the current authorization context ({@code X-Account-Id}), drives the DRAFT store / settings /
+ * contacts steps, and finalizes onboarding (account ACTIVE, onboarding COMPLETED, store ACTIVE).
  */
 @Service
 @RequiredArgsConstructor
@@ -61,13 +61,13 @@ public class SellerOnboardingService {
     private final StoreContactDtoMapper storeContactDtoMapper;
 
     @Transactional(readOnly = true)
-    public OnboardingStateResponse getState(String accountPublicId) {
-        return buildState(resolveAccountId(accountPublicId), accountPublicId);
+    public OnboardingStateResponse getState() {
+        return buildState(resolveAccountId());
     }
 
     @Transactional
-    public StoreResponse createStore(String accountPublicId, StoreDraft draft) {
-        Long accountId = resolveAccountId(accountPublicId);
+    public StoreResponse createStore(StoreDraft draft) {
+        Long accountId = resolveAccountId();
         if (storesApi.findFirstStoreIdByAccountId(accountId).isPresent()) {
             throw new StoreAlreadyExistsException("This seller account already has a store");
         }
@@ -78,9 +78,8 @@ public class SellerOnboardingService {
     }
 
     @Transactional
-    public void updateStore(String accountPublicId, StoreDraft draft, String logoStorageKey) {
-        Long accountId = resolveAccountId(accountPublicId);
-        Long storeId = requireStoreId(accountId);
+    public void updateStore(StoreDraft draft, String logoStorageKey) {
+        Long storeId = requireStoreId(resolveAccountId());
         storesApi.updateDraftStore(storeId, draft);
         if (logoStorageKey != null) {
             storesApi.confirmLogo(storeId, logoStorageKey);
@@ -88,36 +87,32 @@ public class SellerOnboardingService {
     }
 
     @Transactional(readOnly = true)
-    public LogoUploadUrlResponse presignLogoUpload(String accountPublicId, LogoUploadUrlRequest request) {
-        Long accountId = resolveAccountId(accountPublicId);
-        Long storeId = requireStoreId(accountId);
+    public LogoUploadUrlResponse presignLogoUpload(LogoUploadUrlRequest request) {
+        Long storeId = requireStoreId(resolveAccountId());
         return storeLogoDtoMapper.toResponse(
                 storesApi.presignLogoUpload(storeId, storeLogoDtoMapper.toUpload(request)));
     }
 
     @Transactional
-    public StoreResponse removeLogo(String accountPublicId) {
-        Long accountId = resolveAccountId(accountPublicId);
-        Long storeId = requireStoreId(accountId);
+    public StoreResponse removeLogo() {
+        Long storeId = requireStoreId(resolveAccountId());
         return storeDtoMapper.toResponse(storesApi.removeLogo(storeId));
     }
 
     @Transactional
-    public void updateSettings(String accountPublicId, StoreSettings patch) {
-        Long accountId = resolveAccountId(accountPublicId);
-        storesApi.updateSettings(requireStoreId(accountId), patch);
+    public void updateSettings(StoreSettings patch) {
+        storesApi.updateSettings(requireStoreId(resolveAccountId()), patch);
     }
 
     @Transactional
-    public List<StoreContactResponse> replaceContacts(String accountPublicId, List<StoreContact> contacts) {
-        Long accountId = resolveAccountId(accountPublicId);
+    public List<StoreContactResponse> replaceContacts(List<StoreContact> contacts) {
         return storeContactDtoMapper.toResponses(
-                storeContactsApi.replaceContacts(requireStoreId(accountId), contacts));
+                storeContactsApi.replaceContacts(requireStoreId(resolveAccountId()), contacts));
     }
 
     @Transactional
-    public OnboardingStateResponse complete(String accountPublicId) {
-        Long accountId = resolveAccountId(accountPublicId);
+    public OnboardingStateResponse complete() {
+        Long accountId = resolveAccountId();
         requireEmailVerified();
 
         List<String> missing = new ArrayList<>();
@@ -141,10 +136,10 @@ public class SellerOnboardingService {
         sellerAccountsApi.updateOnboardingStatus(accountId, ONBOARDING_COMPLETED);
         storesApi.activateStore(storeId.get());
 
-        return buildState(accountId, accountPublicId);
+        return buildState(accountId);
     }
 
-    private OnboardingStateResponse buildState(Long accountId, String accountPublicId) {
+    private OnboardingStateResponse buildState(Long accountId) {
         AccountView account = accessApi.findAccountById(accountId)
                 .orElseThrow(() -> new NotFoundException("Account not found"));
         String onboardingStatus = sellerAccountsApi.findByAccountId(accountId)
@@ -168,11 +163,11 @@ public class SellerOnboardingService {
     }
 
     /**
-     * Returns the path account resolved by the seller-context interceptor (validated ACTIVE membership);
-     * 403 when no context or the account is not a seller account.
+     * Returns the account resolved by the account-context interceptor from {@code X-Account-Id}
+     * (validated ACTIVE membership); 403 when no context or the account is not a seller account.
      */
-    private Long resolveAccountId(String accountPublicId) {
-        return sellerAccountResolver.resolveSellerAccountId(accountPublicId);
+    private Long resolveAccountId() {
+        return sellerAccountResolver.resolveSellerAccountId();
     }
 
     private Long requireStoreId(Long accountId) {

@@ -29,15 +29,20 @@ Backend-застосунок на **Spring Boot 4.x / Java 26**, PostgreSQL, і�
   елементи, відсортовані за `sort_order`; невідомий код → 404). Доступ — будь-який
   автентифікований користувач (`bravi_user`).
 - **`seller`** — вертикаль продавця: реєстрація seller-акаунта, онбординг, магазини,
-  товари/категорії/виробники магазину, замовлення продавця. Day-to-day REST **скоупиться магазином
-  у шляху**: `/stores/{storePublicId}/**` (`/categories`, `/manufacturers`, `/products`, `/orders`,
-  `/contacts`, а сам магазин — корінь `/stores/{storePublicId}`). Акаунт **виводиться з магазину**
-  (`stores.seller_account_id`), окремо в URL не передається. Онбординг (магазину ще нема) —
-  `/accounts/{accountPublicId}/seller/onboarding/**`. Перелік магазинів акаунта —
-  `GET /accounts/{accountPublicId}/seller/stores` (account-scoped, `hasPermission('STORE','READ')`).
-  `SellerContextInterceptor` резолвить магазин зі
-  шляху, виводить акаунт і перевіряє ACTIVE membership користувача (невідомий/чужий магазин → 404;
-  для онбординг-акаунта без membership → 403) — перед `@PreAuthorize hasPermission(...)`.
+  товари/категорії/виробники магазину, замовлення продавця. Контекст **передається заголовками**,
+  а не в шляху: `X-Account-Id` (публічний id акаунта, майже в усіх запитах) → `AccountContext`;
+  `X-Store-Id` (публічний id магазину, лише де потрібно) → `StoreContext`. Усі seller-ендпоінти
+  згруповано під `/sellers/**`. Сам ресурс «магазин» — **path-based REST**: перелік
+  `GET /sellers/stores` (лише `X-Account-Id`), а конкретний магазин — `/sellers/stores/{storeId}`
+  (get/patch + logo). Store-scoped суб-ресурси скоупляться магазином через заголовок `X-Store-Id`:
+  `/sellers/products`, `/sellers/categories`, `/sellers/manufacturers`, `/sellers/orders`,
+  `/sellers/contacts`. Онбординг (магазину ще нема) — `/sellers/onboarding/**` (лише `X-Account-Id`).
+  Перелік акаунтів користувача (discovery) — `GET /accounts` (без заголовків контексту).
+  `AccountContextInterceptor` (модуль `access`) резолвить `X-Account-Id` → `AccountContext` і
+  перевіряє ACTIVE membership (немає доступу → 403); `StoreContextInterceptor` (модуль
+  `seller.stores`) резолвить магазин у `StoreContext` — з path-параметра `{storeId}`, інакше з
+  заголовка `X-Store-Id` — звіряючи належність акаунту (невідомий/чужий магазин → 404); обидва
+  перед `@PreAuthorize hasPermission(...)`.
   Жодного «першого акаунта/магазину».
 
 **Реєстрація:** зовнішній Auth Service створює користувача в Keycloak і викликає внутрішній
@@ -46,7 +51,7 @@ Membership, ідемпотентно за `keycloakUserId`). Цей ендпоі
 `service_registration` (Keycloak service-account Auth-сервісу).
 
 **Онбординг продавця** (після реєстрації + верифікації email, `role_seller`): фронт веде
-користувача через `/accounts/{accountId}/seller/onboarding` —
+користувача через `/sellers/onboarding` (акаунт — у заголовку `X-Account-Id`) —
 `GET` (стан), `POST /store` (створює DRAFT-магазин + дефолтні settings + manual sales-channel,
 onboarding → IN_PROGRESS), `PATCH /store`, `PATCH /store/settings`, `PUT /store/contacts`,
 `POST /complete` (перевіряє `email_verified`, наявність магазину й manual-каналу, далі

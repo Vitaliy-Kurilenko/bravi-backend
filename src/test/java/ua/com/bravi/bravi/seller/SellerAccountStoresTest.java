@@ -31,9 +31,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * End-to-end DB-backed verification of {@code GET /accounts/{accountPublicId}/seller/stores}:
- * the owner lists their own account's store(s); a caller with no ACTIVE membership on the account
- * is denied (403). The account is resolved from the path by the seller-context interceptor.
+ * End-to-end DB-backed verification of {@code GET /sellers/stores}: the owner lists their own
+ * account's store(s); a caller with no ACTIVE membership on the account is denied (403). The
+ * account is resolved from the {@code X-Account-Id} header by the account-context interceptor.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class SellerAccountStoresTest extends AbstractPostgresIT {
@@ -91,7 +91,7 @@ class SellerAccountStoresTest extends AbstractPostgresIT {
     void ownerListsTheirAccountStores() {
         String accountA = registerAndCreateStore(EXT_A, "a@example.com", TOKEN_A);
 
-        ResponseEntity<String> response = get("/accounts/" + accountA + "/seller/stores", TOKEN_A);
+        ResponseEntity<String> response = get("/sellers/stores", TOKEN_A, accountA);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).contains("\"name\":\"Shop\"");
@@ -103,7 +103,7 @@ class SellerAccountStoresTest extends AbstractPostgresIT {
         // Second seller exists but has no membership on account A.
         registerSeller(EXT_B, "b@example.com");
 
-        assertThat(get("/accounts/" + accountA + "/seller/stores", TOKEN_B).getStatusCode())
+        assertThat(get("/sellers/stores", TOKEN_B, accountA).getStatusCode())
                 .isEqualTo(HttpStatus.FORBIDDEN);
     }
 
@@ -111,13 +111,13 @@ class SellerAccountStoresTest extends AbstractPostgresIT {
     void unknownAccountIsDenied() {
         registerSeller(EXT_A, "a@example.com");
 
-        assertThat(get("/accounts/ac_missing/seller/stores", TOKEN_A).getStatusCode())
+        assertThat(get("/sellers/stores", TOKEN_A, "ac_missing").getStatusCode())
                 .isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     private String registerAndCreateStore(UUID extId, String email, String token) {
         String accountPublicId = registerSeller(extId, email);
-        assertThat(post("/accounts/" + accountPublicId + "/seller/onboarding/store", STORE_BODY, token).getStatusCode())
+        assertThat(post("/sellers/onboarding/store", STORE_BODY, token, accountPublicId).getStatusCode())
                 .isEqualTo(HttpStatus.CREATED);
         return accountPublicId;
     }
@@ -132,23 +132,30 @@ class SellerAccountStoresTest extends AbstractPostgresIT {
                         + "JOIN users u ON u.id = m.user_id WHERE u.ext_id = ?", String.class, extId);
     }
 
-    private ResponseEntity<String> get(String path, String token) {
-        return rest.exchange(url(path), HttpMethod.GET, new HttpEntity<>(headers(token)), String.class);
+    private ResponseEntity<String> get(String path, String token, String accountId) {
+        return rest.exchange(url(path), HttpMethod.GET, new HttpEntity<>(headers(token, accountId)), String.class);
     }
 
     private ResponseEntity<String> post(String path, String body, String token) {
-        return rest.exchange(url(path), HttpMethod.POST, new HttpEntity<>(body, headers(token)), String.class);
+        return post(path, body, token, null);
+    }
+
+    private ResponseEntity<String> post(String path, String body, String token, String accountId) {
+        return rest.exchange(url(path), HttpMethod.POST, new HttpEntity<>(body, headers(token, accountId)), String.class);
     }
 
     private String url(String path) {
         return "http://localhost:" + port + "/api" + path;
     }
 
-    private static HttpHeaders headers(String token) {
+    private static HttpHeaders headers(String token, String accountId) {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.add(HttpConstants.REQUEST_ID_HEADER, "corr-account-stores");
+        if (accountId != null) {
+            headers.add(HttpConstants.ACCOUNT_ID_HEADER, accountId);
+        }
         return headers;
     }
 

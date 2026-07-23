@@ -93,7 +93,7 @@ class SellerOnboardingTest extends AbstractPostgresIT {
 
         // Create DRAFT store — default settings + manual channel are provisioned alongside.
         ResponseEntity<String> created = post(
-                onboarding(accountId) + "/store", "{\"name\":\"Olga's Shop\"}", VERIFIED_TOKEN);
+                ONBOARDING + "/store", "{\"name\":\"Olga's Shop\"}", VERIFIED_TOKEN, accountId);
         assertThat(created.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(created.getBody()).contains("\"status\":\"DRAFT\"");
 
@@ -103,13 +103,13 @@ class SellerOnboardingTest extends AbstractPostgresIT {
                 .isEqualTo("IN_PROGRESS");
 
         // Replace contacts.
-        ResponseEntity<String> contacts = exchange(HttpMethod.PUT, onboarding(accountId) + "/store/contacts",
-                "{\"contacts\":[{\"type\":\"EMAIL\",\"value\":\"shop@example.com\"}]}", VERIFIED_TOKEN);
+        ResponseEntity<String> contacts = exchange(HttpMethod.PUT, ONBOARDING + "/store/contacts",
+                "{\"contacts\":[{\"type\":\"EMAIL\",\"value\":\"shop@example.com\"}]}", VERIFIED_TOKEN, accountId);
         assertThat(contacts.getStatusCode()).isEqualTo(HttpStatus.OK);
 
         // Complete.
         String storePublicId = jdbcTemplate.queryForObject("SELECT public_id FROM stores", String.class);
-        ResponseEntity<String> completed = post(onboarding(accountId) + "/complete", "", VERIFIED_TOKEN);
+        ResponseEntity<String> completed = post(ONBOARDING + "/complete", "", VERIFIED_TOKEN, accountId);
         assertThat(completed.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(completed.getBody())
                 .contains("\"account_status\":\"ACTIVE\"")
@@ -126,7 +126,7 @@ class SellerOnboardingTest extends AbstractPostgresIT {
     void completeBeforeEmailVerifiedIsForbidden() {
         String accountId = registerAndGetAccountPublicId();
 
-        ResponseEntity<String> response = post(onboarding(accountId) + "/complete", "", UNVERIFIED_TOKEN);
+        ResponseEntity<String> response = post(ONBOARDING + "/complete", "", UNVERIFIED_TOKEN, accountId);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(response.getBody()).contains("Email not verified");
@@ -136,7 +136,7 @@ class SellerOnboardingTest extends AbstractPostgresIT {
     void completeWithoutStoreIsUnprocessable() {
         String accountId = registerAndGetAccountPublicId();
 
-        ResponseEntity<String> response = post(onboarding(accountId) + "/complete", "", VERIFIED_TOKEN);
+        ResponseEntity<String> response = post(ONBOARDING + "/complete", "", VERIFIED_TOKEN, accountId);
 
         assertThat(response.getStatusCode().value()).isEqualTo(422);
         assertThat(response.getBody()).contains("store");
@@ -148,27 +148,32 @@ class SellerOnboardingTest extends AbstractPostgresIT {
         return jdbcTemplate.queryForObject("SELECT public_id FROM accounts", String.class);
     }
 
-    private static String onboarding(String accountPublicId) {
-        return "/accounts/" + accountPublicId + "/seller/onboarding";
-    }
+    private static final String ONBOARDING = "/sellers/onboarding";
 
     private ResponseEntity<String> post(String path, String body, String token) {
-        return exchange(HttpMethod.POST, path, body, token);
+        return post(path, body, token, null);
     }
 
-    private ResponseEntity<String> exchange(HttpMethod method, String path, String body, String token) {
-        return rest.exchange(url(path), method, new HttpEntity<>(body, headers(token)), String.class);
+    private ResponseEntity<String> post(String path, String body, String token, String accountId) {
+        return exchange(HttpMethod.POST, path, body, token, accountId);
+    }
+
+    private ResponseEntity<String> exchange(HttpMethod method, String path, String body, String token, String accountId) {
+        return rest.exchange(url(path), method, new HttpEntity<>(body, headers(token, accountId)), String.class);
     }
 
     private String url(String path) {
         return "http://localhost:" + port + "/api" + path;
     }
 
-    private static HttpHeaders headers(String token) {
+    private static HttpHeaders headers(String token, String accountId) {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.add(HttpConstants.REQUEST_ID_HEADER, "corr-onb");
+        if (accountId != null) {
+            headers.add(HttpConstants.ACCOUNT_ID_HEADER, accountId);
+        }
         return headers;
     }
 

@@ -256,7 +256,7 @@ public class ProductService implements ProductsApi {
     }
 
     private static String imageUrl(Long productId, Long imageId) {
-        return "/seller/products/" + productId + "/images/" + imageId;
+        return "/sellers/products/" + productId + "/images/" + imageId;
     }
 
     private ProductImageEntity requireImage(Long productId, Long imageId) {

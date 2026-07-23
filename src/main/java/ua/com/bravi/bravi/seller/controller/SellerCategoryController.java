@@ -21,33 +21,33 @@ import ua.com.bravi.bravi.seller.controller.dto.in.CategoryUpdateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.out.CategoryResponse;
 import ua.com.bravi.bravi.seller.controller.mapper.CategoryDtoMapper;
 import ua.com.bravi.bravi.shared.component.RequireStore;
-import ua.com.bravi.bravi.seller.stores.api.CurrentStoreHolder;
+import ua.com.bravi.bravi.seller.stores.api.StoreContext;
 
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/stores/{storePublicId}/categories")
+@RequestMapping("/sellers/categories")
 @Tag(name = "SellerCategoryController")
 @RequireStore
 public class SellerCategoryController {
 
     private final CategoriesApi categoriesApi;
     private final CategoryDtoMapper categoryDtoMapper;
-    private final CurrentStoreHolder currentStoreHolder;
+    private final StoreContext storeContext;
 
     @Operation(summary = "Get categories", description = "Returns the category tree of the current user's store")
     @GetMapping
     @PreAuthorize("hasPermission('PRODUCT', 'READ')")
     public List<CategoryResponse> getCategories() {
-        return categoryDtoMapper.toResponses(categoriesApi.findTreeByStoreId(currentStoreHolder.get()));
+        return categoryDtoMapper.toResponses(categoriesApi.findTreeByStoreId(storeContext.get()));
     }
 
     @Operation(summary = "Get category", description = "Returns a category subtree of the current user's store")
     @GetMapping("/{publicId}")
     @PreAuthorize("hasPermission('PRODUCT', 'READ')")
     public CategoryResponse getCategory(@PathVariable String publicId) {
-        return categoryDtoMapper.toResponse(categoriesApi.getByPublicId(currentStoreHolder.get(), publicId));
+        return categoryDtoMapper.toResponse(categoriesApi.getByPublicId(storeContext.get(), publicId));
     }
 
     @Operation(summary = "Create category", description = "Creates a category in the current user's store")
@@ -55,7 +55,7 @@ public class SellerCategoryController {
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<CategoryResponse> createCategory(@Valid @RequestBody CategoryCreateRequest request) {
         CategoryResponse created = categoryDtoMapper.toResponse(
-                categoriesApi.create(currentStoreHolder.get(), categoryDtoMapper.toDomain(request)));
+                categoriesApi.create(storeContext.get(), categoryDtoMapper.toDomain(request)));
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
@@ -67,7 +67,7 @@ public class SellerCategoryController {
             @PathVariable String publicId,
             @Valid @RequestBody CategoryUpdateRequest request
     ) {
-        categoriesApi.update(currentStoreHolder.get(), publicId, categoryDtoMapper.toDomain(request));
+        categoriesApi.update(storeContext.get(), publicId, categoryDtoMapper.toDomain(request));
         return ResponseEntity.noContent().build();
     }
 
@@ -76,7 +76,7 @@ public class SellerCategoryController {
     @DeleteMapping("/{publicId}")
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<Void> deleteCategory(@PathVariable String publicId) {
-        categoriesApi.delete(currentStoreHolder.get(), publicId);
+        categoriesApi.delete(storeContext.get(), publicId);
         return ResponseEntity.noContent().build();
     }
 }

@@ -34,7 +34,7 @@ import ua.com.bravi.bravi.seller.controller.dto.out.ProductResponse;
 import ua.com.bravi.bravi.seller.controller.mapper.ProductDtoMapper;
 import ua.com.bravi.bravi.shared.common.SortOrder;
 import ua.com.bravi.bravi.shared.component.RequireStore;
-import ua.com.bravi.bravi.seller.stores.api.CurrentStoreHolder;
+import ua.com.bravi.bravi.seller.stores.api.StoreContext;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -44,14 +44,14 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/stores/{storePublicId}/products")
+@RequestMapping("/sellers/products")
 @Tag(name = "SellerProductController")
 @RequireStore
 public class SellerProductController {
 
     private final ProductsApi productsApi;
     private final ProductDtoMapper productDtoMapper;
-    private final CurrentStoreHolder currentStoreHolder;
+    private final StoreContext storeContext;
 
     @Operation(summary = "Search products",
             description = "Returns a paginated, filtered and sorted list of the current store's products")
@@ -79,21 +79,21 @@ public class SellerProductController {
                 minPrice, maxPrice, createdFrom, createdTo,
                 sortBy == null ? null : ProductSortBy.fromParam(sortBy), sortOrder, page, limit
         );
-        return productDtoMapper.toPageResponse(productsApi.search(currentStoreHolder.get(), query));
+        return productDtoMapper.toPageResponse(productsApi.search(storeContext.get(), query));
     }
 
     @Operation(summary = "Get product", description = "Returns a single product of the current store")
     @GetMapping("/{productId}")
     @PreAuthorize("hasPermission('PRODUCT', 'READ')")
     public ProductResponse getProduct(@PathVariable Long productId) {
-        return productDtoMapper.toResponse(productsApi.getById(currentStoreHolder.get(), productId));
+        return productDtoMapper.toResponse(productsApi.getById(storeContext.get(), productId));
     }
 
     @Operation(summary = "Create product", description = "Creates a product in the current store")
     @PostMapping
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody ProductCreateRequest request) {
-        Long storeId = currentStoreHolder.get();
+        Long storeId = storeContext.get();
         Long productId = productsApi.create(storeId, productDtoMapper.toDomain(request));
         ProductResponse body = productDtoMapper.toResponse(productsApi.getById(storeId, productId));
         return ResponseEntity.status(HttpStatus.CREATED).body(body);
@@ -106,7 +106,7 @@ public class SellerProductController {
             @PathVariable Long productId,
             @Valid @RequestBody ProductUpdateRequest request
     ) {
-        productsApi.update(currentStoreHolder.get(), productId, productDtoMapper.toDomain(request));
+        productsApi.update(storeContext.get(), productId, productDtoMapper.toDomain(request));
         return ResponseEntity.noContent().build();
     }
 
@@ -114,7 +114,7 @@ public class SellerProductController {
     @DeleteMapping("/{productId}")
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long productId) {
-        productsApi.delete(currentStoreHolder.get(), productId);
+        productsApi.delete(storeContext.get(), productId);
         return ResponseEntity.noContent().build();
     }
 
@@ -122,7 +122,7 @@ public class SellerProductController {
     @GetMapping("/{productId}/images")
     @PreAuthorize("hasPermission('PRODUCT', 'READ')")
     public List<ProductImageResponse> getImages(@PathVariable Long productId) {
-        return productDtoMapper.toImageResponses(productsApi.listImages(currentStoreHolder.get(), productId));
+        return productDtoMapper.toImageResponses(productsApi.listImages(storeContext.get(), productId));
     }
 
     @Operation(summary = "Upload product image", description = "Adds an image to the product gallery")
@@ -134,7 +134,7 @@ public class SellerProductController {
             @RequestParam(name = "is_primary", defaultValue = "false") boolean primary
     ) {
         ProductImageResponse body = productDtoMapper.toImageResponse(
-                productsApi.addImage(currentStoreHolder.get(), productId, toUpload(file, primary)));
+                productsApi.addImage(storeContext.get(), productId, toUpload(file, primary)));
         return ResponseEntity.status(HttpStatus.CREATED).body(body);
     }
 
@@ -147,7 +147,7 @@ public class SellerProductController {
             @RequestParam("file") MultipartFile file
     ) {
         return productDtoMapper.toImageResponse(
-                productsApi.replaceImage(currentStoreHolder.get(), productId, imageId, toUpload(file, false)));
+                productsApi.replaceImage(storeContext.get(), productId, imageId, toUpload(file, false)));
     }
 
     @Operation(summary = "Get product image content", description = "Streams the binary content of a product image")
@@ -157,7 +157,7 @@ public class SellerProductController {
             @PathVariable Long productId,
             @PathVariable Long imageId
     ) {
-        ImageContent content = productsApi.loadImageContent(currentStoreHolder.get(), productId, imageId);
+        ImageContent content = productsApi.loadImageContent(storeContext.get(), productId, imageId);
         MediaType mediaType = content.contentType() == null
                 ? MediaType.APPLICATION_OCTET_STREAM
                 : MediaType.parseMediaType(content.contentType());
@@ -171,7 +171,7 @@ public class SellerProductController {
             @PathVariable Long productId,
             @PathVariable Long imageId
     ) {
-        productsApi.deleteImage(currentStoreHolder.get(), productId, imageId);
+        productsApi.deleteImage(storeContext.get(), productId, imageId);
         return ResponseEntity.noContent().build();
     }
 

@@ -7,13 +7,13 @@ import java.util.Optional;
 
 /**
  * Request-scoped bridge to the current user's authorization context for the account
- * addressed by the request path. Populated by the seller-context interceptor (which
- * resolves {@code {accountPublicId}} and validates the user's ACTIVE membership) before
+ * addressed by the {@code X-Account-Id} header. Populated by the account-context interceptor
+ * (which resolves the header public id and validates the user's ACTIVE membership) before
  * {@code @PreAuthorize} runs. Empty until set → {@code hasPermission} denies (fail-closed).
  */
 @Component
 @RequestScope
-public class CurrentAccountHolder {
+public class AccountContext {
 
     private AccessContextView context;
 

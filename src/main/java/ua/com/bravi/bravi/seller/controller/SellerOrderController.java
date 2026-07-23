@@ -30,7 +30,7 @@ import ua.com.bravi.bravi.seller.controller.dto.out.OrderStatusResponse;
 import ua.com.bravi.bravi.seller.controller.mapper.OrderDtoMapper;
 import ua.com.bravi.bravi.shared.common.SortOrder;
 import ua.com.bravi.bravi.shared.component.RequireStore;
-import ua.com.bravi.bravi.seller.stores.api.CurrentStoreHolder;
+import ua.com.bravi.bravi.seller.stores.api.StoreContext;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -38,14 +38,14 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/stores/{storePublicId}/orders")
+@RequestMapping("/sellers/orders")
 @Tag(name = "SellerOrderController")
 @RequireStore
 public class SellerOrderController {
 
     private final OrdersApi ordersApi;
     private final OrderDtoMapper orderDtoMapper;
-    private final CurrentStoreHolder currentStoreHolder;
+    private final StoreContext storeContext;
 
     @Operation(summary = "Search orders",
             description = "Returns a paginated, filtered and sorted list of the current store's orders")
@@ -77,7 +77,7 @@ public class SellerOrderController {
                 minTotal, maxTotal, createdFrom, createdTo,
                 sortBy == null ? null : OrderSortBy.fromParam(sortBy), sortOrder, page, limit
         );
-        return orderDtoMapper.toPageResponse(ordersApi.search(currentStoreHolder.get(), query));
+        return orderDtoMapper.toPageResponse(ordersApi.search(storeContext.get(), query));
     }
 
     @Operation(summary = "List order statuses", description = "Returns the extensible list of order statuses")
@@ -91,14 +91,14 @@ public class SellerOrderController {
     @GetMapping("/{orderId}")
     @PreAuthorize("hasPermission('ORDER', 'READ')")
     public OrderResponse getOrder(@PathVariable Long orderId) {
-        return orderDtoMapper.toResponse(ordersApi.getById(currentStoreHolder.get(), orderId));
+        return orderDtoMapper.toResponse(ordersApi.getById(storeContext.get(), orderId));
     }
 
     @Operation(summary = "Create order", description = "Creates an order in the current store")
     @PostMapping
     @PreAuthorize("hasPermission('ORDER', 'WRITE')")
     public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody OrderCreateRequest request) {
-        Long storeId = currentStoreHolder.get();
+        Long storeId = storeContext.get();
         Long orderId = ordersApi.create(storeId, orderDtoMapper.toDomain(request));
         OrderResponse body = orderDtoMapper.toResponse(ordersApi.getById(storeId, orderId));
         return ResponseEntity.status(HttpStatus.CREATED).body(body);
@@ -112,7 +112,7 @@ public class SellerOrderController {
             @PathVariable Long orderId,
             @Valid @RequestBody OrderUpdateRequest request
     ) {
-        Long storeId = currentStoreHolder.get();
+        Long storeId = storeContext.get();
         ordersApi.update(storeId, orderId, orderDtoMapper.toDomain(request));
         return orderDtoMapper.toResponse(ordersApi.getById(storeId, orderId));
     }
@@ -121,7 +121,7 @@ public class SellerOrderController {
     @DeleteMapping("/{orderId}")
     @PreAuthorize("hasPermission('ORDER', 'WRITE')")
     public ResponseEntity<Void> deleteOrder(@PathVariable Long orderId) {
-        ordersApi.delete(currentStoreHolder.get(), orderId);
+        ordersApi.delete(storeContext.get(), orderId);
         return ResponseEntity.noContent().build();
     }
 
@@ -132,7 +132,7 @@ public class SellerOrderController {
             @PathVariable Long orderId,
             @Valid @RequestBody OrderItemRequest request
     ) {
-        Long storeId = currentStoreHolder.get();
+        Long storeId = storeContext.get();
         ordersApi.addItem(storeId, orderId, orderDtoMapper.toItemEdit(request));
         OrderResponse body = orderDtoMapper.toResponse(ordersApi.getById(storeId, orderId));
         return ResponseEntity.status(HttpStatus.CREATED).body(body);
@@ -147,7 +147,7 @@ public class SellerOrderController {
             @PathVariable Long itemId,
             @Valid @RequestBody OrderItemEditRequest request
     ) {
-        Long storeId = currentStoreHolder.get();
+        Long storeId = storeContext.get();
         ordersApi.updateItem(storeId, orderId, itemId, orderDtoMapper.toItemEdit(request));
         return orderDtoMapper.toResponse(ordersApi.getById(storeId, orderId));
     }
@@ -157,7 +157,7 @@ public class SellerOrderController {
     @DeleteMapping("/{orderId}/items/{itemId}")
     @PreAuthorize("hasPermission('ORDER', 'WRITE')")
     public OrderResponse deleteItem(@PathVariable Long orderId, @PathVariable Long itemId) {
-        Long storeId = currentStoreHolder.get();
+        Long storeId = storeContext.get();
         ordersApi.deleteItem(storeId, orderId, itemId);
         return orderDtoMapper.toResponse(ordersApi.getById(storeId, orderId));
     }

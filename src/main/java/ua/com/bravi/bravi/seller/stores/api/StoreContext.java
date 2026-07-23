@@ -4,13 +4,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.annotation.RequestScope;
 
 /**
- * Request-scoped holder of the store addressed by the request path. Populated by the
- * seller-context interceptor (which resolves {@code {storePublicId}} scoped to the current
- * account) before the handler runs. Null until set → {@code @RequireStore} yields 404.
+ * Request-scoped holder of the store addressed by the {@code X-Store-Id} header. Populated by the
+ * store-context interceptor (which resolves the header public id scoped to the current account)
+ * before the handler runs. Null until set → {@code @RequireStore} yields 404.
  */
 @Component
 @RequestScope
-public class CurrentStoreHolder {
+public class StoreContext {
 
     private Long storeId;
 

@@ -10,13 +10,13 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import ua.com.bravi.bravi.shared.component.PermitNoStore;
 import ua.com.bravi.bravi.shared.component.RequireStore;
 import ua.com.bravi.bravi.shared.exception.NotFoundException;
-import ua.com.bravi.bravi.seller.stores.api.CurrentStoreHolder;
+import ua.com.bravi.bravi.seller.stores.api.StoreContext;
 
 @Component
 @RequiredArgsConstructor
 public class StoreRequiredInterceptor implements HandlerInterceptor {
 
-    private final CurrentStoreHolder currentStoreHolder;
+    private final StoreContext storeContext;
 
     @Override
     public boolean preHandle(@NonNull HttpServletRequest request,
@@ -28,7 +28,7 @@ public class StoreRequiredInterceptor implements HandlerInterceptor {
         if (!requiresStore(handlerMethod)) {
             return true;
         }
-        if (currentStoreHolder.get() == null) {
+        if (storeContext.get() == null) {
             throw new NotFoundException("Store not found");
         }
         return true;

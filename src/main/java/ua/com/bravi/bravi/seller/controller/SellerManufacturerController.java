@@ -21,40 +21,40 @@ import ua.com.bravi.bravi.seller.controller.dto.in.ManufacturerUpdateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.out.ManufacturerResponse;
 import ua.com.bravi.bravi.seller.controller.mapper.ManufacturerDtoMapper;
 import ua.com.bravi.bravi.shared.component.RequireStore;
-import ua.com.bravi.bravi.seller.stores.api.CurrentStoreHolder;
+import ua.com.bravi.bravi.seller.stores.api.StoreContext;
 
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/stores/{storePublicId}/manufacturers")
+@RequestMapping("/sellers/manufacturers")
 @Tag(name = "SellerManufacturerController")
 @RequireStore
 public class SellerManufacturerController {
 
     private final ManufacturersApi manufacturersApi;
     private final ManufacturerDtoMapper manufacturerDtoMapper;
-    private final CurrentStoreHolder currentStoreHolder;
+    private final StoreContext storeContext;
 
     @Operation(summary = "Get manufacturers", description = "Returns all manufacturers of the current user's store")
     @GetMapping
     @PreAuthorize("hasPermission('PRODUCT', 'READ')")
     public List<ManufacturerResponse> getManufacturers() {
-        return manufacturerDtoMapper.toResponses(manufacturersApi.findByStoreId(currentStoreHolder.get()));
+        return manufacturerDtoMapper.toResponses(manufacturersApi.findByStoreId(storeContext.get()));
     }
 
     @Operation(summary = "Get manufacturer", description = "Returns a manufacturer of the current user's store")
     @GetMapping("/{manufacturerId}")
     @PreAuthorize("hasPermission('PRODUCT', 'READ')")
     public ManufacturerResponse getManufacturer(@PathVariable Long manufacturerId) {
-        return manufacturerDtoMapper.toResponse(manufacturersApi.getById(currentStoreHolder.get(), manufacturerId));
+        return manufacturerDtoMapper.toResponse(manufacturersApi.getById(storeContext.get(), manufacturerId));
     }
 
     @Operation(summary = "Create manufacturer", description = "Creates a manufacturer in the current user's store")
     @PostMapping
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<Void> createManufacturer(@Valid @RequestBody ManufacturerCreateRequest request) {
-        manufacturersApi.create(currentStoreHolder.get(), manufacturerDtoMapper.toDomain(request));
+        manufacturersApi.create(storeContext.get(), manufacturerDtoMapper.toDomain(request));
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -65,7 +65,7 @@ public class SellerManufacturerController {
             @PathVariable Long manufacturerId,
             @Valid @RequestBody ManufacturerUpdateRequest request
     ) {
-        manufacturersApi.update(currentStoreHolder.get(), manufacturerId, manufacturerDtoMapper.toDomain(request));
+        manufacturersApi.update(storeContext.get(), manufacturerId, manufacturerDtoMapper.toDomain(request));
         return ResponseEntity.noContent().build();
     }
 
@@ -73,7 +73,7 @@ public class SellerManufacturerController {
     @DeleteMapping("/{manufacturerId}")
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<Void> deleteManufacturer(@PathVariable Long manufacturerId) {
-        manufacturersApi.delete(currentStoreHolder.get(), manufacturerId);
+        manufacturersApi.delete(storeContext.get(), manufacturerId);
         return ResponseEntity.noContent().build();
     }
 }

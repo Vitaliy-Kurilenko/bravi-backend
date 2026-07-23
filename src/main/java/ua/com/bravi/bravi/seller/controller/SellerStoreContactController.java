@@ -19,7 +19,7 @@ import ua.com.bravi.bravi.seller.controller.dto.in.StoreContactCreateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.in.StoreContactUpdateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.out.StoreContactResponse;
 import ua.com.bravi.bravi.seller.controller.mapper.StoreContactDtoMapper;
-import ua.com.bravi.bravi.seller.stores.api.CurrentStoreHolder;
+import ua.com.bravi.bravi.seller.stores.api.StoreContext;
 import ua.com.bravi.bravi.shared.component.RequireStore;
 import ua.com.bravi.bravi.seller.stores.contacts.api.StoreContactsApi;
 
@@ -27,20 +27,20 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/stores/{storePublicId}/contacts")
+@RequestMapping("/sellers/contacts")
 @Tag(name = "SellerStoreContactController")
 @RequireStore
 public class SellerStoreContactController {
 
     private final StoreContactsApi storeContactsApi;
     private final StoreContactDtoMapper storeContactDtoMapper;
-    private final CurrentStoreHolder currentStoreHolder;
+    private final StoreContext storeContext;
 
     @Operation(summary = "Get store contacts", description = "Returns all contacts of the current user's store")
     @GetMapping
     @PreAuthorize("hasPermission('STORE', 'READ')")
     public List<StoreContactResponse> getContacts() {
-        return storeContactDtoMapper.toResponses(storeContactsApi.findByStoreId(currentStoreHolder.get()));
+        return storeContactDtoMapper.toResponses(storeContactsApi.findByStoreId(storeContext.get()));
     }
 
     @Operation(summary = "Add store contacts", description = "Adds one or more contacts to the current user's store")
@@ -49,7 +49,7 @@ public class SellerStoreContactController {
     public ResponseEntity<Void> addContacts(
             @Valid @RequestBody List<@Valid StoreContactCreateRequest> requests
     ) {
-        storeContactsApi.addContacts(currentStoreHolder.get(), storeContactDtoMapper.toDomainFromCreate(requests));
+        storeContactsApi.addContacts(storeContext.get(), storeContactDtoMapper.toDomainFromCreate(requests));
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -60,7 +60,7 @@ public class SellerStoreContactController {
             @PathVariable Long contactId,
             @Valid @RequestBody StoreContactUpdateRequest request
     ) {
-        storeContactsApi.updateContact(currentStoreHolder.get(), contactId, storeContactDtoMapper.toDomain(request));
+        storeContactsApi.updateContact(storeContext.get(), contactId, storeContactDtoMapper.toDomain(request));
         return ResponseEntity.noContent().build();
     }
 
@@ -68,7 +68,7 @@ public class SellerStoreContactController {
     @DeleteMapping("/{contactId}")
     @PreAuthorize("hasPermission('STORE', 'WRITE')")
     public ResponseEntity<Void> deleteContact(@PathVariable Long contactId) {
-        storeContactsApi.deleteContact(currentStoreHolder.get(), contactId);
+        storeContactsApi.deleteContact(storeContext.get(), contactId);
         return ResponseEntity.noContent().build();
     }
 }

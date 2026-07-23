@@ -90,7 +90,7 @@ class SellerAuthorizationTest extends AbstractPostgresIT {
     @Test
     void writesAreDeniedUntilTheSellerIsRegistered() {
         // 1. A bravi_user token with no registered business context has no STORE permission → 403.
-        assertThat(post("/accounts/acc_missing/seller/onboarding/store", STORE_BODY, USER_TOKEN).getStatusCode())
+        assertThat(post("/sellers/onboarding/store", STORE_BODY, USER_TOKEN, "acc_missing").getStatusCode())
                 .isEqualTo(HttpStatus.FORBIDDEN);
 
         // 2. Auth Service registers the seller (service-account token) → account + SELLER_OWNER membership.
@@ -99,9 +99,8 @@ class SellerAuthorizationTest extends AbstractPostgresIT {
         String accountId = jdbcTemplate.queryForObject("SELECT public_id FROM accounts", String.class);
 
         // 3. The same user token now carries STORE_READ/STORE_WRITE via the SELLER_OWNER role.
-        String onboarding = "/accounts/" + accountId + "/seller/onboarding";
-        assertThat(get(onboarding, USER_TOKEN).getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(post(onboarding + "/store", STORE_BODY, USER_TOKEN).getStatusCode())
+        assertThat(get("/sellers/onboarding", USER_TOKEN, accountId).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(post("/sellers/onboarding/store", STORE_BODY, USER_TOKEN, accountId).getStatusCode())
                 .isEqualTo(HttpStatus.CREATED);
     }
 
@@ -111,23 +110,30 @@ class SellerAuthorizationTest extends AbstractPostgresIT {
                 .isEqualTo(HttpStatus.FORBIDDEN);
     }
 
-    private ResponseEntity<String> get(String path, String token) {
-        return rest.exchange(url(path), HttpMethod.GET, new HttpEntity<>(headers(token)), String.class);
+    private ResponseEntity<String> get(String path, String token, String accountId) {
+        return rest.exchange(url(path), HttpMethod.GET, new HttpEntity<>(headers(token, accountId)), String.class);
     }
 
     private ResponseEntity<String> post(String path, String body, String token) {
-        return rest.exchange(url(path), HttpMethod.POST, new HttpEntity<>(body, headers(token)), String.class);
+        return post(path, body, token, null);
+    }
+
+    private ResponseEntity<String> post(String path, String body, String token, String accountId) {
+        return rest.exchange(url(path), HttpMethod.POST, new HttpEntity<>(body, headers(token, accountId)), String.class);
     }
 
     private String url(String path) {
         return "http://localhost:" + port + "/api" + path;
     }
 
-    private static HttpHeaders headers(String token) {
+    private static HttpHeaders headers(String token, String accountId) {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.add(HttpConstants.REQUEST_ID_HEADER, "corr-authz");
+        if (accountId != null) {
+            headers.add(HttpConstants.ACCOUNT_ID_HEADER, accountId);
+        }
         return headers;
     }
 
