@@ -6,7 +6,8 @@ import ua.com.bravi.bravi.seller.catalog.manufacturers.domain.ManufacturerStatus
 import java.time.Instant;
 
 public record ManufacturerResponse(
-        Long id,
+        @JsonProperty("public_id")
+        String publicId,
         String name,
         String description,
         ManufacturerStatus status,

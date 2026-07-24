@@ -22,14 +22,18 @@ import java.time.Instant;
 @Getter
 @Setter
 @Entity
-@Table(name = "manufacturers", indexes = {
-        @Index(name = "idx_manufacturers_store_id", columnList = "store_id")
+@Table(name = "store_manufacturers", indexes = {
+        @Index(name = "idx_store_manufacturers_store_id", columnList = "store_id")
 })
 public class ManufacturerEntity implements StoreOwned {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @NotNull
+    @Column(name = "public_id", nullable = false, unique = true)
+    private String publicId;
 
     @NotNull
     @Column(name = "store_id", nullable = false)

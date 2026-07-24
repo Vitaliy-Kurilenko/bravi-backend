@@ -1,18 +1,20 @@
 package ua.com.bravi.bravi.seller.catalog.manufacturers.api;
 
 import ua.com.bravi.bravi.seller.catalog.manufacturers.domain.Manufacturer;
-
-import java.util.List;
+import ua.com.bravi.bravi.seller.catalog.manufacturers.domain.ManufacturerSearchQuery;
 
 public interface ManufacturersApi {
 
-    List<ManufacturerView> findByStoreId(Long storeId);
+    ManufacturerPage search(Long storeId, ManufacturerSearchQuery query);
 
+    /** Внутрішній lookup за bigint id — для крос-модульних споживачів (products). */
     ManufacturerView getById(Long storeId, Long manufacturerId);
 
-    Long create(Long storeId, Manufacturer manufacturer);
+    ManufacturerView getByPublicId(Long storeId, String publicId);
 
-    void update(Long storeId, Long manufacturerId, Manufacturer patch);
+    ManufacturerView create(Long storeId, Manufacturer manufacturer);
 
-    void delete(Long storeId, Long manufacturerId);
+    void update(Long storeId, String publicId, Manufacturer patch);
+
+    void delete(Long storeId, String publicId);
 }

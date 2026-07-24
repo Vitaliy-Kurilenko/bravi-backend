@@ -18,7 +18,7 @@ public final class TestDatabaseCleaner {
             "product_images",
             "products",
             "store_categories",
-            "manufacturers",
+            "store_manufacturers",
             "store_contacts",
             "store_settings",
             "sales_channels",

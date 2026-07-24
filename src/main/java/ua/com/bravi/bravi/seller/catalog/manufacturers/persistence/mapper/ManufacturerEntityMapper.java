@@ -21,6 +21,7 @@ public interface ManufacturerEntityMapper {
     List<ManufacturerView> toViews(List<ManufacturerEntity> entities);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "publicId", ignore = true)
     @Mapping(target = "storeId", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
@@ -28,6 +29,7 @@ public interface ManufacturerEntityMapper {
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "publicId", ignore = true)
     @Mapping(target = "storeId", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
