@@ -5,6 +5,7 @@ import ua.com.bravi.bravi.seller.stores.domain.WorkingHours;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Currency;
+import java.util.Locale;
 
 public record StoreView(
         Long id,
@@ -22,6 +23,9 @@ public record StoreView(
         String logoUrl,
         WorkingHours workingHours,
         Currency currency,
+        Locale language,
+        String weightUnit,
+        String dimensionUnit,
         Boolean allowReturn,
         String status,
         Instant createdAt,

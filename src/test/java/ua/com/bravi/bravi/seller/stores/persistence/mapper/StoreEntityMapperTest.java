@@ -55,7 +55,7 @@ class StoreEntityMapperTest {
         Store store = new Store(
                 99L, 77L, "Shop", "desc", "UA", "Kyiv obl.", "Kyiv",
                 "01001", "Khreschatyk", null,
-                KYIV, "https://logo", workingHours(), UAH, true,
+                KYIV, "https://logo", workingHours(), UAH, null, null, null, true,
                 StoreStatus.DISABLED,
                 Instant.parse("2026-01-01T00:00:00Z"),
                 Instant.parse("2026-02-01T00:00:00Z")
@@ -85,7 +85,7 @@ class StoreEntityMapperTest {
 
         Store patch = new Store(
                 null, null, "New name", null, null, null, "Lviv",
-                null, null, null, null, null, null, null, false,
+                null, null, null, null, null, null, null, null, null, null, false,
                 null, null, null
         );
 
@@ -113,6 +113,9 @@ class StoreEntityMapperTest {
         settings.setStoreId(5L);
         settings.setTimezone(KYIV);
         settings.setDefaultCurrency(UAH);
+        settings.setDefaultLanguage(java.util.Locale.ENGLISH);
+        settings.setDefaultWeightUnit("KG");
+        settings.setDefaultDimensionUnit("CM");
         settings.setAllowReturn(true);
         settings.setWorkingHours(workingHours());
         settings.setCreatedAt(Instant.parse("2020-01-01T00:00:00Z"));
@@ -121,6 +124,9 @@ class StoreEntityMapperTest {
 
         assertThat(view.timezone()).isEqualTo(KYIV);
         assertThat(view.currency()).isEqualTo(UAH);
+        assertThat(view.language()).isEqualTo(java.util.Locale.ENGLISH);
+        assertThat(view.weightUnit()).isEqualTo("KG");
+        assertThat(view.dimensionUnit()).isEqualTo("CM");
         assertThat(view.allowReturn()).isTrue();
         assertThat(view.workingHours().monday().from()).isEqualTo(LocalTime.of(9, 0));
         assertThat(view.status()).isEqualTo("ACTIVE");
@@ -138,7 +144,8 @@ class StoreEntityMapperTest {
 
         Store patch = new Store(
                 null, null, null, null, null, null, null,
-                null, null, null, KYIV, null, workingHours(), UAH, true,
+                null, null, null, KYIV, null, workingHours(), UAH,
+                java.util.Locale.FRENCH, "G", "MM", true,
                 null, null, null
         );
 
@@ -148,8 +155,10 @@ class StoreEntityMapperTest {
         assertThat(settings.getDefaultCurrency()).isEqualTo(UAH);
         assertThat(settings.getAllowReturn()).isTrue();
         assertThat(settings.getWorkingHours().monday().from()).isEqualTo(LocalTime.of(9, 0));
-        // Settings-only fields are untouched by a store patch.
-        assertThat(settings.getDefaultLanguage()).isEqualTo(java.util.Locale.ENGLISH);
+        // Language and unit codes flow from the store patch into the settings row.
+        assertThat(settings.getDefaultLanguage()).isEqualTo(java.util.Locale.FRENCH);
+        assertThat(settings.getDefaultWeightUnit()).isEqualTo("G");
+        assertThat(settings.getDefaultDimensionUnit()).isEqualTo("MM");
     }
 
     private static WorkingHours workingHours() {

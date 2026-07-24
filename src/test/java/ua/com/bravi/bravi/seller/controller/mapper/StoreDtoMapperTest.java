@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.Currency;
+import java.util.Locale;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -32,7 +33,7 @@ class StoreDtoMapperTest {
         StoreView view = new StoreView(
                 10L, "pub-1", 1L, "Shop", "Cool shop", "UA", "Kyiv obl.", "Kyiv",
                 "01001", "Khreschatyk 1", "office 3",
-                KYIV, "https://logo", wh, UAH, true,
+                KYIV, "https://logo", wh, UAH, Locale.ENGLISH, "KG", "CM", true,
                 "ACTIVE", created, updated
         );
 
@@ -51,6 +52,9 @@ class StoreDtoMapperTest {
         assertThat(response.logoUrl()).isEqualTo("https://logo");
         assertThat(response.workingHours()).isEqualTo(wh);
         assertThat(response.currency()).isEqualTo(UAH);
+        assertThat(response.language()).isEqualTo(Locale.ENGLISH);
+        assertThat(response.weightUnit()).isEqualTo("KG");
+        assertThat(response.dimensionUnit()).isEqualTo("CM");
         assertThat(response.allowReturn()).isTrue();
         assertThat(response.status()).isEqualTo("ACTIVE");
     }
@@ -84,7 +88,7 @@ class StoreDtoMapperTest {
         StoreUpdateRequest req = new StoreUpdateRequest(
                 "NewName", null, null, null, null,
                 null, null, null,
-                null, null, null, null, null
+                null, null, null, null, null, null, null, null
         );
 
         Store store = mapper.toDomain(req);
@@ -94,6 +98,9 @@ class StoreDtoMapperTest {
         assertThat(store.country()).isNull();
         assertThat(store.timezone()).isNull();
         assertThat(store.currency()).isNull();
+        assertThat(store.language()).isNull();
+        assertThat(store.weightUnit()).isNull();
+        assertThat(store.dimensionUnit()).isNull();
         assertThat(store.allowReturn()).isNull();
         assertThat(store.id()).isNull();
         assertThat(store.sellerAccountId()).isNull();

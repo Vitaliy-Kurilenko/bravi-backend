@@ -65,7 +65,7 @@ class StoreControllerTest {
         StoreUpdateRequest request = new StoreUpdateRequest(
                 "NewName", null, null, null, null,
                 null, null, null,
-                null, null, null, null, null
+                null, null, null, null, null, null, null, null
         );
         Store domain = mock(Store.class);
         when(storeDtoMapper.toDomain(request)).thenReturn(domain);
@@ -83,7 +83,7 @@ class StoreControllerTest {
         StoreUpdateRequest request = new StoreUpdateRequest(
                 "NewName", null, null, null, null,
                 null, null, null,
-                null, null, null, null, "store-logos/42/a.png"
+                null, null, null, null, null, null, null, "store-logos/42/a.png"
         );
         Store domain = mock(Store.class);
         when(storeDtoMapper.toDomain(request)).thenReturn(domain);

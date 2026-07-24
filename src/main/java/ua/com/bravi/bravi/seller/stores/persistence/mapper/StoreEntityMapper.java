@@ -19,6 +19,9 @@ public interface StoreEntityMapper {
 
     @Mapping(target = "timezone", ignore = true)
     @Mapping(target = "currency", ignore = true)
+    @Mapping(target = "language", ignore = true)
+    @Mapping(target = "weightUnit", ignore = true)
+    @Mapping(target = "dimensionUnit", ignore = true)
     @Mapping(target = "allowReturn", ignore = true)
     @Mapping(target = "workingHours", ignore = true)
     Store toDomain(StoreEntity entity);
@@ -26,6 +29,9 @@ public interface StoreEntityMapper {
     @Mapping(target = "status", expression = "java(entity.getStatus() == null ? null : entity.getStatus().name())")
     @Mapping(target = "timezone", source = "settings.timezone")
     @Mapping(target = "currency", source = "settings.defaultCurrency")
+    @Mapping(target = "language", source = "settings.defaultLanguage")
+    @Mapping(target = "weightUnit", source = "settings.defaultWeightUnit")
+    @Mapping(target = "dimensionUnit", source = "settings.defaultDimensionUnit")
     @Mapping(target = "allowReturn", source = "settings.allowReturn")
     @Mapping(target = "workingHours", source = "settings.workingHours")
     @Mapping(target = "createdAt", source = "entity.createdAt")
@@ -55,9 +61,9 @@ public interface StoreEntityMapper {
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "storeId", ignore = true)
     @Mapping(target = "defaultCurrency", source = "currency")
-    @Mapping(target = "defaultLanguage", ignore = true)
-    @Mapping(target = "defaultWeightUnit", ignore = true)
-    @Mapping(target = "defaultDimensionUnit", ignore = true)
+    @Mapping(target = "defaultLanguage", source = "language")
+    @Mapping(target = "defaultWeightUnit", source = "weightUnit")
+    @Mapping(target = "defaultDimensionUnit", source = "dimensionUnit")
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     void updateSettings(@MappingTarget StoreSettingsEntity settings, Store patch);

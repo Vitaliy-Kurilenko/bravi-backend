@@ -123,7 +123,13 @@ public class StoreService implements StoresApi {
     @Transactional
     public void updateStore(Long storeId, Store patch) {
         storeEntityMapper.updateEntity(requireStore(storeId), patch);
-        // timezone/currency of a store patch belong to the settings row.
+        if (patch.weightUnit() != null) {
+            requireDictionaryCode(WEIGHT_UNIT_DICTIONARY, "weight_unit", patch.weightUnit());
+        }
+        if (patch.dimensionUnit() != null) {
+            requireDictionaryCode(DIMENSION_UNIT_DICTIONARY, "dimension_unit", patch.dimensionUnit());
+        }
+        // timezone/currency/language/units and working hours of a store patch belong to the settings row.
         storeEntityMapper.updateSettings(requireSettings(storeId), patch);
     }
 

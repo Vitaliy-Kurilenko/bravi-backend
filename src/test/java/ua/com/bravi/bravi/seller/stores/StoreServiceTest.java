@@ -14,6 +14,7 @@ import ua.com.bravi.bravi.seller.stores.api.StoreView;
 import ua.com.bravi.bravi.seller.stores.api.event.StoreCreatedEvent;
 import ua.com.bravi.bravi.seller.stores.domain.Store;
 import ua.com.bravi.bravi.seller.stores.domain.StoreStatus;
+import ua.com.bravi.bravi.seller.stores.exception.InvalidStoreSettingsException;
 import ua.com.bravi.bravi.seller.stores.persistence.IStoreEntityRepository;
 import ua.com.bravi.bravi.seller.stores.persistence.IStoreSettingsRepository;
 import ua.com.bravi.bravi.seller.stores.persistence.entity.StoreEntity;
@@ -78,7 +79,7 @@ class StoreServiceTest {
                 null, null, "Shop", null, null, null, null,
                 null, null, null,
                 ZoneId.of("UTC"), null, null,
-                Currency.getInstance("UAH"), true,
+                Currency.getInstance("UAH"), null, null, null, true,
                 null, null, null
         );
     }
@@ -177,7 +178,7 @@ class StoreServiceTest {
     void updateStoreInvokesMapperPatch() {
         Store patch = new Store(
                 null, null, "New name", null, null, null, null,
-                null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null,
                 null, null, null
         );
         StoreEntity entity = new StoreEntity();
@@ -191,6 +192,23 @@ class StoreServiceTest {
 
         verify(storeEntityMapper).updateEntity(entity, patch);
         verify(storeEntityMapper).updateSettings(settings, patch);
+    }
+
+    @Test
+    void updateStoreRejectsUnknownWeightUnitCode() {
+        Store patch = new Store(
+                null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, "XX", null, null,
+                null, null, null
+        );
+        StoreEntity entity = new StoreEntity();
+        when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(entity));
+        when(dictionariesApi.isActiveItem("WEIGHT_UNIT", "XX")).thenReturn(false);
+
+        assertThatThrownBy(() -> service.updateStore(STORE_ID, patch))
+                .isInstanceOf(InvalidStoreSettingsException.class);
+
+        verify(storeEntityMapper, never()).updateSettings(any(), any());
     }
 
     @Test
