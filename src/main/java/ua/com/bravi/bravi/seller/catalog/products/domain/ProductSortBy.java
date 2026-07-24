@@ -11,8 +11,7 @@ import ua.com.bravi.bravi.seller.catalog.products.exception.InvalidProductReques
 public enum ProductSortBy {
     ID("id"),
     NAME("name"),
-    PRICE("partnerPrice"),
-    RECOMMENDED_PRICE("recommendedPrice"),
+    PRICE("price"),
     QUANTITY("quantity"),
     STOCK_STATUS_ID("stockStatusId"),
     CREATED_AT("createdAt"),

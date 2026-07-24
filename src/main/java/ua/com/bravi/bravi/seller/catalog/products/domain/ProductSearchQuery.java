@@ -8,8 +8,8 @@ import java.util.List;
 
 public record ProductSearchQuery(
         String search,
-        List<Long> categoryIds,
-        List<Long> manufacturerIds,
+        List<String> categoryIds,
+        List<String> manufacturerIds,
         List<Long> stockStatusIds,
         List<ProductStatus> statuses,
         BigDecimal minPrice,

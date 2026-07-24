@@ -23,18 +23,22 @@ import java.time.Instant;
 @Getter
 @Setter
 @Entity
-@Table(name = "products", indexes = {
-        @Index(name = "idx_products_store_id", columnList = "store_id"),
-        @Index(name = "idx_products_category_id", columnList = "category_id"),
-        @Index(name = "idx_products_manufacturer_id", columnList = "manufacturer_id"),
-        @Index(name = "idx_products_stock_status_id", columnList = "stock_status_id"),
-        @Index(name = "idx_products_created_at", columnList = "created_at")
+@Table(name = "store_products", indexes = {
+        @Index(name = "idx_store_products_store_id", columnList = "store_id"),
+        @Index(name = "idx_store_products_category_id", columnList = "category_id"),
+        @Index(name = "idx_store_products_manufacturer_id", columnList = "manufacturer_id"),
+        @Index(name = "idx_store_products_stock_status_id", columnList = "stock_status_id"),
+        @Index(name = "idx_store_products_created_at", columnList = "created_at")
 })
 public class ProductEntity implements StoreOwned {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @NotNull
+    @Column(name = "public_id", nullable = false, unique = true)
+    private String publicId;
 
     @NotNull
     @Column(name = "store_id", nullable = false)
@@ -65,12 +69,8 @@ public class ProductEntity implements StoreOwned {
     private String description;
 
     @NotNull
-    @Column(name = "partner_price", nullable = false, precision = 19, scale = 4)
-    private BigDecimal partnerPrice;
-
-    @NotNull
-    @Column(name = "recommended_price", nullable = false, precision = 19, scale = 4)
-    private BigDecimal recommendedPrice;
+    @Column(name = "price", nullable = false, precision = 19, scale = 4)
+    private BigDecimal price;
 
     @NotNull
     @Column(name = "quantity", nullable = false)

@@ -1,10 +1,9 @@
 package ua.com.bravi.bravi.seller.catalog.products.api;
 
+/** Declared image metadata for presign (validated before the upload and again on confirm). */
 public record ImageUpload(
-        byte[] content,
         String contentType,
-        String originalFilename,
         long size,
-        boolean primary
+        String originalFilename
 ) {
 }

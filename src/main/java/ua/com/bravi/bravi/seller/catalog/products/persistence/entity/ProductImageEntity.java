@@ -17,8 +17,8 @@ import java.time.Instant;
 @Getter
 @Setter
 @Entity
-@Table(name = "product_images", indexes = {
-        @Index(name = "idx_product_images_product_id", columnList = "product_id")
+@Table(name = "store_product_images", indexes = {
+        @Index(name = "idx_store_product_images_product_id", columnList = "product_id")
 })
 public class ProductImageEntity {
 

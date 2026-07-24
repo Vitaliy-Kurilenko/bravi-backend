@@ -143,8 +143,8 @@ public class OrderService implements OrdersApi {
             item.setSku(product.sku());
             item.setCode(product.code());
             item.setName(product.name());
-            item.setPartnerPrice(product.partnerPrice());
-            item.setSalePrice(patch.salePrice() != null ? patch.salePrice() : product.recommendedPrice());
+            item.setPartnerPrice(product.price());
+            item.setSalePrice(patch.salePrice() != null ? patch.salePrice() : product.price());
         } else if (patch.salePrice() != null) {
             item.setSalePrice(patch.salePrice());
         }
@@ -182,12 +182,12 @@ public class OrderService implements OrdersApi {
                 .toList();
     }
 
-    /** Бере актуальні дані товару й фіксує снапшот позиції; salePrice за замовч. — recommended_price товару. */
+    /** Бере актуальні дані товару й фіксує снапшот позиції; salePrice за замовч. — price товару. */
     private OrderItem snapshotItem(Long storeId, Long productId, Integer quantity, BigDecimal salePrice) {
         ProductView product = requireProduct(storeId, productId);
-        BigDecimal price = salePrice != null ? salePrice : product.recommendedPrice();
+        BigDecimal price = salePrice != null ? salePrice : product.price();
         return new OrderItem(null, product.id(), product.sku(), product.code(), product.name(),
-                quantity, product.partnerPrice(), price, null, null);
+                quantity, product.price(), price, null, null);
     }
 
     private void recomputeTotals(OrderEntity entity) {

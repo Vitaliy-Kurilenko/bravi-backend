@@ -12,7 +12,8 @@ import java.util.Set;
  */
 public enum MediaCategory {
 
-    STORE_LOGO("store-logos", Set.of("image/png", "image/jpeg", "image/webp"), DataSize.ofMegabytes(5));
+    STORE_LOGO("store-logos", Set.of("image/png", "image/jpeg", "image/webp"), DataSize.ofMegabytes(5)),
+    PRODUCT_IMAGE("product-images", Set.of("image/png", "image/jpeg", "image/webp"), DataSize.ofMegabytes(5));
 
     private static final String FIELD = "file";
 

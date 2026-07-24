@@ -7,13 +7,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import ua.com.bravi.bravi.seller.catalog.categories.api.CategoriesApi;
+import ua.com.bravi.bravi.seller.catalog.categories.api.CategoryView;
 import ua.com.bravi.bravi.seller.catalog.manufacturers.api.ManufacturersApi;
 import ua.com.bravi.bravi.seller.catalog.products.api.ImageUpload;
 import ua.com.bravi.bravi.seller.catalog.products.api.ProductImageView;
-import ua.com.bravi.bravi.seller.catalog.products.config.props.ProductImageStorageProperties;
+import ua.com.bravi.bravi.seller.catalog.products.api.ProductView;
 import ua.com.bravi.bravi.seller.catalog.products.domain.Product;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductStatus;
-import ua.com.bravi.bravi.seller.catalog.products.exception.InvalidProductRequestException;
 import ua.com.bravi.bravi.seller.catalog.products.exception.ProductAlreadyExistsException;
 import ua.com.bravi.bravi.seller.catalog.products.persistence.IProductEntityRepository;
 import ua.com.bravi.bravi.seller.catalog.products.persistence.IProductImageEntityRepository;
@@ -22,9 +22,12 @@ import ua.com.bravi.bravi.seller.catalog.products.persistence.entity.ProductEnti
 import ua.com.bravi.bravi.seller.catalog.products.persistence.entity.ProductImageEntity;
 import ua.com.bravi.bravi.seller.catalog.products.persistence.mapper.ProductEntityMapper;
 import ua.com.bravi.bravi.seller.catalog.products.persistence.mapper.ProductImageEntityMapper;
-import ua.com.bravi.bravi.seller.catalog.products.storage.ProductImageStorage;
 import ua.com.bravi.bravi.shared.exception.ForbiddenException;
 import ua.com.bravi.bravi.shared.exception.NotFoundException;
+import ua.com.bravi.bravi.shared.media.MediaStorage;
+import ua.com.bravi.bravi.shared.media.StoredObject;
+import ua.com.bravi.bravi.shared.media.exception.InvalidMediaUploadException;
+import ua.com.bravi.bravi.shared.media.exception.MediaObjectNotFoundException;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -33,7 +36,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -45,7 +47,9 @@ class ProductServiceTest {
     private static final Long STORE_ID = 7L;
     private static final Long OTHER_STORE_ID = 99L;
     private static final Long PRODUCT_ID = 42L;
+    private static final String PUBLIC_ID = "prd_test";
     private static final Long STOCK_STATUS_ID = 1L;
+    private static final String KEY = "product-images/7/42/img.png";
 
     private final IProductEntityRepository productRepository = mock(IProductEntityRepository.class);
     private final IProductImageEntityRepository imageRepository = mock(IProductImageEntityRepository.class);
@@ -54,21 +58,19 @@ class ProductServiceTest {
     private final ProductImageEntityMapper imageEntityMapper = mock(ProductImageEntityMapper.class);
     private final CategoriesApi categoriesApi = mock(CategoriesApi.class);
     private final ManufacturersApi manufacturersApi = mock(ManufacturersApi.class);
-    private final ProductImageStorage imageStorage = mock(ProductImageStorage.class);
-    private final ProductImageStorageProperties storageProperties = new ProductImageStorageProperties();
+    private final MediaStorage mediaStorage = mock(MediaStorage.class);
 
     private ProductService service;
 
     @BeforeEach
     void setUp() {
         service = new ProductService(productRepository, imageRepository, stockStatusRepository,
-                productEntityMapper, imageEntityMapper, categoriesApi, manufacturersApi,
-                imageStorage, storageProperties);
+                productEntityMapper, imageEntityMapper, categoriesApi, manufacturersApi, mediaStorage);
     }
 
-    private static Product product(Long categoryId, Long manufacturerId, Long stockStatusId, ProductStatus status) {
-        return new Product(null, null, categoryId, manufacturerId, stockStatusId, "Widget", null, "CODE-1",
-                null, BigDecimal.ONE, BigDecimal.TEN, 1, null, null, null, null, status, null, null);
+    private static Product product(String categoryId, String manufacturerId, Long stockStatusId, ProductStatus status) {
+        return new Product(null, null, null, categoryId, manufacturerId, stockStatusId, "Widget", null, "CODE-1",
+                null, BigDecimal.ONE, 1, null, null, null, null, status, null, null);
     }
 
     private static ProductEntity productEntityOwnedBy(Long storeId) {
@@ -79,28 +81,49 @@ class ProductServiceTest {
     }
 
     private static ImageUpload pngUpload() {
-        return new ImageUpload(new byte[]{1, 2, 3}, "image/png", "p.png", 3, false);
+        return new ImageUpload("image/png", 3, "p.png");
     }
 
     @Test
-    void createValidatesStockStatusAndDefaultsStatusToActive() {
+    void createDefaultsStatusToActiveAndAssignsPublicId() {
         ProductEntity entity = new ProductEntity();
         entity.setStatus(null);
         when(stockStatusRepository.existsById(STOCK_STATUS_ID)).thenReturn(true);
         when(productEntityMapper.toEntity(any())).thenReturn(entity);
         when(productRepository.save(entity)).thenReturn(entity);
+        when(productEntityMapper.toView(any(), any(), any(), any())).thenReturn(mock(ProductView.class));
 
         service.create(STORE_ID, product(null, null, STOCK_STATUS_ID, null));
 
         assertThat(entity.getStatus()).isEqualTo(ProductStatus.ACTIVE);
         assertThat(entity.getStoreId()).isEqualTo(STORE_ID);
+        assertThat(entity.getPublicId()).startsWith("prd_");
+    }
+
+    @Test
+    void createResolvesCategoryPublicIdToInternalId() {
+        ProductEntity entity = new ProductEntity();
+        when(stockStatusRepository.existsById(STOCK_STATUS_ID)).thenReturn(true);
+        when(productEntityMapper.toEntity(any())).thenReturn(entity);
+        CategoryView category = new ua.com.bravi.bravi.seller.catalog.categories.api.CategoryView(
+                55L, "cat_x", STORE_ID, null, null, "C", null, null, null, null, null);
+        when(categoriesApi.getByPublicId(STORE_ID, "cat_x")).thenReturn(category);
+        when(categoriesApi.getById(STORE_ID, 55L)).thenReturn(category);
+        when(productRepository.save(entity)).thenReturn(entity);
+        when(productEntityMapper.toView(any(), any(), any(), any())).thenReturn(mock(ProductView.class));
+
+        service.create(STORE_ID, product("cat_x", null, STOCK_STATUS_ID, null));
+
+        assertThat(entity.getCategoryId()).isEqualTo(55L);
     }
 
     @Test
     void createValidatesCategoryAgainstStore() {
-        when(categoriesApi.getById(STORE_ID, 5L)).thenThrow(new ForbiddenException("nope"));
+        when(stockStatusRepository.existsById(STOCK_STATUS_ID)).thenReturn(true);
+        when(productEntityMapper.toEntity(any())).thenReturn(new ProductEntity());
+        when(categoriesApi.getByPublicId(STORE_ID, "cat_x")).thenThrow(new ForbiddenException("nope"));
 
-        assertThatThrownBy(() -> service.create(STORE_ID, product(5L, null, STOCK_STATUS_ID, null)))
+        assertThatThrownBy(() -> service.create(STORE_ID, product("cat_x", null, STOCK_STATUS_ID, null)))
                 .isInstanceOf(ForbiddenException.class);
 
         verify(productRepository, never()).save(any());
@@ -119,10 +142,18 @@ class ProductServiceTest {
         ProductEntity entity = new ProductEntity();
         when(stockStatusRepository.existsById(STOCK_STATUS_ID)).thenReturn(true);
         when(productEntityMapper.toEntity(any())).thenReturn(entity);
-        when(productRepository.save(entity)).thenThrow(new DataIntegrityViolationException("uq_products_store_code"));
+        when(productRepository.save(entity)).thenThrow(new DataIntegrityViolationException("uq_store_products_store_code"));
 
         assertThatThrownBy(() -> service.create(STORE_ID, product(null, null, STOCK_STATUS_ID, null)))
                 .isInstanceOf(ProductAlreadyExistsException.class);
+    }
+
+    @Test
+    void getByPublicIdReturnsNotFoundForOtherStore() {
+        when(productRepository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getByPublicId(STORE_ID, PUBLIC_ID))
+                .isInstanceOf(NotFoundException.class);
     }
 
     @Test
@@ -134,47 +165,68 @@ class ProductServiceTest {
     }
 
     @Test
-    void deleteRemovesImageFilesThenProduct() {
+    void deleteRemovesImageObjectsThenProduct() {
         ProductEntity entity = productEntityOwnedBy(STORE_ID);
         ProductImageEntity image = new ProductImageEntity();
         image.setStorageKey("key-1");
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(entity));
+        when(productRepository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID)).thenReturn(Optional.of(entity));
         when(imageRepository.findByProductIdOrderBySortOrderAsc(PRODUCT_ID)).thenReturn(List.of(image));
 
-        service.delete(STORE_ID, PRODUCT_ID);
+        service.delete(STORE_ID, PUBLIC_ID);
 
-        verify(imageStorage).delete("key-1");
+        verify(mediaStorage).delete("key-1");
         verify(productRepository).delete(entity);
     }
 
     @Test
-    void addFirstImageBecomesPrimary() {
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(productEntityOwnedBy(STORE_ID)));
-        when(imageStorage.store(any(), eq("image/png"), eq("p.png"))).thenReturn("stored-key");
+    void confirmFirstImageBecomesPrimary() {
+        when(productRepository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID))
+                .thenReturn(Optional.of(productEntityOwnedBy(STORE_ID)));
+        when(mediaStorage.stat(KEY)).thenReturn(Optional.of(new StoredObject(KEY, "image/png", 3)));
         when(imageRepository.countByProductId(PRODUCT_ID)).thenReturn(0);
         when(imageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(imageRepository.findByProductIdOrderBySortOrderAsc(PRODUCT_ID)).thenReturn(List.of());
         when(imageEntityMapper.toView(any(), any())).thenReturn(mock(ProductImageView.class));
 
-        service.addImage(STORE_ID, PRODUCT_ID, pngUpload());
+        service.confirmImage(STORE_ID, PUBLIC_ID, KEY, false);
 
         ArgumentCaptor<ProductImageEntity> captor = ArgumentCaptor.forClass(ProductImageEntity.class);
         verify(imageRepository).save(captor.capture());
         ProductImageEntity saved = captor.getValue();
         assertThat(saved.getIsPrimary()).isTrue();
-        assertThat(saved.getStorageKey()).isEqualTo("stored-key");
+        assertThat(saved.getStorageKey()).isEqualTo(KEY);
         assertThat(saved.getSortOrder()).isZero();
     }
 
     @Test
-    void addImageRejectsNonImageUpload() {
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(productEntityOwnedBy(STORE_ID)));
+    void confirmImageRejectsForeignStorageKey() {
+        when(productRepository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID))
+                .thenReturn(Optional.of(productEntityOwnedBy(STORE_ID)));
 
-        ImageUpload pdf = new ImageUpload(new byte[]{1}, "application/pdf", "f.pdf", 1, false);
-        assertThatThrownBy(() -> service.addImage(STORE_ID, PRODUCT_ID, pdf))
-                .isInstanceOf(InvalidProductRequestException.class);
+        assertThatThrownBy(() -> service.confirmImage(STORE_ID, PUBLIC_ID, "product-images/1/2/x.png", false))
+                .isInstanceOf(InvalidMediaUploadException.class);
 
-        verify(imageStorage, never()).store(any(), any(), any());
+        verify(imageRepository, never()).save(any());
+    }
+
+    @Test
+    void confirmImageRejectsMissingObject() {
+        when(productRepository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID))
+                .thenReturn(Optional.of(productEntityOwnedBy(STORE_ID)));
+        when(mediaStorage.stat(KEY)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.confirmImage(STORE_ID, PUBLIC_ID, KEY, false))
+                .isInstanceOf(MediaObjectNotFoundException.class);
+    }
+
+    @Test
+    void presignImageValidatesAndDelegates() {
+        when(productRepository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID))
+                .thenReturn(Optional.of(productEntityOwnedBy(STORE_ID)));
+
+        service.presignImageUpload(STORE_ID, PUBLIC_ID, pngUpload());
+
+        verify(mediaStorage).presignUpload(any());
     }
 
     @Test
@@ -189,13 +241,14 @@ class ProductServiceTest {
         next.setProductId(PRODUCT_ID);
         next.setIsPrimary(false);
 
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(productEntityOwnedBy(STORE_ID)));
+        when(productRepository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID))
+                .thenReturn(Optional.of(productEntityOwnedBy(STORE_ID)));
         when(imageRepository.findById(10L)).thenReturn(Optional.of(primary));
         when(imageRepository.findByProductIdOrderBySortOrderAsc(PRODUCT_ID)).thenReturn(List.of(next));
 
-        service.deleteImage(STORE_ID, PRODUCT_ID, 10L);
+        service.deleteImage(STORE_ID, PUBLIC_ID, 10L);
 
-        verify(imageStorage).delete("k10");
+        verify(mediaStorage).delete("k10");
         assertThat(next.getIsPrimary()).isTrue();
         verify(imageRepository).save(next);
     }

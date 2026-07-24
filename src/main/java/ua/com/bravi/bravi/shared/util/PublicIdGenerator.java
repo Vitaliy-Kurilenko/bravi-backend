@@ -14,6 +14,7 @@ public final class PublicIdGenerator {
     public static final String STORE_PREFIX = "st";
     public static final String CATEGORY_PREFIX = "cat";
     public static final String MANUFACTURER_PREFIX = "mfr";
+    public static final String PRODUCT_PREFIX = "prd";
 
     private static final char[] ALPHABET =
             "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".toCharArray();

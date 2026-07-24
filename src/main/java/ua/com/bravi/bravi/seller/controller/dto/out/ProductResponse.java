@@ -8,21 +8,19 @@ import java.time.Instant;
 import java.util.List;
 
 public record ProductResponse(
-        Long id,
+        @JsonProperty("public_id")
+        String publicId,
         @JsonProperty("category_id")
-        Long categoryId,
+        String categoryId,
         @JsonProperty("manufacturer_id")
-        Long manufacturerId,
+        String manufacturerId,
         @JsonProperty("stock_status_id")
         Long stockStatusId,
         String name,
         String sku,
         String code,
         String description,
-        @JsonProperty("partner_price")
-        BigDecimal partnerPrice,
-        @JsonProperty("recommended_price")
-        BigDecimal recommendedPrice,
+        BigDecimal price,
         Integer quantity,
         BigDecimal weight,
         BigDecimal width,

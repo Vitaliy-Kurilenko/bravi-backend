@@ -6,7 +6,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -14,21 +13,21 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
-import ua.com.bravi.bravi.seller.catalog.products.api.ImageContent;
-import ua.com.bravi.bravi.seller.catalog.products.api.ImageUpload;
 import ua.com.bravi.bravi.seller.catalog.products.api.ProductsApi;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductSearchQuery;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductSortBy;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductStatus;
 import ua.com.bravi.bravi.seller.controller.dto.in.ProductCreateRequest;
+import ua.com.bravi.bravi.seller.controller.dto.in.ProductImageAttachRequest;
+import ua.com.bravi.bravi.seller.controller.dto.in.ProductImageUpdateRequest;
+import ua.com.bravi.bravi.seller.controller.dto.in.ProductImageUploadUrlRequest;
 import ua.com.bravi.bravi.seller.controller.dto.in.ProductUpdateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.out.ProductImageResponse;
+import ua.com.bravi.bravi.seller.controller.dto.out.ProductImageUploadUrlResponse;
 import ua.com.bravi.bravi.seller.controller.dto.out.ProductPageResponse;
 import ua.com.bravi.bravi.seller.controller.dto.out.ProductResponse;
 import ua.com.bravi.bravi.seller.controller.mapper.ProductDtoMapper;
@@ -36,8 +35,6 @@ import ua.com.bravi.bravi.shared.common.SortOrder;
 import ua.com.bravi.bravi.shared.component.RequireStore;
 import ua.com.bravi.bravi.seller.stores.api.StoreContext;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -59,8 +56,8 @@ public class SellerProductController {
     @PreAuthorize("hasPermission('PRODUCT', 'READ')")
     public ProductPageResponse searchProducts(
             @RequestParam(required = false) String search,
-            @RequestParam(name = "category_ids", required = false) List<Long> categoryIds,
-            @RequestParam(name = "manufacturer_ids", required = false) List<Long> manufacturerIds,
+            @RequestParam(name = "category_ids", required = false) List<String> categoryIds,
+            @RequestParam(name = "manufacturer_ids", required = false) List<String> manufacturerIds,
             @RequestParam(name = "stock_statuses", required = false) List<Long> stockStatuses,
             @RequestParam(name = "statuses", required = false) List<ProductStatus> statuses,
             @RequestParam(name = "min_price", required = false) BigDecimal minPrice,
@@ -83,104 +80,93 @@ public class SellerProductController {
     }
 
     @Operation(summary = "Get product", description = "Returns a single product of the current store")
-    @GetMapping("/{productId}")
+    @GetMapping("/{publicId}")
     @PreAuthorize("hasPermission('PRODUCT', 'READ')")
-    public ProductResponse getProduct(@PathVariable Long productId) {
-        return productDtoMapper.toResponse(productsApi.getById(storeContext.get(), productId));
+    public ProductResponse getProduct(@PathVariable String publicId) {
+        return productDtoMapper.toResponse(productsApi.getByPublicId(storeContext.get(), publicId));
     }
 
     @Operation(summary = "Create product", description = "Creates a product in the current store")
     @PostMapping
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody ProductCreateRequest request) {
-        Long storeId = storeContext.get();
-        Long productId = productsApi.create(storeId, productDtoMapper.toDomain(request));
-        ProductResponse body = productDtoMapper.toResponse(productsApi.getById(storeId, productId));
+        ProductResponse body = productDtoMapper.toResponse(
+                productsApi.create(storeContext.get(), productDtoMapper.toDomain(request)));
         return ResponseEntity.status(HttpStatus.CREATED).body(body);
     }
 
     @Operation(summary = "Update product", description = "Partially updates a product of the current store")
-    @PatchMapping("/{productId}")
+    @PatchMapping("/{publicId}")
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<Void> updateProduct(
-            @PathVariable Long productId,
+            @PathVariable String publicId,
             @Valid @RequestBody ProductUpdateRequest request
     ) {
-        productsApi.update(storeContext.get(), productId, productDtoMapper.toDomain(request));
+        productsApi.update(storeContext.get(), publicId, productDtoMapper.toDomain(request));
         return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Delete product", description = "Deletes a product of the current store with its images")
-    @DeleteMapping("/{productId}")
+    @DeleteMapping("/{publicId}")
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
-    public ResponseEntity<Void> deleteProduct(@PathVariable Long productId) {
-        productsApi.delete(storeContext.get(), productId);
+    public ResponseEntity<Void> deleteProduct(@PathVariable String publicId) {
+        productsApi.delete(storeContext.get(), publicId);
         return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "List product images", description = "Returns the image gallery of a product")
-    @GetMapping("/{productId}/images")
+    @GetMapping("/{publicId}/images")
     @PreAuthorize("hasPermission('PRODUCT', 'READ')")
-    public List<ProductImageResponse> getImages(@PathVariable Long productId) {
-        return productDtoMapper.toImageResponses(productsApi.listImages(storeContext.get(), productId));
+    public List<ProductImageResponse> getImages(@PathVariable String publicId) {
+        return productDtoMapper.toImageResponses(productsApi.listImages(storeContext.get(), publicId));
     }
 
-    @Operation(summary = "Upload product image", description = "Adds an image to the product gallery")
-    @PostMapping(value = "/{productId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Request image upload URL",
+            description = "Returns a presigned URL to upload a product image directly to storage")
+    @PostMapping("/{publicId}/images/upload-url")
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
-    public ResponseEntity<ProductImageResponse> addImage(
-            @PathVariable Long productId,
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(name = "is_primary", defaultValue = "false") boolean primary
+    public ProductImageUploadUrlResponse requestImageUploadUrl(
+            @PathVariable String publicId,
+            @Valid @RequestBody ProductImageUploadUrlRequest request
     ) {
-        ProductImageResponse body = productDtoMapper.toImageResponse(
-                productsApi.addImage(storeContext.get(), productId, toUpload(file, primary)));
+        return productDtoMapper.toUploadUrlResponse(
+                productsApi.presignImageUpload(storeContext.get(), publicId, productDtoMapper.toUpload(request)));
+    }
+
+    @Operation(summary = "Attach product image",
+            description = "Confirms a previously uploaded image and adds it to the product gallery")
+    @PostMapping("/{publicId}/images")
+    @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
+    public ResponseEntity<ProductImageResponse> attachImage(
+            @PathVariable String publicId,
+            @Valid @RequestBody ProductImageAttachRequest request
+    ) {
+        ProductImageResponse body = productDtoMapper.toImageResponse(productsApi.confirmImage(
+                storeContext.get(), publicId, request.storageKey(), request.isPrimary()));
         return ResponseEntity.status(HttpStatus.CREATED).body(body);
     }
 
-    @Operation(summary = "Replace product image", description = "Replaces the file of an existing product image")
-    @PutMapping(value = "/{productId}/images/{imageId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Update product image",
+            description = "Changes an image's state; is_primary=true promotes it to the gallery primary")
+    @PatchMapping("/{publicId}/images/{imageId}")
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
-    public ProductImageResponse replaceImage(
-            @PathVariable Long productId,
+    public ProductImageResponse updateImage(
+            @PathVariable String publicId,
             @PathVariable Long imageId,
-            @RequestParam("file") MultipartFile file
+            @Valid @RequestBody ProductImageUpdateRequest request
     ) {
         return productDtoMapper.toImageResponse(
-                productsApi.replaceImage(storeContext.get(), productId, imageId, toUpload(file, false)));
-    }
-
-    @Operation(summary = "Get product image content", description = "Streams the binary content of a product image")
-    @GetMapping("/{productId}/images/{imageId}")
-    @PreAuthorize("hasPermission('PRODUCT', 'READ')")
-    public ResponseEntity<byte[]> getImageContent(
-            @PathVariable Long productId,
-            @PathVariable Long imageId
-    ) {
-        ImageContent content = productsApi.loadImageContent(storeContext.get(), productId, imageId);
-        MediaType mediaType = content.contentType() == null
-                ? MediaType.APPLICATION_OCTET_STREAM
-                : MediaType.parseMediaType(content.contentType());
-        return ResponseEntity.ok().contentType(mediaType).body(content.content());
+                productsApi.setPrimaryImage(storeContext.get(), publicId, imageId));
     }
 
     @Operation(summary = "Delete product image", description = "Removes an image from the product gallery")
-    @DeleteMapping("/{productId}/images/{imageId}")
+    @DeleteMapping("/{publicId}/images/{imageId}")
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<Void> deleteImage(
-            @PathVariable Long productId,
+            @PathVariable String publicId,
             @PathVariable Long imageId
     ) {
-        productsApi.deleteImage(storeContext.get(), productId, imageId);
+        productsApi.deleteImage(storeContext.get(), publicId, imageId);
         return ResponseEntity.noContent().build();
-    }
-
-    private static ImageUpload toUpload(MultipartFile file, boolean primary) {
-        try {
-            return new ImageUpload(file.getBytes(), file.getContentType(), file.getOriginalFilename(),
-                    file.getSize(), primary);
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to read uploaded file", e);
-        }
     }
 }

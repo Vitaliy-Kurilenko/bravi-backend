@@ -71,9 +71,3 @@ bravi:
     public-base-url: ${MEDIA_PUBLIC_BASE_URL:http://localhost:9000/bravi-media}
     presign-ttl: 10m
 
-catalog:
-  products:
-    image-storage:
-      base-path: ${PRODUCT_IMAGE_PATH:./data/product-images}
-      max-file-size: 5MB
-

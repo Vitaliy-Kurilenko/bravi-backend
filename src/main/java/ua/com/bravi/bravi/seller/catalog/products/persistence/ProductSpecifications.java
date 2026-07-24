@@ -16,7 +16,12 @@ public final class ProductSpecifications {
     private ProductSpecifications() {
     }
 
-    public static Specification<ProductEntity> forStore(Long storeId, ProductSearchQuery query) {
+    /**
+     * {@code categoryIds}/{@code manufacturerIds} — вже резолвлені internal bigint id
+     * (public id'и товарний API розшифровує через categories/manufacturers api до побудови specification).
+     */
+    public static Specification<ProductEntity> forStore(Long storeId, ProductSearchQuery query,
+                                                        List<Long> categoryIds, List<Long> manufacturerIds) {
         return (root, criteriaQuery, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.equal(root.get("storeId"), storeId));
@@ -29,16 +34,16 @@ public final class ProductSpecifications {
                         cb.like(cb.lower(root.get("sku")), like)
                 ));
             }
-            addIn(predicates, root.get("categoryId"), query.categoryIds());
-            addIn(predicates, root.get("manufacturerId"), query.manufacturerIds());
+            addIn(predicates, root.get("categoryId"), categoryIds);
+            addIn(predicates, root.get("manufacturerId"), manufacturerIds);
             addIn(predicates, root.get("stockStatusId"), query.stockStatusIds());
             addIn(predicates, root.get("status"), query.statuses());
 
             if (query.minPrice() != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("partnerPrice"), query.minPrice()));
+                predicates.add(cb.greaterThanOrEqualTo(root.get("price"), query.minPrice()));
             }
             if (query.maxPrice() != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("partnerPrice"), query.maxPrice()));
+                predicates.add(cb.lessThanOrEqualTo(root.get("price"), query.maxPrice()));
             }
             if (query.createdFrom() != null) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), query.createdFrom()));

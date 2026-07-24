@@ -12,17 +12,13 @@ public record ProductUpdateRequest(
         String code,
         String description,
         @JsonProperty("category_id")
-        Long categoryId,
+        String categoryId,
         @JsonProperty("manufacturer_id")
-        Long manufacturerId,
+        String manufacturerId,
         @JsonProperty("stock_status_id")
         Long stockStatusId,
-        @JsonProperty("partner_price")
         @PositiveOrZero
-        BigDecimal partnerPrice,
-        @JsonProperty("recommended_price")
-        @PositiveOrZero
-        BigDecimal recommendedPrice,
+        BigDecimal price,
         @PositiveOrZero
         Integer quantity,
         BigDecimal weight,

@@ -16,20 +16,15 @@ public record ProductCreateRequest(
         String code,
         String description,
         @JsonProperty("category_id")
-        Long categoryId,
+        String categoryId,
         @JsonProperty("manufacturer_id")
-        Long manufacturerId,
+        String manufacturerId,
         @JsonProperty("stock_status_id")
         @NotNull
         Long stockStatusId,
-        @JsonProperty("partner_price")
         @NotNull
         @PositiveOrZero
-        BigDecimal partnerPrice,
-        @JsonProperty("recommended_price")
-        @NotNull
-        @PositiveOrZero
-        BigDecimal recommendedPrice,
+        BigDecimal price,
         @NotNull
         @PositiveOrZero
         Integer quantity,
