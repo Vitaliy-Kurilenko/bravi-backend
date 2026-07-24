@@ -9,6 +9,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import ua.com.bravi.bravi.AbstractPostgresIT;
 import ua.com.bravi.bravi.seller.catalog.manufacturers.domain.ManufacturerStatus;
 import ua.com.bravi.bravi.seller.catalog.manufacturers.persistence.entity.ManufacturerEntity;
+import ua.com.bravi.bravi.shared.util.PublicIdGenerator;
 
 import java.util.List;
 import java.util.UUID;
@@ -51,6 +52,7 @@ class ManufacturerEntityRepositoryTest extends AbstractPostgresIT {
     private static ManufacturerEntity newManufacturer(Long storeId, String name) {
         ManufacturerEntity entity = new ManufacturerEntity();
         entity.setStoreId(storeId);
+        entity.setPublicId(PublicIdGenerator.generate(PublicIdGenerator.MANUFACTURER_PREFIX));
         entity.setName(name);
         entity.setDescription("desc");
         entity.setStatus(ManufacturerStatus.INACTIVE);

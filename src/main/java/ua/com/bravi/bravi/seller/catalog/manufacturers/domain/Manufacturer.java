@@ -4,6 +4,7 @@ import java.time.Instant;
 
 public record Manufacturer(
         Long id,
+        String publicId,
         Long storeId,
         String name,
         String description,

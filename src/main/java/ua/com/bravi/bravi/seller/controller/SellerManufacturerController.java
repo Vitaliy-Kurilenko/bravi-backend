@@ -14,12 +14,18 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ua.com.bravi.bravi.seller.catalog.manufacturers.api.ManufacturersApi;
+import ua.com.bravi.bravi.seller.catalog.manufacturers.domain.ManufacturerSearchQuery;
+import ua.com.bravi.bravi.seller.catalog.manufacturers.domain.ManufacturerSortBy;
+import ua.com.bravi.bravi.seller.catalog.manufacturers.domain.ManufacturerStatus;
 import ua.com.bravi.bravi.seller.controller.dto.in.ManufacturerCreateRequest;
 import ua.com.bravi.bravi.seller.controller.dto.in.ManufacturerUpdateRequest;
+import ua.com.bravi.bravi.seller.controller.dto.out.ManufacturerPageResponse;
 import ua.com.bravi.bravi.seller.controller.dto.out.ManufacturerResponse;
 import ua.com.bravi.bravi.seller.controller.mapper.ManufacturerDtoMapper;
+import ua.com.bravi.bravi.shared.common.SortOrder;
 import ua.com.bravi.bravi.shared.component.RequireStore;
 import ua.com.bravi.bravi.seller.stores.api.StoreContext;
 
@@ -36,44 +42,57 @@ public class SellerManufacturerController {
     private final ManufacturerDtoMapper manufacturerDtoMapper;
     private final StoreContext storeContext;
 
-    @Operation(summary = "Get manufacturers", description = "Returns all manufacturers of the current user's store")
+    @Operation(summary = "Search manufacturers",
+            description = "Returns a paginated, filtered and sorted list of the current store's manufacturers")
     @GetMapping
     @PreAuthorize("hasPermission('PRODUCT', 'READ')")
-    public List<ManufacturerResponse> getManufacturers() {
-        return manufacturerDtoMapper.toResponses(manufacturersApi.findByStoreId(storeContext.get()));
+    public ManufacturerPageResponse getManufacturers(
+            @RequestParam(required = false) String search,
+            @RequestParam(name = "statuses", required = false) List<ManufacturerStatus> statuses,
+            @RequestParam(name = "sort_by", required = false) String sortBy,
+            @RequestParam(name = "sort_order", defaultValue = "DESC") SortOrder sortOrder,
+            @RequestParam(name = "page", defaultValue = "1") int page,
+            @RequestParam(name = "limit", defaultValue = "20") int limit
+    ) {
+        ManufacturerSearchQuery query = new ManufacturerSearchQuery(
+                search, statuses,
+                sortBy == null ? null : ManufacturerSortBy.fromParam(sortBy), sortOrder, page, limit
+        );
+        return manufacturerDtoMapper.toPageResponse(manufacturersApi.search(storeContext.get(), query));
     }
 
     @Operation(summary = "Get manufacturer", description = "Returns a manufacturer of the current user's store")
-    @GetMapping("/{manufacturerId}")
+    @GetMapping("/{publicId}")
     @PreAuthorize("hasPermission('PRODUCT', 'READ')")
-    public ManufacturerResponse getManufacturer(@PathVariable Long manufacturerId) {
-        return manufacturerDtoMapper.toResponse(manufacturersApi.getById(storeContext.get(), manufacturerId));
+    public ManufacturerResponse getManufacturer(@PathVariable String publicId) {
+        return manufacturerDtoMapper.toResponse(manufacturersApi.getByPublicId(storeContext.get(), publicId));
     }
 
     @Operation(summary = "Create manufacturer", description = "Creates a manufacturer in the current user's store")
     @PostMapping
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
-    public ResponseEntity<Void> createManufacturer(@Valid @RequestBody ManufacturerCreateRequest request) {
-        manufacturersApi.create(storeContext.get(), manufacturerDtoMapper.toDomain(request));
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+    public ResponseEntity<ManufacturerResponse> createManufacturer(@Valid @RequestBody ManufacturerCreateRequest request) {
+        ManufacturerResponse created = manufacturerDtoMapper.toResponse(
+                manufacturersApi.create(storeContext.get(), manufacturerDtoMapper.toDomain(request)));
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @Operation(summary = "Update manufacturer", description = "Partially updates a manufacturer of the current user's store")
-    @PatchMapping("/{manufacturerId}")
+    @PatchMapping("/{publicId}")
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<Void> updateManufacturer(
-            @PathVariable Long manufacturerId,
+            @PathVariable String publicId,
             @Valid @RequestBody ManufacturerUpdateRequest request
     ) {
-        manufacturersApi.update(storeContext.get(), manufacturerId, manufacturerDtoMapper.toDomain(request));
+        manufacturersApi.update(storeContext.get(), publicId, manufacturerDtoMapper.toDomain(request));
         return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Delete manufacturer", description = "Deletes a manufacturer of the current user's store")
-    @DeleteMapping("/{manufacturerId}")
+    @DeleteMapping("/{publicId}")
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
-    public ResponseEntity<Void> deleteManufacturer(@PathVariable Long manufacturerId) {
-        manufacturersApi.delete(storeContext.get(), manufacturerId);
+    public ResponseEntity<Void> deleteManufacturer(@PathVariable String publicId) {
+        manufacturersApi.delete(storeContext.get(), publicId);
         return ResponseEntity.noContent().build();
     }
 }

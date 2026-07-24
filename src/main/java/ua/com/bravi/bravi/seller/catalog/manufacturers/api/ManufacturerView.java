@@ -6,6 +6,7 @@ import java.time.Instant;
 
 public record ManufacturerView(
         Long id,
+        String publicId,
         Long storeId,
         String name,
         String description,
