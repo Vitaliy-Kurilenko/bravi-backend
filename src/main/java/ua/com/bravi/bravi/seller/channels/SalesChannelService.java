@@ -1,6 +1,7 @@
 package ua.com.bravi.bravi.seller.channels;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ua.com.bravi.bravi.seller.channels.api.SalesChannelsApi;
@@ -10,6 +11,7 @@ import ua.com.bravi.bravi.seller.channels.persistence.ISalesChannelRepository;
 import ua.com.bravi.bravi.seller.channels.persistence.entity.SalesChannelEntity;
 import ua.com.bravi.bravi.shared.util.PublicIdGenerator;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SalesChannelService implements SalesChannelsApi {
@@ -31,6 +33,7 @@ public class SalesChannelService implements SalesChannelsApi {
         channel.setName(MANUAL_CHANNEL_NAME);
         channel.setStatus(SalesChannelStatus.ACTIVE);
         salesChannelRepository.save(channel);
+        log.info("Manual sales channel created storeId={} publicId={}", storeId, channel.getPublicId());
     }
 
     @Override

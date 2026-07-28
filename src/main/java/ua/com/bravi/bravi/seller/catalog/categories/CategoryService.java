@@ -1,6 +1,7 @@
 package ua.com.bravi.bravi.seller.catalog.categories;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CategoryService implements CategoriesApi {
@@ -74,6 +76,8 @@ public class CategoryService implements CategoriesApi {
         }
         try {
             CategoryEntity saved = categoryRepository.save(entity);
+            log.info("Category created storeId={} categoryId={} publicId={} parentId={}",
+                    storeId, saved.getId(), saved.getPublicId(), parentId);
             return categoryEntityMapper.toView(saved, category.parentPublicId(), List.of());
         } catch (DataIntegrityViolationException duplicateName) {
             throw new CategoryAlreadyExistsException(DUPLICATE_NAME);
@@ -96,6 +100,7 @@ public class CategoryService implements CategoriesApi {
         } catch (DataIntegrityViolationException duplicateName) {
             throw new CategoryAlreadyExistsException(DUPLICATE_NAME);
         }
+        log.info("Category updated storeId={} publicId={}", storeId, publicId);
     }
 
     @Override
@@ -106,6 +111,7 @@ public class CategoryService implements CategoriesApi {
             throw new CategoryHasChildrenException("Category has subcategories and cannot be deleted");
         }
         categoryRepository.delete(entity);
+        log.info("Category deleted storeId={} publicId={}", storeId, publicId);
     }
 
     private CategoryView toSubtree(Long storeId, CategoryEntity node) {

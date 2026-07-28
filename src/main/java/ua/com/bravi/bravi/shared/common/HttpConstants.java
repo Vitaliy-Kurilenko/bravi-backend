@@ -14,8 +14,6 @@ public final class HttpConstants {
     /** Public id of the store in scope (resolved into StoreContext); only on store-scoped requests. */
     public static final String STORE_ID_HEADER = "X-Store-Id";
 
-    public static final String REQUEST_ID_MDC_KEY = "requestId";
-
     /** Service-to-service endpoints (Auth Service → Backend); no end-user context. */
     public static final String INTERNAL_PATHS = "/internal/**";
 

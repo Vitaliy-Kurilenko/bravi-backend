@@ -1,6 +1,7 @@
 package ua.com.bravi.bravi.seller.orders;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -35,6 +36,7 @@ import ua.com.bravi.bravi.identity.api.IdentityApi;
 import java.math.BigDecimal;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderService implements OrdersApi {
@@ -98,7 +100,10 @@ public class OrderService implements OrdersApi {
         entity.setTotal(total);
         items.forEach(item -> entity.addItem(orderEntityMapper.toItemEntity(item)));
 
-        return orderRepository.save(entity).getId();
+        Long orderId = orderRepository.save(entity).getId();
+        log.info("Order created storeId={} orderId={} items={} total={}",
+                storeId, orderId, items.size(), total);
+        return orderId;
     }
 
     @Override
@@ -108,17 +113,22 @@ public class OrderService implements OrdersApi {
         if (patch.statusId() != null) {
             OrderStatusEntity status = orderStatusRepository.findById(patch.statusId())
                     .orElseThrow(() -> new InvalidOrderRequestException("status_id", "Unknown order status"));
+            Long previousStatusId = entity.getStatusId();
             entity.setStatusId(patch.statusId());
             entity.setStatus(status);
+            log.info("Order status changed storeId={} orderId={} fromStatusId={} toStatusId={} toStatus={}",
+                    storeId, orderId, previousStatusId, status.getId(), status.getCode());
         }
         orderEntityMapper.updateEntity(entity, patch);
         orderRepository.flush();
+        log.info("Order updated storeId={} orderId={}", storeId, orderId);
     }
 
     @Override
     @Transactional
     public void delete(Long storeId, Long orderId) {
         orderRepository.delete(requireOwned(storeId, orderId)); // items + shipment знімаються каскадом
+        log.info("Order deleted storeId={} orderId={}", storeId, orderId);
     }
 
     @Override
@@ -129,6 +139,8 @@ public class OrderService implements OrdersApi {
         entity.addItem(orderEntityMapper.toItemEntity(snapshot));
         recomputeTotals(entity);
         orderRepository.flush();
+        log.info("Order item added storeId={} orderId={} productId={} total={}",
+                storeId, orderId, item.productId(), entity.getTotal());
     }
 
     @Override
@@ -153,6 +165,8 @@ public class OrderService implements OrdersApi {
         }
         recomputeTotals(entity);
         orderRepository.flush();
+        log.info("Order item updated storeId={} orderId={} itemId={} total={}",
+                storeId, orderId, itemId, entity.getTotal());
     }
 
     @Override
@@ -166,6 +180,8 @@ public class OrderService implements OrdersApi {
         entity.getItems().remove(item); // orphanRemoval видаляє рядок
         recomputeTotals(entity);
         orderRepository.flush();
+        log.info("Order item deleted storeId={} orderId={} itemId={} total={}",
+                storeId, orderId, itemId, entity.getTotal());
     }
 
     @Override

@@ -1,6 +1,7 @@
 package ua.com.bravi.bravi.seller.stores.contacts;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ua.com.bravi.bravi.shared.exception.NotFoundException;
@@ -14,6 +15,7 @@ import ua.com.bravi.bravi.seller.stores.contacts.persistence.mapper.StoreContact
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StoreContactService implements StoreContactsApi {
@@ -40,6 +42,7 @@ public class StoreContactService implements StoreContactsApi {
                 .toList();
 
         contactRepository.saveAll(entities);
+        log.info("Store contacts added storeId={} count={}", storeId, entities.size());
     }
 
     @Override
@@ -57,6 +60,7 @@ public class StoreContactService implements StoreContactsApi {
                 })
                 .toList();
 
+        log.info("Store contacts replaced storeId={} count={}", storeId, entities.size());
         return contactEntityMapper.toViews(contactRepository.saveAll(entities));
     }
 
@@ -71,6 +75,7 @@ public class StoreContactService implements StoreContactsApi {
         contactEntityMapper.updateEntity(entity, patch);
 
         StoreContactPolicy.validate(entity.getType(), entity.getValue());
+        log.info("Store contact updated storeId={} contactId={} type={}", storeId, contactId, entity.getType());
     }
 
     @Override
@@ -82,5 +87,6 @@ public class StoreContactService implements StoreContactsApi {
         entity.requireOwnedBy(storeId);
 
         contactRepository.delete(entity);
+        log.info("Store contact deleted storeId={} contactId={}", storeId, contactId);
     }
 }

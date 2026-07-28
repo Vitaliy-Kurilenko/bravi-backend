@@ -1,0 +1,22 @@
+# Профіль локальної розробки: людино-читабельний текстовий вивід + докладні рівні.
+# Запуск: ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+kind: Application
+
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+
+logging:
+  level:
+    ua.com.bravi.bravi: DEBUG
+    ua.com.bravi.bravi.payload: ${PAYLOAD_LOG_LEVEL:DEBUG}
+    ua.com.bravi.bravi.calls: ${SERVICE_CALL_LOG_LEVEL:DEBUG}
+    org:
+      hibernate:
+        SQL: DEBUG
+        orm.jdbc.bind: TRACE
+      springframework:
+        security: DEBUG
+        web: DEBUG

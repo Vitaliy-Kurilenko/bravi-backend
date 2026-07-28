@@ -229,17 +229,22 @@ order  filter                          відповідальність
  -200  RequiredHeadersFilter          валідує наявність кожного заголовка
                                       зі списку HttpConstants.REQUIRED_HEADERS;
                                       400 ProblemDetail при відсутності
- -190  RequestIdMdcFilter             MDC.put("requestId") + echo у response;
+ -190  MdcContextFilter               MDC: requestId (з X-Correlation-Id або згенерований)
+                                      + accountId/storeId із заголовків; echo у response;
                                       ДО security, щоб логи 401/403 теж корелювались
+ -180  AccessLogFilter                один рядок на завершений запит у логер
+                                      ua.com.bravi.bravi.access (метод, шлях, статус, тривалість)
+ -170  PayloadLoggingFilter           тіла запиту/відповіді + query у ua.com.bravi.bravi.payload;
+                                      лише на DEBUG, значення чутливих полів замасковані
  -100  Spring Security FilterChainProxy  валідація JWT через JWKS Keycloak; 401 при невалідному
     0  InvocationContextFilter        читає SecurityContext + headers,
-                                      заповнює @RequestScope InvocationContext
+                                      заповнює @RequestScope InvocationContext + MDC userExtId
 ```
 
 - **Обов'язкові заголовки і виключені шляхи** — `shared/common/HttpConstants.java`
   (`REQUIRED_HEADERS`, `EXCLUDED_PATHS`). Додати новий — один рядок у константі
 - **JWT** — Spring Security resource server, `issuer-uri` зібрано з `keycloack.base-url` + `keycloack.realm`;
-  ролі — з claim'а `realm_access.roles` Keycloak
+  ролі — з claim'а `resource_access.backend-service.roles` Keycloak (див. §10a)
 - **`InvocationContext`** — `@RequestScope` бін у `shared/component/`. Інжектиться через
   constructor injection куди потрібно (зокрема в `api`-холдери інших модулів)
 - **401/403** — кастомні `ProblemDetail*EntryPoint`/`*AccessDeniedHandler` пишуть напряму в response
@@ -287,6 +292,58 @@ per-method перевірка прав — `@PreAuthorize("hasPermission('RESOUR
   `{accountId}` (public id) з поточним акаунтом (`resolveCurrentContext`) і кидає 403 при розбіжності
   чи не-SELLER акаунті — на додачу до per-method `hasPermission('STORE', ...)`
 - Новий ресурс → додай пару `*_READ/*_WRITE` у seed-міграцію і `@PreAuthorize` на методи
+
+## 10b. Логування
+
+Логи — **тільки в stdout**; ані `logback-spring.xml`, ані файлових appender'ів немає.
+Формат керується профілями через вбудований structured logging Spring Boot 4
+(`logging.structured.format.console: ecs`) — **без** `logstash-logback-encoder`.
+
+- **Профілі**: базовий `application.yaml` — тихі дефолти й текстовий вивід (їх успадковують тести,
+  тому `spring.profiles.active` НЕ задаємо в yaml); `application-local.yaml` — DEBUG + SQL;
+  `application-prod.yaml` — ECS JSON. Рівні — через env (`ROOT_LOG_LEVEL`, `APP_LOG_LEVEL`,
+  `ACCESS_LOG_LEVEL`), а не правкою yaml
+- **MDC-ключі** — константи в `shared/common/MdcKeys.java`: `requestId`, `accountId`, `storeId`,
+  `userExtId`. Заголовкові кладе `MdcContextFilter` (order -190), `userExtId` — `InvocationContextFilter`
+  після резолву JWT. Кожен фільтр прибирає свої ключі у `finally` (потоки перевикористовуються).
+  У JSON вони виходять окремими полями, у тексті — через `logging.pattern.correlation`
+- **PII у логи не потрапляє**: у MDC лише непрямі ідентифікатори. `InvocationContext` містить
+  email/username/ім'я — логувати його (у т.ч. `toString()`) заборонено
+- **Access-log** — `AccessLogFilter` під власним логером `ua.com.bravi.bravi.access`, щоб рівень
+  керувався окремо від пакетів застосунку. Структуровані поля — через fluent-API SLF4J
+  (`log.atInfo().addKeyValue(...)`), щоб у JSON вони були полями, а не текстом
+- **Винятки**: 5xx — `log.error` зі стектрейсом у `GlobalExceptionHandler`; очікувані доменні
+  4xx — `log.warn`/`log.debug` **без** стектрейсу (статус і так видно в access-log).
+  Новий модульний handler → `@Slf4j` + один `log.debug` на метод
+- **Сервіси — бізнес-події, не трасування.** `<Module>Service` логує `INFO` **після** успішної
+  зміни стану (create/update/delete/зміна статусу), формат — подія в минулому часі + `key=value`
+  з id сутностей: `log.info("Store activated storeId={}", storeId)`. Правила:
+  - **читання не логуємо** (`find*`/`get*`/`search`) — вони вже видні в access-log;
+    суто read-only сервіс (напр. `DictionaryService`) логів не має взагалі
+  - **бізнес-відмову** (порушення інваріанта перед киданням доменного винятку) — `log.warn`
+    із причиною: `log.warn("Onboarding completion rejected accountId={} missing={}", ...)`
+  - **`DEBUG`** — для технічних деталей (видача presigned URL, гонки при провіженінгу)
+  - **жодних PII**: тільки id/коди/лічильники. Ні email, ні імен, ні значень контактів
+  - не дублюємо подію в оркестраторі й у вкладеному сервісі, якщо вона про одне й те саме
+- **Payload'и та виклики сервісів — діагностика, вимкнена скрізь окрім профілю `local`.**
+  `PayloadLoggingFilter` (order -170) логує тіла запитів/відповідей і query під логером
+  `ua.com.bravi.bravi.payload`; `ServiceCallLoggingAspect` — аргументи/результати публічних
+  методів `@Service`-бінів (тобто й міжмодульні виклики через `<Module>Api`) під
+  `ua.com.bravi.bravi.calls`. Обидва мовчать, доки логер не в DEBUG, і відсікають роботу
+  через `isDebugEnabled()` до обробки аргументів:
+  - **уся PII маскується `shared/util/LogSanitizer`** — за іменем поля
+    (`LoggingConstants.SENSITIVE_KEYS`, свідомо ширший за потрібне) і додатково за формою
+    значення для email. Аспект рендерить аргументи як `name=value` саме тому, що позиційний
+    скаляр без імені маскувати нема за чим
+  - новий чутливий атрибут → додай ключ у `SENSITIVE_KEYS`, а не «забудь залогувати»
+  - у базовому yaml вони на INFO (тож тести й прод мовчать), DEBUG вмикає профіль `local`;
+    `application-prod.yaml` дублює INFO **явно** — це запобіжник на випадок, якщо базовий
+    рівень колись переведуть на DEBUG, тож не прибирай його
+  - рівні задані окремими ключами, тому `APP_LOG_LEVEL=DEBUG` їх НЕ вмикає
+  - `PayloadLoggingFilter` обов'язково кличе `copyBodyToResponse()` у `finally`, інакше
+    клієнт отримає порожнє тіло; тіло запиту буферизується не більше `MAX_CACHED_BODY_BYTES`
+- **Actuator-ендпоінт `loggers` не вмикати**: `/actuator/**` у `EXCLUDED_PATHS` має `permitAll()`,
+  тож writable `loggers` дав би змогу міняти рівні без автентифікації
 
 ## 11. README
 

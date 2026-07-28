@@ -1,5 +1,8 @@
 package ua.com.bravi.bravi.shared.exception;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.*;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
@@ -13,6 +16,8 @@ import ua.com.bravi.bravi.shared.exception.dto.FiledValidationError;
 
 import java.util.ArrayList;
 
+@Slf4j
+@Order(Ordered.LOWEST_PRECEDENCE)
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
@@ -21,6 +26,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleAccessDeniedException(
             AccessDeniedException ex
     ) {
+        log.warn("Access denied: {}", ex.getMessage());
+
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
         problem.setTitle("Access Denied");
         problem.setDetail("Request contains problems");
@@ -45,6 +52,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             ));
         }
 
+        log.debug("Validation failed: {}", errors);
+
         ProblemDetail problem = ProblemDetail.forStatus(status);
         problem.setTitle("Validation failed");
         problem.setDetail("Request contains invalid fields");
@@ -63,6 +72,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     ) {
         ArrayList<FiledValidationError> errors = new ArrayList<>();
         errors.add(new FiledValidationError(extractField(ex), rootMessage(ex)));
+
+        log.debug("Unreadable request body: {}", errors);
 
         ProblemDetail problem = ProblemDetail.forStatus(status);
         problem.setTitle("Validation failed");
@@ -97,6 +108,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleMissingRequiredHeader(
             MissingRequiredHeaderException ex
     ) {
+        log.debug("Missing required header: {}", ex.getHeaderName());
+
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problem.setTitle("Missing required header");
         problem.setDetail("Request must include '" + ex.getHeaderName() + "' header");
@@ -110,6 +123,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleNotFound(
             NotFoundException ex
     ) {
+        log.debug("Not found: {}", ex.getMessage());
+
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
         problem.setTitle("Not found");
         problem.setDetail(ex.getMessage());
@@ -122,6 +137,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleForbidden(
             ForbiddenException ex
     ) {
+        log.warn("Forbidden: {}", ex.getMessage());
+
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
         problem.setTitle("Forbidden");
         problem.setDetail(ex.getMessage());
@@ -134,6 +151,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleUnexpectedException(
             Exception ex
     ) {
+        log.error("Unhandled exception", ex);
+
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         problem.setTitle("Internal server error");
         problem.setDetail("Unexpected error occurred");

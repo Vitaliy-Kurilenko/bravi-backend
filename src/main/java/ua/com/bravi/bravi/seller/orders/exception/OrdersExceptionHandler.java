@@ -1,5 +1,6 @@
 package ua.com.bravi.bravi.seller.orders.exception;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -11,6 +12,7 @@ import ua.com.bravi.bravi.shared.exception.dto.FiledValidationError;
 
 import java.util.List;
 
+@Slf4j
 @Order(Ordered.LOWEST_PRECEDENCE - 100)
 @RestControllerAdvice
 public class OrdersExceptionHandler {
@@ -18,6 +20,8 @@ public class OrdersExceptionHandler {
     @ExceptionHandler(OrderNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ProblemDetail handleOrderNotFound(OrderNotFoundException ex) {
+        log.debug("OrderNotFoundException: {}", ex.getMessage());
+
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
         problem.setTitle("Order not found");
         problem.setDetail(ex.getMessage());
@@ -27,6 +31,8 @@ public class OrdersExceptionHandler {
     @ExceptionHandler(InvalidOrderRequestException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ProblemDetail handleInvalidRequest(InvalidOrderRequestException ex) {
+        log.debug("InvalidOrderRequestException: {}", ex.getMessage());
+
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problem.setTitle("Validation failed");
         problem.setDetail("Request contains invalid fields");

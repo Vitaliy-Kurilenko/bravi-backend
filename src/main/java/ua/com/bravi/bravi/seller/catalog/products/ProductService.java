@@ -1,6 +1,7 @@
 package ua.com.bravi.bravi.seller.catalog.products;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -45,6 +46,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProductService implements ProductsApi {
@@ -121,6 +123,8 @@ public class ProductService implements ProductsApi {
         }
         try {
             ProductEntity saved = productRepository.save(entity);
+            log.info("Product created storeId={} productId={} publicId={}",
+                    storeId, saved.getId(), saved.getPublicId());
             return toView(storeId, saved, List.of());
         } catch (DataIntegrityViolationException duplicate) {
             throw new ProductAlreadyExistsException(DUPLICATE);
@@ -144,6 +148,7 @@ public class ProductService implements ProductsApi {
         } catch (DataIntegrityViolationException duplicate) {
             throw new ProductAlreadyExistsException(DUPLICATE);
         }
+        log.info("Product updated storeId={} publicId={}", storeId, publicId);
     }
 
     @Override
@@ -153,6 +158,7 @@ public class ProductService implements ProductsApi {
         imageRepository.findByProductIdOrderBySortOrderAsc(entity.getId())
                 .forEach(image -> mediaStorage.delete(image.getStorageKey()));
         productRepository.delete(entity); // store_product_images знімаються ON DELETE CASCADE
+        log.info("Product deleted storeId={} publicId={}", storeId, publicId);
     }
 
     @Override
@@ -164,6 +170,8 @@ public class ProductService implements ProductsApi {
     public PresignedUpload presignImageUpload(Long storeId, String publicId, ImageUpload upload) {
         ProductEntity product = requireOwned(storeId, publicId);
         MediaCategory.PRODUCT_IMAGE.validate(upload.contentType(), upload.size());
+        log.debug("Presigning product image upload storeId={} publicId={} contentType={} size={}",
+                storeId, publicId, upload.contentType(), upload.size());
         return mediaStorage.presignUpload(new MediaUploadRequest(
                 MediaCategory.PRODUCT_IMAGE, imageScope(storeId, product.getId()),
                 upload.contentType(), upload.size(), upload.originalFilename()));
@@ -191,6 +199,8 @@ public class ProductService implements ProductsApi {
         if (Boolean.TRUE.equals(saved.getIsPrimary())) {
             demoteOtherPrimaries(product.getId(), saved.getId());
         }
+        log.info("Product image added storeId={} publicId={} imageId={} primary={}",
+                storeId, publicId, saved.getId(), saved.getIsPrimary());
         return toImageView(saved);
     }
 
@@ -202,6 +212,7 @@ public class ProductService implements ProductsApi {
         image.setIsPrimary(true);
         ProductImageEntity saved = imageRepository.save(image);
         demoteOtherPrimaries(product.getId(), saved.getId());
+        log.info("Product primary image changed storeId={} publicId={} imageId={}", storeId, publicId, imageId);
         return toImageView(saved);
     }
 
@@ -223,6 +234,8 @@ public class ProductService implements ProductsApi {
                         imageRepository.save(next);
                     });
         }
+        log.info("Product image deleted storeId={} publicId={} imageId={} wasPrimary={}",
+                storeId, publicId, imageId, wasPrimary);
     }
 
     private void validateStockStatus(Long stockStatusId) {

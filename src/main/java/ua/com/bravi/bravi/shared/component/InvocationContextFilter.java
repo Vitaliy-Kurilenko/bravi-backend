@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
+import org.slf4j.MDC;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,6 +16,7 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 import ua.com.bravi.bravi.shared.common.HttpConstants;
+import ua.com.bravi.bravi.shared.common.MdcKeys;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -59,11 +61,16 @@ public class InvocationContextFilter extends OncePerRequestFilter {
             context.setRoles(extractRoles(jwtAuth));
             context.setFirstName(resolveFirstName(jwt));
             context.setLastName(jwt.getClaimAsString(FAMILY_NAME_CLAIM));
+            MDC.put(MdcKeys.USER_EXT_ID, jwt.getSubject());
         }
 
         context.setDevice(userAgentParser.parse(request.getHeader(HttpConstants.USER_AGENT_HEADER)));
 
-        filterChain.doFilter(request, response);
+        try {
+            filterChain.doFilter(request, response);
+        } finally {
+            MDC.remove(MdcKeys.USER_EXT_ID);
+        }
     }
 
     private String resolveFirstName(Jwt jwt) {

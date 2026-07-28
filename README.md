@@ -61,7 +61,8 @@ account → ACTIVE, onboarding → COMPLETED, store → ACTIVE). Один маг
 рівно один магазин.
 
 **Аутентифікація:** Spring Security OAuth2 resource server — валідація JWT Keycloak через JWKS;
-ролі беруться з claim'а `realm_access.roles`. Формат помилок — RFC 9457 `ProblemDetail`.
+ролі беруться з claim'а `resource_access.backend-service.roles` (client-ролі `backend-service`).
+Формат помилок — RFC 9457 `ProblemDetail`.
 
 **Персистентність:** JPA/Hibernate + PostgreSQL; схема керується **Flyway**
 (`src/main/resources/db.migration/`, застосовується автоматично при старті). Документація API —
@@ -90,8 +91,9 @@ Swagger UI / OpenAPI (springdoc).
 |-----------------------|----------------------------------------------------|-------------------------|
 | `KEYCLOACK_BASE_URL`  | Базовий URL Keycloak (для збірки JWT `issuer-uri`) | `http://localhost:8080` |
 | `KEYCLOACK_REALM`     | Realm Keycloak                                     | `bravi`                 |
-| `KEYCLOACK_CLIENT_ID` | Client ID застосунку в Keycloak                    | `user-token-proxy`      |
-| `INTERNAL_API_ROLE`   | Realm-роль для доступу до `/internal/**`            | `service_registration`  |
+| `KEYCLOACK_CLIENT_ID` | Client ID застосунку в Keycloak                    | `backend-service`       |
+| `INTERNAL_API_ROLE`   | Client-роль `backend-service` для `/internal/**`   | `auth_service`          |
+| `USER_API_ROLE`       | Client-роль `backend-service` для людей-користувачів | `bravi_user`          |
 | `SERVER_PORT`         | Порт HTTP-сервера                                  | `8083`                  |
 | `MEDIA_S3_ENDPOINT`   | Endpoint об'єктного сховища (S3/MinIO)             | `http://localhost:9000` |
 | `MEDIA_S3_REGION`     | Регіон сховища                                     | `us-east-1`             |
@@ -100,6 +102,14 @@ Swagger UI / OpenAPI (springdoc).
 | `MEDIA_S3_SECRET_KEY` | Secret key сховища                                 | `minioadmin`            |
 | `MEDIA_S3_PATH_STYLE` | Path-style-доступ (`true` для MinIO)               | `true`                  |
 | `MEDIA_PUBLIC_BASE_URL` | База публічних URL медіа-об'єктів                | `http://localhost:9000/bravi-media` |
+| `SPRING_PROFILES_ACTIVE` | Активний профіль (`local` / `prod`)             | *(немає — базовий конфіг)* |
+| `ROOT_LOG_LEVEL`      | Рівень кореневого логера                           | `INFO` (`WARN` у `prod`) |
+| `APP_LOG_LEVEL`       | Рівень логів застосунку (`ua.com.bravi.bravi`)     | `INFO`                  |
+| `ACCESS_LOG_LEVEL`    | Рівень HTTP access-логу (`OFF` — вимкнути)         | `INFO`                  |
+| `PAYLOAD_LOG_LEVEL`   | `DEBUG` вмикає лог тіл запитів/відповідей          | `INFO` (`DEBUG` у `local`) |
+| `SERVICE_CALL_LOG_LEVEL` | `DEBUG` вмикає лог аргументів викликів сервісів | `INFO` (`DEBUG` у `local`) |
+| `APP_VERSION`         | Версія сервісу в полі `service.version` (профіль `prod`) | `unknown`         |
+| `APP_ENVIRONMENT`     | Середовище в полі `service.environment` (профіль `prod`) | `prod`            |
 
 > JWT `issuer-uri` збирається як `${KEYCLOACK_BASE_URL}/realms/${KEYCLOACK_REALM}`.
 > Секрети (`DB_PASSWORD`, `MEDIA_S3_SECRET_KEY` тощо) не комітяться — лише через env або зовнішній vault.
@@ -141,10 +151,76 @@ export DB_URL=jdbc:postgresql://localhost:5432/bravi
 export DB_USER=bravi
 export DB_PASSWORD=secret
 
-./mvnw spring-boot:run
+./mvnw spring-boot:run                                      # базовий конфіг (тихий, текстовий)
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local      # розробка: DEBUG + SQL
 ```
 
 Flyway-міграції застосовуються автоматично при старті.
+
+## Логування
+
+Логи пишуться **тільки в stdout** — збором і ротацією займається docker/k8s. Файлових
+appender'ів немає, `logback-spring.xml` не використовується: формат керується профілями
+через штатний structured logging Spring Boot.
+
+| Профіль             | Формат                                    | Коли                    |
+|---------------------|-------------------------------------------|-------------------------|
+| *(базовий, без профілю)* | Текстовий, тихі рівні (`INFO`/`WARN`) | CI, тести               |
+| `local`             | Текстовий + `DEBUG`, SQL Hibernate і binds | Локальна розробка       |
+| `prod`              | **JSON (ECS)** — готовий до Loki/ELK       | `SPRING_PROFILES_ACTIVE=prod` |
+
+**Контекст запиту (MDC).** Кожен рядок логу під час обробки запиту несе `requestId`
+(із заголовка `X-Correlation-Id`, а якщо його немає — згенерований сервером і повернутий
+у відповіді), а також `accountId` / `storeId` (із `X-Account-Id` / `X-Store-Id`) і `userExtId`
+(`sub` з JWT). У текстовому форматі вони йдуть префіксом, у JSON — окремими полями.
+MDC заповнюється **до** Spring Security, тож 401/403 теж корелюються.
+
+```
+16:00:04.352  INFO --- [bravi] [exec-1] [corr-123] [acc_1/str_2] ua.com.bravi.bravi.access : GET /api/dictionaries 200 10ms
+```
+
+**HTTP access-log.** `AccessLogFilter` пише один рядок на завершений запит
+(метод, шлях, статус, тривалість) у логер `ua.com.bravi.bravi.access` — рівень окремий
+(`ACCESS_LOG_LEVEL`, `OFF` вимикає). Шляхи з `HttpConstants.EXCLUDED_PATHS`
+(actuator, swagger, `/error`) не логуються.
+
+**Винятки.** Необроблені винятки (500) логуються `ERROR` **зі стектрейсом** у
+`GlobalExceptionHandler`; очікувані доменні 4xx — `WARN`/`DEBUG` без стектрейсу.
+
+**Параметри запитів/відповідей і викликів між сервісами.** Вимкнені за замовчуванням;
+вмикаються профілем `local` або точково env-змінними:
+
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local   # обидва логери → DEBUG
+
+# або без профілю, точково:
+PAYLOAD_LOG_LEVEL=DEBUG SERVICE_CALL_LOG_LEVEL=DEBUG ./mvnw spring-boot:run
+```
+
+```
+--> POST /api/sellers/onboarding/store query=[] body=[{"name":"Olga's Shop"}]
+<-- POST /api/sellers/onboarding/store status=201 body=[{"public_id":"st_IjWs…","status":"DRAFT"}]
+--> UserService.provisionUser(keycloakUserId=5555…, email=***, firstName=***, lastName=***)
+<-- UserService.provisionUser returned CurrentUserView[id=1, …, email=***] in 20ms
+```
+
+> **Значення чутливих полів маскуються завжди**, навіть на DEBUG: email, телефон, ім'я/прізвище,
+> `value` контакту, паролі/токени/підписи (перелік — `LoggingConstants.SENSITIVE_KEYS`).
+> Рівні цих логерів задані явно, тому `APP_LOG_LEVEL` на них не впливає — тільки змінні вище.
+> Тіло запиту буферизується не більше 8 КБ, довгі payload'и обрізаються.
+
+**Бізнес-події.** Сервіси логують `INFO` після кожної успішної зміни стану (реєстрація,
+онбординг, магазин, товари, замовлення) з id сутностей — читання не логуються. Разом із
+`requestId` це дає повну історію сценарію:
+
+```
+[corr-onb] u.c.b.b.s.a.SellerRegistrationService : Seller registered userId=1 accountId=1 onboardingStatus=NOT_STARTED
+[corr-onb] u.c.b.bravi.seller.stores.StoreService : Draft store created storeId=1 publicId=st_xkwO… sellerAccountId=1
+[corr-onb] u.c.b.b.seller.SellerOnboardingService : Onboarding completed accountId=1 storeId=1
+```
+
+> У логи не потрапляють PII: у MDC кладемо лише непрямі ідентифікатори. `InvocationContext`
+> містить email, username та ім'я — логувати його (у т.ч. через `toString()`) не можна.
 
 ### Зовнішній вхід через API-gateway
 
