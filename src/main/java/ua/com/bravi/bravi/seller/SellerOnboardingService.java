@@ -1,6 +1,7 @@
 package ua.com.bravi.bravi.seller;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ua.com.bravi.bravi.access.api.AccessApi;
@@ -41,6 +42,7 @@ import java.util.Optional;
  * from the current authorization context ({@code X-Account-Id}), drives the DRAFT store / settings /
  * contacts steps, and finalizes onboarding (account ACTIVE, onboarding COMPLETED, store ACTIVE).
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SellerOnboardingService {
@@ -74,6 +76,7 @@ public class SellerOnboardingService {
         StoreView view = storesApi.createDraftStore(accountId, draft);
         salesChannelsApi.createManualChannel(view.id());
         sellerAccountsApi.updateOnboardingStatus(accountId, ONBOARDING_IN_PROGRESS);
+        log.info("Onboarding started accountId={} storeId={}", accountId, view.id());
         return storeDtoMapper.toResponse(view);
     }
 
@@ -129,6 +132,7 @@ public class SellerOnboardingService {
             }
         }
         if (!missing.isEmpty()) {
+            log.warn("Onboarding completion rejected accountId={} missing={}", accountId, missing);
             throw new OnboardingIncompleteException(missing);
         }
 
@@ -136,6 +140,7 @@ public class SellerOnboardingService {
         sellerAccountsApi.updateOnboardingStatus(accountId, ONBOARDING_COMPLETED);
         storesApi.activateStore(storeId.get());
 
+        log.info("Onboarding completed accountId={} storeId={}", accountId, storeId.get());
         return buildState(accountId);
     }
 
@@ -182,6 +187,7 @@ public class SellerOnboardingService {
             user = identityApi.syncEmailVerified(userId, true);
         }
         if (!user.emailVerified()) {
+            log.warn("Onboarding completion rejected userId={} reason=email_not_verified", userId);
             throw new EmailNotVerifiedException("Verify your email before completing onboarding");
         }
     }

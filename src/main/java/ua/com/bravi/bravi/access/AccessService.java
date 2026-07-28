@@ -1,6 +1,7 @@
 package ua.com.bravi.bravi.access;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ua.com.bravi.bravi.access.api.AccessApi;
@@ -24,6 +25,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AccessService implements AccessApi {
@@ -147,6 +149,10 @@ public class AccessService implements AccessApi {
 
         membershipRepository.assignSystemRole(savedMembership.getId(), type.name() + "_OWNER");
 
+        log.info("Owner account provisioned accountId={} publicId={} type={} userId={} membershipId={} role={}",
+                savedAccount.getId(), savedAccount.getPublicId(), type, userId,
+                savedMembership.getId(), type.name() + "_OWNER");
+
         return new OwnerAccountView(
                 savedAccount.getId(),
                 savedAccount.getPublicId(),
@@ -162,5 +168,6 @@ public class AccessService implements AccessApi {
         AccountEntity account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new NotFoundException("Account not found"));
         account.setStatus(AccountStatus.ACTIVE);
+        log.info("Account activated accountId={} publicId={}", accountId, account.getPublicId());
     }
 }

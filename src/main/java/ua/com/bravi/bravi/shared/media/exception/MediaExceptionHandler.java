@@ -1,5 +1,6 @@
 package ua.com.bravi.bravi.shared.media.exception;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -12,6 +13,7 @@ import ua.com.bravi.bravi.shared.exception.dto.FiledValidationError;
 import java.util.List;
 
 /** Кросовий handler для завантаження медіа (presign/confirm будь-якого модуля). */
+@Slf4j
 @Order(Ordered.LOWEST_PRECEDENCE - 100)
 @RestControllerAdvice
 public class MediaExceptionHandler {
@@ -19,6 +21,8 @@ public class MediaExceptionHandler {
     @ExceptionHandler(InvalidMediaUploadException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ProblemDetail handleInvalidMediaUpload(InvalidMediaUploadException ex) {
+        log.debug("InvalidMediaUploadException: {}", ex.getMessage());
+
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problem.setTitle("Validation failed");
         problem.setDetail("Request contains invalid fields");
@@ -29,6 +33,8 @@ public class MediaExceptionHandler {
     @ExceptionHandler(MediaObjectNotFoundException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ProblemDetail handleMediaObjectNotFound(MediaObjectNotFoundException ex) {
+        log.debug("MediaObjectNotFoundException: {}", ex.getMessage());
+
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problem.setTitle("Media object not found");
         problem.setDetail(ex.getMessage());

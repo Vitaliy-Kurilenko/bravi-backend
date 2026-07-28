@@ -1,6 +1,7 @@
 package ua.com.bravi.bravi.seller.account;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ua.com.bravi.bravi.access.api.AccessApi;
@@ -15,6 +16,7 @@ import ua.com.bravi.bravi.shared.exception.NotFoundException;
 
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SellerAccountService implements SellerAccountsApi {
@@ -38,5 +40,6 @@ public class SellerAccountService implements SellerAccountsApi {
         SellerAccountEntity entity = sellerAccountRepository.findById(accountId)
                 .orElseThrow(() -> new NotFoundException("Seller account not found"));
         entity.setOnboardingStatus(SellerOnboardingStatus.valueOf(onboardingStatus));
+        log.info("Seller onboarding status changed accountId={} status={}", accountId, onboardingStatus);
     }
 }

@@ -7,10 +7,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import ua.com.bravi.bravi.shared.component.AccessLogFilter;
 import ua.com.bravi.bravi.shared.component.InvocationContext;
 import ua.com.bravi.bravi.shared.component.InvocationContextFilter;
-import ua.com.bravi.bravi.shared.component.RequestIdMdcFilter;
+import ua.com.bravi.bravi.shared.component.MdcContextFilter;
+import ua.com.bravi.bravi.shared.component.PayloadLoggingFilter;
 import ua.com.bravi.bravi.shared.component.RequiredHeadersFilter;
+import ua.com.bravi.bravi.shared.component.ServiceCallLoggingAspect;
 import ua.com.bravi.bravi.shared.component.UserAgentParser;
 
 @Configuration
@@ -18,7 +21,9 @@ import ua.com.bravi.bravi.shared.component.UserAgentParser;
 public class WebConfig implements WebMvcConfigurer {
 
     private static final int REQUIRED_HEADERS_ORDER = -200;
-    private static final int REQUEST_ID_MDC_ORDER = -190;
+    private static final int MDC_CONTEXT_ORDER = -190;
+    private static final int ACCESS_LOG_ORDER = -180;
+    private static final int PAYLOAD_LOG_ORDER = -170;
     private static final int INVOCATION_CONTEXT_ORDER = 0;
 
     @Bean
@@ -31,11 +36,32 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     @Bean
-    FilterRegistrationBean<RequestIdMdcFilter> requestIdMdcFilterRegistration() {
-        FilterRegistrationBean<RequestIdMdcFilter> registration =
-                new FilterRegistrationBean<>(new RequestIdMdcFilter());
-        registration.setOrder(REQUEST_ID_MDC_ORDER);
+    FilterRegistrationBean<MdcContextFilter> mdcContextFilterRegistration() {
+        FilterRegistrationBean<MdcContextFilter> registration =
+                new FilterRegistrationBean<>(new MdcContextFilter());
+        registration.setOrder(MDC_CONTEXT_ORDER);
         return registration;
+    }
+
+    @Bean
+    FilterRegistrationBean<AccessLogFilter> accessLogFilterRegistration() {
+        FilterRegistrationBean<AccessLogFilter> registration =
+                new FilterRegistrationBean<>(new AccessLogFilter());
+        registration.setOrder(ACCESS_LOG_ORDER);
+        return registration;
+    }
+
+    @Bean
+    FilterRegistrationBean<PayloadLoggingFilter> payloadLoggingFilterRegistration() {
+        FilterRegistrationBean<PayloadLoggingFilter> registration =
+                new FilterRegistrationBean<>(new PayloadLoggingFilter());
+        registration.setOrder(PAYLOAD_LOG_ORDER);
+        return registration;
+    }
+
+    @Bean
+    ServiceCallLoggingAspect serviceCallLoggingAspect() {
+        return new ServiceCallLoggingAspect();
     }
 
     @Bean

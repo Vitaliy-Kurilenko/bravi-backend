@@ -1,6 +1,7 @@
 package ua.com.bravi.bravi.seller.stores;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +40,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StoreService implements StoresApi {
@@ -103,6 +105,8 @@ public class StoreService implements StoresApi {
         StoreEntity saved = storeRepository.save(entity);
         StoreSettingsEntity settings = createDefaultSettings(saved.getId());
         eventPublisher.publishEvent(new StoreCreatedEvent(saved.getId(), sellerAccountId, Instant.now()));
+        log.info("Draft store created storeId={} publicId={} sellerAccountId={}",
+                saved.getId(), saved.getPublicId(), sellerAccountId);
         return storeEntityMapper.toView(saved, settings);
     }
 
@@ -117,6 +121,7 @@ public class StoreService implements StoresApi {
         if (draft.country() != null) {
             entity.setCountry(draft.country());
         }
+        log.info("Draft store updated storeId={}", storeId);
     }
 
     @Override
@@ -131,6 +136,7 @@ public class StoreService implements StoresApi {
         }
         // timezone/currency/language/units and working hours of a store patch belong to the settings row.
         storeEntityMapper.updateSettings(requireSettings(storeId), patch);
+        log.info("Store updated storeId={}", storeId);
     }
 
     @Override
@@ -163,12 +169,14 @@ public class StoreService implements StoresApi {
         if (patch.timezone() != null) {
             settings.setTimezone(patch.timezone());
         }
+        log.info("Store settings updated storeId={}", storeId);
     }
 
     @Override
     @Transactional
     public void activateStore(Long storeId) {
         requireStore(storeId).setStatus(StoreStatus.ACTIVE);
+        log.info("Store activated storeId={}", storeId);
     }
 
     @Override
@@ -177,6 +185,8 @@ public class StoreService implements StoresApi {
         StoreEntity entity = requireStore(storeId);
         MediaCategory.STORE_LOGO.validate(upload.contentType(), upload.size());
         sweepOrphanedLogos(storeId, entity.getLogoKey());
+        log.debug("Presigning store logo upload storeId={} contentType={} size={}",
+                storeId, upload.contentType(), upload.size());
         return mediaStorage.presignUpload(new MediaUploadRequest(
                 MediaCategory.STORE_LOGO, logoScope(storeId), upload.contentType(), upload.size(), upload.originalFilename()));
     }
@@ -196,6 +206,7 @@ public class StoreService implements StoresApi {
         if (previousKey != null && !previousKey.equals(storageKey)) {
             mediaStorage.delete(previousKey);
         }
+        log.info("Store logo confirmed storeId={} storageKey={}", storeId, storageKey);
         return toView(storeId, entity);
     }
 
@@ -209,6 +220,7 @@ public class StoreService implements StoresApi {
         if (key != null) {
             mediaStorage.delete(key);
         }
+        log.info("Store logo removed storeId={}", storeId);
         return toView(storeId, entity);
     }
 

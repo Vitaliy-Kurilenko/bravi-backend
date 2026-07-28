@@ -1,6 +1,7 @@
 package ua.com.bravi.bravi.identity;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService implements IdentityApi {
@@ -88,6 +90,7 @@ public class UserService implements IdentityApi {
         if (tokenEmailVerified && !entity.isEmailVerified()) {
             entity.setEmailVerified(true);
             userRepository.save(entity);
+            log.info("User email verified userId={}", userId);
         }
         return toView(userEntityMapper.toDomain(entity));
     }
@@ -112,8 +115,12 @@ public class UserService implements IdentityApi {
                     userRepository.save(userEntityMapper.toEntity(toCreate)));
             eventPublisher.publishEvent(new UserProvisionedEvent(
                     saved.id(), saved.extId(), Instant.now()));
+            // без email/імені — PII в логи не потрапляє
+            log.info("User provisioned userId={} publicId={} extId={}",
+                    saved.id(), saved.publicId(), saved.extId());
             return toView(saved);
         } catch (DataIntegrityViolationException concurrentInsert) {
+            log.debug("Concurrent user provisioning detected extId={}, falling back to lookup", extId);
             return userRepository.findByExtId(extId)
                     .map(userEntityMapper::toDomain)
                     .map(this::toView)

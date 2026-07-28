@@ -1,6 +1,7 @@
 package ua.com.bravi.bravi.seller.catalog.manufacturers;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -26,6 +27,7 @@ import ua.com.bravi.bravi.shared.util.PublicIdGenerator;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ManufacturerService implements ManufacturersApi {
@@ -77,7 +79,10 @@ public class ManufacturerService implements ManufacturersApi {
             entity.setStatus(ManufacturerStatus.ACTIVE);
         }
         try {
-            return manufacturerEntityMapper.toView(manufacturerRepository.save(entity));
+            ManufacturerEntity saved = manufacturerRepository.save(entity);
+            log.info("Manufacturer created storeId={} manufacturerId={} publicId={}",
+                    storeId, saved.getId(), saved.getPublicId());
+            return manufacturerEntityMapper.toView(saved);
         } catch (DataIntegrityViolationException duplicateName) {
             throw new ManufacturerAlreadyExistsException("Manufacturer with this name already exists in the store");
         }
@@ -93,12 +98,14 @@ public class ManufacturerService implements ManufacturersApi {
         } catch (DataIntegrityViolationException duplicateName) {
             throw new ManufacturerAlreadyExistsException("Manufacturer with this name already exists in the store");
         }
+        log.info("Manufacturer updated storeId={} publicId={}", storeId, publicId);
     }
 
     @Override
     @Transactional
     public void delete(Long storeId, String publicId) {
         manufacturerRepository.delete(requireOwned(storeId, publicId));
+        log.info("Manufacturer deleted storeId={} publicId={}", storeId, publicId);
     }
 
     private ManufacturerEntity requireOwned(Long storeId, String publicId) {

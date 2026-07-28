@@ -1,6 +1,7 @@
 package ua.com.bravi.bravi.seller.account;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ua.com.bravi.bravi.access.api.AccessApi;
@@ -19,6 +20,7 @@ import ua.com.bravi.bravi.seller.account.persistence.entity.SellerAccountEntity;
  * Orchestrates seller registration invoked by the Auth Service: creates (or returns, idempotently)
  * the User + SELLER Account + SellerAccount profile + owner Membership in one transaction.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SellerRegistrationService implements SellerRegistrationApi {
@@ -35,6 +37,8 @@ public class SellerRegistrationService implements SellerRegistrationApi {
         // Same email under a different Keycloak identity => inconsistent registration context.
         identityApi.findByEmail(command.email()).ifPresent(existing -> {
             if (!command.keycloakUserId().equals(existing.extId())) {
+                log.warn("Seller registration rejected extId={} reason=email_bound_to_other_identity",
+                        command.keycloakUserId());
                 throw new RegistrationContextConflictException(
                         "Email already registered for a different identity");
             }
@@ -53,6 +57,9 @@ public class SellerRegistrationService implements SellerRegistrationApi {
         String onboardingStatus = sellerAccountRepository.findById(owner.accountId())
                 .map(entity -> entity.getOnboardingStatus().name())
                 .orElse(SellerOnboardingStatus.NOT_STARTED.name());
+
+        log.info("Seller registered userId={} accountId={} onboardingStatus={}",
+                user.id(), owner.accountId(), onboardingStatus);
 
         return new SellerRegistrationView(
                 user.publicId(),

@@ -11,10 +11,9 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate                              # перевірка відповідності entity і таблиць
-    show-sql: true
+    show-sql: false                                   # SQL віддає логер org.hibernate.SQL (профіль local)
     properties:
       hibernate:
-        format_sql: true
         jdbc:
           time_zone: UTC
   datasource:
@@ -40,17 +39,23 @@ spring:
 
 logging:
   pattern:
-    level: "%5p [%X{requestId:-}]"
+    # %replace ховає порожні дужки поза контекстом запиту (старт, фонові задачі)
+    correlation: "%replace([%X{requestId:-}] ){'\\[\\] ',''}%replace([%X{accountId:-}/%X{storeId:-}] ){'\\[/\\] ',''}"
   level:
-    root: INFO
-    ua.com.bravi.bravi: ${APP_LOG_LEVEL:DEBUG}
+    root: ${ROOT_LOG_LEVEL:INFO}
+    ua.com.bravi.bravi: ${APP_LOG_LEVEL:INFO}
+    ua.com.bravi.bravi.access: ${ACCESS_LOG_LEVEL:INFO}    # HTTP access-log (AccessLogFilter)
+    # Діагностика: DEBUG вмикає логування payload'ів і аргументів сервісів (містять PII — не для проду)
+    ua.com.bravi.bravi.payload: ${PAYLOAD_LOG_LEVEL:INFO}
+    ua.com.bravi.bravi.calls: ${SERVICE_CALL_LOG_LEVEL:INFO}
     org:
       hibernate:
-        SQL: DEBUG
-        orm.jdbc.bind: TRACE
+        SQL: WARN
+        orm.jdbc.bind: WARN
       springframework:
-        security: DEBUG
-        web: DEBUG
+        security: WARN
+        web: WARN
+      flywaydb: INFO
 
 keycloack:
   base-url: http://localhost:8080

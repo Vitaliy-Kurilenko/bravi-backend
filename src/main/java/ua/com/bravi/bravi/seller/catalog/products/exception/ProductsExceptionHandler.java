@@ -1,5 +1,6 @@
 package ua.com.bravi.bravi.seller.catalog.products.exception;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -11,6 +12,7 @@ import ua.com.bravi.bravi.shared.exception.dto.FiledValidationError;
 
 import java.util.List;
 
+@Slf4j
 @Order(Ordered.LOWEST_PRECEDENCE - 100)
 @RestControllerAdvice
 public class ProductsExceptionHandler {
@@ -18,6 +20,8 @@ public class ProductsExceptionHandler {
     @ExceptionHandler(ProductAlreadyExistsException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ProblemDetail handleProductAlreadyExists(ProductAlreadyExistsException ex) {
+        log.debug("ProductAlreadyExistsException: {}", ex.getMessage());
+
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
         problem.setTitle("Product already exists");
         problem.setDetail(ex.getMessage());
@@ -27,6 +31,8 @@ public class ProductsExceptionHandler {
     @ExceptionHandler(InvalidProductRequestException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ProblemDetail handleInvalidRequest(InvalidProductRequestException ex) {
+        log.debug("InvalidProductRequestException: {}", ex.getMessage());
+
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problem.setTitle("Validation failed");
         problem.setDetail("Request contains invalid fields");
