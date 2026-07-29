@@ -5,6 +5,9 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
+import ua.com.bravi.bravi.seller.catalog.categories.api.CategoryView;
+import ua.com.bravi.bravi.seller.catalog.manufacturers.api.ManufacturerView;
+import ua.com.bravi.bravi.seller.catalog.products.api.CatalogRefView;
 import ua.com.bravi.bravi.seller.catalog.products.api.ProductImageView;
 import ua.com.bravi.bravi.seller.catalog.products.api.ProductView;
 import ua.com.bravi.bravi.seller.catalog.products.domain.Product;
@@ -15,13 +18,21 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface ProductEntityMapper {
 
-    // categoryId/manufacturerId у view — це public id'и суміжних агрегатів; ProductService їх резолвить
+    // category/manufacturer у view — вкладені посилання на суміжні агрегати; ProductService їх резолвить
     // з internal bigint (entity) через categories/manufacturers api і передає сюди.
-    @Mapping(target = "categoryId", source = "categoryPublicId")
-    @Mapping(target = "manufacturerId", source = "manufacturerPublicId")
+    @Mapping(target = "id", source = "entity.id")
+    @Mapping(target = "name", source = "entity.name")
+    @Mapping(target = "category", source = "category")
+    @Mapping(target = "manufacturer", source = "manufacturer")
     @Mapping(target = "images", source = "images")
-    ProductView toView(ProductEntity entity, String categoryPublicId, String manufacturerPublicId,
+    ProductView toView(ProductEntity entity, CatalogRefView category, CatalogRefView manufacturer,
                        List<ProductImageView> images);
+
+    @Mapping(target = "id", source = "publicId")
+    CatalogRefView toRef(CategoryView category);
+
+    @Mapping(target = "id", source = "publicId")
+    CatalogRefView toRef(ManufacturerView manufacturer);
 
     // categoryId/manufacturerId приходять як public id — service резолвить їх у bigint і виставляє на entity.
     @Mapping(target = "id", ignore = true)

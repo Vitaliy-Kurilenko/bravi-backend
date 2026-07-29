@@ -10,6 +10,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ua.com.bravi.bravi.seller.catalog.categories.api.CategoriesApi;
+import ua.com.bravi.bravi.seller.catalog.categories.api.CategoryView;
+import ua.com.bravi.bravi.seller.catalog.manufacturers.api.ManufacturerView;
 import ua.com.bravi.bravi.seller.catalog.manufacturers.api.ManufacturersApi;
 import ua.com.bravi.bravi.seller.catalog.products.api.ImageUpload;
 import ua.com.bravi.bravi.seller.catalog.products.api.ProductImageView;
@@ -81,13 +83,13 @@ public class ProductService implements ProductsApi {
                 ProductSpecifications.forStore(storeId, query, categoryFilterIds, manufacturerFilterIds), pageable);
         List<ProductEntity> products = result.getContent();
         Map<Long, List<ProductImageView>> imagesByProduct = imagesByProduct(products);
-        Map<Long, String> categoryPublicIds = categoryPublicIds(storeId, products);
-        Map<Long, String> manufacturerPublicIds = manufacturerPublicIds(storeId, products);
+        Map<Long, CategoryView> categories = categoriesById(storeId, products);
+        Map<Long, ManufacturerView> manufacturers = manufacturersById(storeId, products);
 
         List<ProductView> data = products.stream()
-                .map(entity -> productEntityMapper.toView(entity,
-                        categoryPublicIds.get(entity.getCategoryId()),
-                        manufacturerPublicIds.get(entity.getManufacturerId()),
+                .map(entity -> toView(entity,
+                        categories.get(entity.getCategoryId()),
+                        manufacturers.get(entity.getManufacturerId()),
                         imagesByProduct.getOrDefault(entity.getId(), List.of())))
                 .toList();
 
@@ -268,32 +270,36 @@ public class ProductService implements ProductsApi {
     }
 
     private ProductView toView(Long storeId, ProductEntity entity, List<ProductImageView> images) {
-        String categoryPublicId = entity.getCategoryId() == null ? null
-                : categoriesApi.getById(storeId, entity.getCategoryId()).publicId();
-        String manufacturerPublicId = entity.getManufacturerId() == null ? null
-                : manufacturersApi.getById(storeId, entity.getManufacturerId()).publicId();
-        return productEntityMapper.toView(entity, categoryPublicId, manufacturerPublicId, images);
+        CategoryView category = entity.getCategoryId() == null ? null
+                : categoriesApi.getById(storeId, entity.getCategoryId());
+        ManufacturerView manufacturer = entity.getManufacturerId() == null ? null
+                : manufacturersApi.getById(storeId, entity.getManufacturerId());
+        return toView(entity, category, manufacturer, images);
     }
 
-    /** Batch-резолв internal→public для сторінки: один lookup на кожен унікальний id, не на кожен товар. */
-    private Map<Long, String> categoryPublicIds(Long storeId, List<ProductEntity> products) {
-        return distinctPublicIds(products, ProductEntity::getCategoryId,
-                id -> categoriesApi.getById(storeId, id).publicId());
+    private ProductView toView(ProductEntity entity, CategoryView category, ManufacturerView manufacturer,
+                               List<ProductImageView> images) {
+        return productEntityMapper.toView(entity, productEntityMapper.toRef(category),
+                productEntityMapper.toRef(manufacturer), images);
     }
 
-    private Map<Long, String> manufacturerPublicIds(Long storeId, List<ProductEntity> products) {
-        return distinctPublicIds(products, ProductEntity::getManufacturerId,
-                id -> manufacturersApi.getById(storeId, id).publicId());
+    /** Batch-резолв суміжних агрегатів для сторінки: один lookup на кожен унікальний id, не на кожен товар. */
+    private Map<Long, CategoryView> categoriesById(Long storeId, List<ProductEntity> products) {
+        return distinctRefs(products, ProductEntity::getCategoryId, id -> categoriesApi.getById(storeId, id));
     }
 
-    private static Map<Long, String> distinctPublicIds(List<ProductEntity> products,
-                                                       Function<ProductEntity, Long> idExtractor,
-                                                       Function<Long, String> publicIdResolver) {
+    private Map<Long, ManufacturerView> manufacturersById(Long storeId, List<ProductEntity> products) {
+        return distinctRefs(products, ProductEntity::getManufacturerId, id -> manufacturersApi.getById(storeId, id));
+    }
+
+    private static <V> Map<Long, V> distinctRefs(List<ProductEntity> products,
+                                                 Function<ProductEntity, Long> idExtractor,
+                                                 Function<Long, V> resolver) {
         return products.stream()
                 .map(idExtractor)
                 .filter(Objects::nonNull)
                 .distinct()
-                .collect(Collectors.toMap(Function.identity(), publicIdResolver));
+                .collect(Collectors.toMap(Function.identity(), resolver));
     }
 
     private void demoteOtherPrimaries(Long productId, Long keepImageId) {

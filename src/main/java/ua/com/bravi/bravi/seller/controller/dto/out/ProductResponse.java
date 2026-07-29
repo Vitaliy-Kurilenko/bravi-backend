@@ -10,10 +10,8 @@ import java.util.List;
 public record ProductResponse(
         @JsonProperty("public_id")
         String publicId,
-        @JsonProperty("category_id")
-        String categoryId,
-        @JsonProperty("manufacturer_id")
-        String manufacturerId,
+        CatalogRefResponse category,
+        CatalogRefResponse manufacturer,
         @JsonProperty("stock_status_id")
         Long stockStatusId,
         String name,

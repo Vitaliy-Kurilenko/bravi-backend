@@ -4,15 +4,22 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import ua.com.bravi.bravi.seller.catalog.categories.api.CategoriesApi;
 import ua.com.bravi.bravi.seller.catalog.categories.api.CategoryView;
+import ua.com.bravi.bravi.seller.catalog.manufacturers.api.ManufacturerView;
 import ua.com.bravi.bravi.seller.catalog.manufacturers.api.ManufacturersApi;
+import ua.com.bravi.bravi.seller.catalog.products.api.CatalogRefView;
 import ua.com.bravi.bravi.seller.catalog.products.api.ImageUpload;
 import ua.com.bravi.bravi.seller.catalog.products.api.ProductImageView;
 import ua.com.bravi.bravi.seller.catalog.products.api.ProductView;
 import ua.com.bravi.bravi.seller.catalog.products.domain.Product;
+import ua.com.bravi.bravi.seller.catalog.products.domain.ProductSearchQuery;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductStatus;
 import ua.com.bravi.bravi.seller.catalog.products.exception.ProductAlreadyExistsException;
 import ua.com.bravi.bravi.seller.catalog.products.persistence.IProductEntityRepository;
@@ -36,8 +43,11 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -50,6 +60,8 @@ class ProductServiceTest {
     private static final String PUBLIC_ID = "prd_test";
     private static final Long STOCK_STATUS_ID = 1L;
     private static final String KEY = "product-images/7/42/img.png";
+    private static final CatalogRefView CATEGORY_REF = new CatalogRefView("cat_x", "Ноутбуки");
+    private static final CatalogRefView MANUFACTURER_REF = new CatalogRefView("mnf_x", "Lenovo");
 
     private final IProductEntityRepository productRepository = mock(IProductEntityRepository.class);
     private final IProductImageEntityRepository imageRepository = mock(IProductImageEntityRepository.class);
@@ -82,6 +94,18 @@ class ProductServiceTest {
 
     private static ImageUpload pngUpload() {
         return new ImageUpload("image/png", 3, "p.png");
+    }
+
+    private static CategoryView category() {
+        return new CategoryView(55L, "cat_x", STORE_ID, null, null, "Ноутбуки", null, null, null, null, null);
+    }
+
+    private static ManufacturerView manufacturer() {
+        return new ManufacturerView(66L, "mnf_x", STORE_ID, "Lenovo", null, null, null, null);
+    }
+
+    private static ProductSearchQuery searchQuery() {
+        return new ProductSearchQuery(null, null, null, null, null, null, null, null, null, null, null, 1, 20);
     }
 
     @Test
@@ -154,6 +178,58 @@ class ProductServiceTest {
 
         assertThatThrownBy(() -> service.getByPublicId(STORE_ID, PUBLIC_ID))
                 .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void getByPublicIdPassesResolvedCategoryAndManufacturerRefsToMapper() {
+        ProductEntity entity = productEntityOwnedBy(STORE_ID);
+        entity.setCategoryId(55L);
+        entity.setManufacturerId(66L);
+        when(productRepository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID)).thenReturn(Optional.of(entity));
+        when(categoriesApi.getById(STORE_ID, 55L)).thenReturn(category());
+        when(manufacturersApi.getById(STORE_ID, 66L)).thenReturn(manufacturer());
+        when(productEntityMapper.toRef(category())).thenReturn(CATEGORY_REF);
+        when(productEntityMapper.toRef(manufacturer())).thenReturn(MANUFACTURER_REF);
+
+        service.getByPublicId(STORE_ID, PUBLIC_ID);
+
+        verify(productEntityMapper).toView(eq(entity), eq(CATEGORY_REF), eq(MANUFACTURER_REF), any());
+    }
+
+    @Test
+    void getByPublicIdLeavesRefsNullWhenProductHasNoCategoryOrManufacturer() {
+        ProductEntity entity = productEntityOwnedBy(STORE_ID);
+        when(productRepository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID)).thenReturn(Optional.of(entity));
+
+        service.getByPublicId(STORE_ID, PUBLIC_ID);
+
+        verify(categoriesApi, never()).getById(any(), any());
+        verify(manufacturersApi, never()).getById(any(), any());
+        verify(productEntityMapper).toView(eq(entity), isNull(), isNull(), any());
+    }
+
+    @Test
+    void searchResolvesEachDistinctReferenceOnlyOnce() {
+        ProductEntity first = productEntityOwnedBy(STORE_ID);
+        ProductEntity second = productEntityOwnedBy(STORE_ID);
+        second.setId(43L);
+        List.of(first, second).forEach(entity -> {
+            entity.setCategoryId(55L);
+            entity.setManufacturerId(66L);
+        });
+        when(productRepository.findAll(ArgumentMatchers.<Specification<ProductEntity>>any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(first, second)));
+        when(categoriesApi.getById(STORE_ID, 55L)).thenReturn(category());
+        when(manufacturersApi.getById(STORE_ID, 66L)).thenReturn(manufacturer());
+        when(productEntityMapper.toRef(category())).thenReturn(CATEGORY_REF);
+        when(productEntityMapper.toRef(manufacturer())).thenReturn(MANUFACTURER_REF);
+        when(productEntityMapper.toView(any(), any(), any(), any())).thenReturn(mock(ProductView.class));
+
+        service.search(STORE_ID, searchQuery());
+
+        verify(categoriesApi, times(1)).getById(STORE_ID, 55L);
+        verify(manufacturersApi, times(1)).getById(STORE_ID, 66L);
+        verify(productEntityMapper, times(2)).toView(any(), eq(CATEGORY_REF), eq(MANUFACTURER_REF), any());
     }
 
     @Test

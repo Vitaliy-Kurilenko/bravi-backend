@@ -57,6 +57,12 @@ onboarding → IN_PROGRESS), `PATCH /store`, `PATCH /store/settings`, `PUT /stor
 `POST /complete` (перевіряє `email_verified`, наявність магазину й manual-каналу, далі
 account → ACTIVE, onboarding → COMPLETED, store → ACTIVE). Один магазин на seller-акаунт.
 
+**Каталог продавця:** `GET /sellers/products` і `GET /sellers/products/{publicId}` віддають
+категорію та виробника вкладеними об'єктами з public id і назвою:
+`"category": { "id": "cat_…", "name": "Ноутбуки" }`, `"manufacturer": { "id": "mnf_…", "name": "Lenovo" }`
+(`null`, якщо товар без категорії/виробника). На запис (`POST`/`PATCH`) і у фільтрах списку
+(`category_ids`, `manufacturer_ids`) — як і раніше, самі public id.
+
 **Мультитенантність:** користувач належить до акаунта через membership; seller-акаунт має
 рівно один магазин.
 
