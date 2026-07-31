@@ -35,3 +35,6 @@ build/
 .env
 /tasks
 /data
+
+### macOS ###
+.DS_Store
