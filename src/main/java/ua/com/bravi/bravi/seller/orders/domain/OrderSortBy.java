@@ -4,8 +4,8 @@ import lombok.Getter;
 import ua.com.bravi.bravi.seller.orders.exception.InvalidOrderRequestException;
 
 /**
- * Whitelist полів сортування замовлень. {@code property} — ім'я властивості {@code OrderEntity}
- * для безпечного {@code Sort} (без прокидання довільного рядка з клієнта).
+ * Whitelist of order sort fields. {@code property} is the {@code OrderEntity} property name used
+ * to build a {@code Sort}, so an arbitrary client string never reaches the query.
  */
 @Getter
 public enum OrderSortBy {
@@ -23,7 +23,7 @@ public enum OrderSortBy {
         this.property = property;
     }
 
-    /** Парсить зовнішній токен (наприклад {@code created_at}) у enum, case-insensitive. */
+    /** Parses an external token such as {@code created_at} into the enum, case-insensitively. */
     public static OrderSortBy fromParam(String token) {
         for (OrderSortBy value : values()) {
             if (value.name().equalsIgnoreCase(token)) {

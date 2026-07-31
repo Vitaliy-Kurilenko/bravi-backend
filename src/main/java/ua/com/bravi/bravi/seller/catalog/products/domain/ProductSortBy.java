@@ -4,8 +4,8 @@ import lombok.Getter;
 import ua.com.bravi.bravi.seller.catalog.products.exception.InvalidProductRequestException;
 
 /**
- * Whitelist полів сортування товарів. {@code property} — ім'я властивості {@code ProductEntity}
- * для безпечного {@code Sort} (без прямого прокидання довільного рядка з клієнта).
+ * Whitelist of product sort fields. {@code property} is the {@code ProductEntity} property name
+ * used to build a {@code Sort}, so an arbitrary client string never reaches the query.
  */
 @Getter
 public enum ProductSortBy {
@@ -24,7 +24,7 @@ public enum ProductSortBy {
         this.property = property;
     }
 
-    /** Парсить зовнішній токен (наприклад {@code created_at}) у enum, case-insensitive. */
+    /** Parses an external token such as {@code created_at} into the enum, case-insensitively. */
     public static ProductSortBy fromParam(String token) {
         for (ProductSortBy value : values()) {
             if (value.name().equalsIgnoreCase(token)) {

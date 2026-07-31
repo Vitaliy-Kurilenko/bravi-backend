@@ -2,7 +2,7 @@ package ua.com.bravi.bravi.seller.catalog.products.exception;
 
 import lombok.Getter;
 
-/** Field-aware 400 для невалідних даних товару (завантаження фото, параметри пошуку тощо). */
+/** Field-aware 400 for invalid product data, such as an image upload or a search parameter. */
 @Getter
 public class InvalidProductRequestException extends RuntimeException {
 

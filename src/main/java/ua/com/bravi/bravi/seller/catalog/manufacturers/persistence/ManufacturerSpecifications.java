@@ -9,7 +9,7 @@ import ua.com.bravi.bravi.seller.catalog.manufacturers.persistence.entity.Manufa
 import java.util.ArrayList;
 import java.util.List;
 
-/** Будує динамічний {@link Specification} фільтрації виробників із {@link ManufacturerSearchQuery}. */
+/** Builds a dynamic {@link Specification} that filters manufacturers by a {@link ManufacturerSearchQuery}. */
 public final class ManufacturerSpecifications {
 
     private ManufacturerSpecifications() {

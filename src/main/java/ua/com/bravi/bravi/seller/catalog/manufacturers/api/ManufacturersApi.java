@@ -7,7 +7,7 @@ public interface ManufacturersApi {
 
     ManufacturerPage search(Long storeId, ManufacturerSearchQuery query);
 
-    /** Внутрішній lookup за bigint id — для крос-модульних споживачів (products). */
+    /** Internal lookup by bigint id, used by cross-module consumers such as products. */
     ManufacturerView getById(Long storeId, Long manufacturerId);
 
     ManufacturerView getByPublicId(Long storeId, String publicId);

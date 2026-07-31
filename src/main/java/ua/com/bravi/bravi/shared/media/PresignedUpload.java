@@ -3,7 +3,7 @@ package ua.com.bravi.bravi.shared.media;
 import java.time.Instant;
 import java.util.Map;
 
-/** Результат presign: куди PUT-ити, під яким ключем, з якими заголовками і доки посилання дійсне. */
+/** Result of a presign: where to PUT, under which key, with which headers and until when the link is valid. */
 public record PresignedUpload(
         String uploadUrl,
         String storageKey,

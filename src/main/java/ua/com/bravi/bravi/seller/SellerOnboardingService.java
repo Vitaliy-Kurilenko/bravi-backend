@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Orchestrates seller onboarding (spec §5) under {@code /seller/onboarding}. Resolves the account
+ * Orchestrates seller onboarding under {@code /seller/onboarding}. Resolves the account
  * from the current authorization context ({@code X-Account-Id}), drives the DRAFT store / settings /
  * contacts steps, and finalizes onboarding (account ACTIVE, onboarding COMPLETED, store ACTIVE).
  */

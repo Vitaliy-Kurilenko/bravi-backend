@@ -2,7 +2,7 @@ package ua.com.bravi.bravi.seller.stores.exception;
 
 import lombok.Getter;
 
-/** Налаштування магазину містять код, якого немає серед активних елементів довідника. */
+/** Store settings carry a code that is not among the active items of the dictionary. */
 @Getter
 public class InvalidStoreSettingsException extends RuntimeException {
 

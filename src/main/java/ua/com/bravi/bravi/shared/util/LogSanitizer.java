@@ -6,20 +6,20 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Готує довільний payload (JSON-тіло, query-рядок, {@code toString()} аргумента) до логування:
- * маскує значення чутливих полів, збирає в один рядок і обрізає надто довге.
- * Використовується і фільтром payload'ів, і аспектом викликів сервісів.
+ * Prepares an arbitrary payload (a JSON body, a query string, an argument {@code toString()}) for
+ * logging: masks values of sensitive fields, collapses it into one line and truncates what is too long.
+ * Used by both the payload filter and the service call aspect.
  */
 public final class LogSanitizer {
 
     private static final String KEYS = String.join("|", LoggingConstants.SENSITIVE_KEYS);
 
-    /** JSON: {@code "email": "a@b.c"} або {@code "email":null}. */
+    /** JSON form: {@code "email": "a@b.c"} or {@code "email":null}. */
     private static final Pattern JSON_FIELD = Pattern.compile(
             "(\"(?:" + KEYS + ")\"\\s*:\\s*)(\"(?:\\\\.|[^\"\\\\])*\"|[^,}\\]\\s]+)",
             Pattern.CASE_INSENSITIVE);
 
-    /** record/toString та query: {@code email=a@b.c}, {@code email:a@b.c}. */
+    /** Record, toString and query form: {@code email=a@b.c}, {@code email:a@b.c}. */
     private static final Pattern KEY_VALUE = Pattern.compile(
             "\\b((?:" + KEYS + ")\\s*[=:]\\s*)([^,)\\]}&\\s]*)",
             Pattern.CASE_INSENSITIVE);
@@ -27,8 +27,8 @@ public final class LogSanitizer {
     private static final Pattern WHITESPACE = Pattern.compile("\\s+");
 
     /**
-     * Страховка: значення, що виглядає як email, маскується навіть якщо воно передане
-     * без імені поля (позиційний аргумент, елемент колекції тощо).
+     * Matches a value that looks like an email so that it is masked even when it arrives
+     * without a field name, as a positional argument or a collection element.
      */
     private static final Pattern EMAIL_VALUE = Pattern.compile(
             "[\\w.+-]+@[\\w-]+\\.[\\w.-]+", Pattern.CASE_INSENSITIVE);
@@ -44,7 +44,7 @@ public final class LogSanitizer {
         return truncate(masked);
     }
 
-    /** Готує аргумент/результат виклику сервісу; {@code null} лишається видимим як "null". */
+    /** Prepares an argument or a result of a service call; {@code null} stays visible as "null". */
     public static String describe(Object value) {
         return value == null ? "null" : sanitize(String.valueOf(value));
     }

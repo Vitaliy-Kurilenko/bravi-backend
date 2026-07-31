@@ -6,8 +6,8 @@ import java.util.List;
 
 /**
  * Removes business rows created by end-to-end tests while preserving Flyway-seeded reference data
- * (roles, permissions, role_permissions, *_statuses). Deletes in FK-safe order — a {@code TRUNCATE
- * ... CASCADE} would follow the {@code roles.account_id} FK and wipe the seeded system roles.
+ * (roles, permissions, role_permissions, *_statuses). Rows are deleted one table at a time in
+ * FK-safe order, which leaves the seeded system roles in place.
  */
 public final class TestDatabaseCleaner {
 

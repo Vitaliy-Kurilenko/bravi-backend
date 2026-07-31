@@ -4,23 +4,24 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Порт об'єктного сховища медіа. Клієнт вантажить файл напряму в сховище за presigned-посиланням,
- * тож байти не проходять крізь застосунок. Реалізації (S3/MinIO) приховані за цим інтерфейсом.
+ * Port to the media object storage. A client uploads a file to the storage directly through a
+ * presigned link, so the bytes never pass through the application. Implementations stay behind
+ * this interface.
  */
 public interface MediaStorage {
 
-    /** Генерує storage key під заданим префіксом і повертає presigned PUT URL для прямого завантаження. */
+    /** Generates a storage key under the given prefix and returns a presigned PUT URL for a direct upload. */
     PresignedUpload presignUpload(MediaUploadRequest request);
 
-    /** Метадані об'єкта за ключем (HEAD); {@code empty}, якщо об'єкта немає. */
+    /** Returns metadata of the object with the given key, or {@code empty} when no such object exists. */
     Optional<StoredObject> stat(String key);
 
-    /** Ключі всіх об'єктів під префіксом; порожній список, якщо немає жодного. */
+    /** Returns the keys of all objects under the prefix, or an empty list when there are none. */
     List<String> list(String prefix);
 
-    /** Видаляє об'єкт за ключем (ідемпотентно). */
+    /** Deletes the object with the given key; idempotent. */
     void delete(String key);
 
-    /** Стабільний публічний URL об'єкта (bucket/CDN із public-read). */
+    /** Returns the stable public URL of the object. */
     String publicUrl(String key);
 }

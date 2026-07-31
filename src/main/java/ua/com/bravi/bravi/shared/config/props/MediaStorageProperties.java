@@ -7,16 +7,16 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.time.Duration;
 
 /**
- * Інфраструктурні налаштування об'єктного сховища медіа (S3/MinIO) — тільки те, що варіюється між
- * середовищами. Розкладка ключів і обмеження на файли — не тут, а у {@link ua.com.bravi.bravi.shared.media.MediaCategory}.
- * Секрети — тільки через env.
+ * Infrastructure settings of the media object storage (S3/MinIO) — only what varies between
+ * environments. Key layout and file limits belong to {@link ua.com.bravi.bravi.shared.media.MediaCategory}.
+ * Secrets are supplied through environment variables.
  */
 @Getter
 @Setter
 @ConfigurationProperties(prefix = "bravi.media")
 public class MediaStorageProperties {
 
-    /** Endpoint сховища (для MinIO — локальний, для S3 — регіональний). */
+    /** Storage endpoint: local for MinIO, regional for S3. */
     private String endpoint;
 
     private String region = "us-east-1";
@@ -27,12 +27,12 @@ public class MediaStorageProperties {
 
     private String secretKey;
 
-    /** true для MinIO (path-style), false для реального S3 (virtual-hosted). */
+    /** {@code true} for MinIO (path-style access), {@code false} for S3 (virtual-hosted). */
     private boolean pathStyleAccess = true;
 
-    /** База публічних URL об'єктів (bucket/CDN із public-read). */
+    /** Base of public object URLs — a bucket or a CDN with public read access. */
     private String publicBaseUrl;
 
-    /** TTL presigned-посилання на завантаження. */
+    /** Time to live of a presigned upload link. */
     private Duration presignTtl = Duration.ofMinutes(10);
 }

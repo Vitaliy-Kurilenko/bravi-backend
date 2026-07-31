@@ -31,7 +31,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * End-to-end DB-backed RBAC on the seller vertical after the explicit-registration switch:
+ * End-to-end DB-backed RBAC on the seller vertical:
  * a bravi_user can only write once the Auth Service has registered them (service token
  * → {@code /internal/registrations/seller}), which creates the account + SELLER_OWNER membership.
  */

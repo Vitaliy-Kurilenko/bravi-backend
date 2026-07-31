@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-/** Будує динамічний {@link Specification} фільтрації замовлень із {@link OrderSearchQuery}. */
+/** Builds a dynamic {@link Specification} that filters orders by an {@link OrderSearchQuery}. */
 public final class OrderSpecifications {
 
     private OrderSpecifications() {

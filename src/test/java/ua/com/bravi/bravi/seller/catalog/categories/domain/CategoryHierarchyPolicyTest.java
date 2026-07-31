@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class CategoryHierarchyPolicyTest {
 
-    // Дерево магазину:
+    // Store tree:
     //   1 (root, lvl1) -> 2 (lvl2) -> 3 (lvl3)
     //   10 (root, lvl1) -> 11 (lvl2)
     private static final List<Category> TREE = List.of(
@@ -55,14 +55,14 @@ class CategoryHierarchyPolicyTest {
 
     @Test
     void moveExceedingDepthIsRejected() {
-        // вузол 2 має піддерево висотою 2 (2->3); під вузол 11 (lvl2) => 2+2 = 4 > 3
+        // Node 2 has a subtree of height 2 (2->3); under node 11 (lvl2) that gives 2+2 = 4 > 3
         assertThatThrownBy(() -> CategoryHierarchyPolicy.validateMove(TREE, 2L, 11L))
                 .isInstanceOf(InvalidCategoryHierarchyException.class);
     }
 
     @Test
     void validMoveOfLeafIsAllowed() {
-        // лист 3 (висота 1) під корінь 10 (lvl1) => 1+1 = 2
+        // Leaf 3 (height 1) under root 10 (lvl1) gives 1+1 = 2
         assertThatCode(() -> CategoryHierarchyPolicy.validateMove(TREE, 3L, 10L)).doesNotThrowAnyException();
     }
 }

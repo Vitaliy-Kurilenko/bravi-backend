@@ -55,7 +55,7 @@ public class OrderEntity implements StoreOwned {
     @Column(name = "status_id", nullable = false)
     private Long statusId;
 
-    /** Read-only зв'язок для join'ів (фільтр за code) та проєкції у view; запис — через {@link #statusId}. */
+    /** Read-only association used for joins and view projections; writes go through {@link #statusId}. */
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "status_id", insertable = false, updatable = false)
     private OrderStatusEntity status;

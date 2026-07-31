@@ -127,7 +127,7 @@ public class OrderService implements OrdersApi {
     @Override
     @Transactional
     public void delete(Long storeId, Long orderId) {
-        orderRepository.delete(requireOwned(storeId, orderId)); // items + shipment знімаються каскадом
+        orderRepository.delete(requireOwned(storeId, orderId)); // items and shipment are removed by cascade
         log.info("Order deleted storeId={} orderId={}", storeId, orderId);
     }
 
@@ -177,7 +177,7 @@ public class OrderService implements OrdersApi {
         if (entity.getItems().size() <= 1) {
             throw new InvalidOrderRequestException("items", "Order must contain at least one item");
         }
-        entity.getItems().remove(item); // orphanRemoval видаляє рядок
+        entity.getItems().remove(item); // orphanRemoval deletes the row
         recomputeTotals(entity);
         orderRepository.flush();
         log.info("Order item deleted storeId={} orderId={} itemId={} total={}",
@@ -198,7 +198,7 @@ public class OrderService implements OrdersApi {
                 .toList();
     }
 
-    /** Бере актуальні дані товару й фіксує снапшот позиції; salePrice за замовч. — price товару. */
+    /** Takes the current product data and records an item snapshot; sale price defaults to the product price. */
     private OrderItem snapshotItem(Long storeId, Long productId, Integer quantity, BigDecimal salePrice) {
         ProductView product = requireProduct(storeId, productId);
         BigDecimal price = salePrice != null ? salePrice : product.price();

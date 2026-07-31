@@ -2,7 +2,7 @@ package ua.com.bravi.bravi.shared.media.exception;
 
 import lombok.Getter;
 
-/** Медіа-файл не проходить валідацію (недозволений тип, порожній чи завеликий) або ключ не той. */
+/** A media file fails validation: unsupported content type, empty, too large, or an unexpected key. */
 @Getter
 public class InvalidMediaUploadException extends RuntimeException {
 

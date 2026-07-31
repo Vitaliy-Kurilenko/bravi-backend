@@ -1,8 +1,8 @@
 package ua.com.bravi.bravi.shared.media;
 
 /**
- * Запит на presigned-завантаження: логічна категорія (звідки береться префікс ключа й обмеження),
- * scope власника (напр. {@code "7"} або {@code "7/42"}) і метадані файлу.
+ * Request for a presigned upload: the logical category that provides the key prefix and the limits,
+ * the owner scope (e.g. {@code "7"} or {@code "7/42"}) and the file metadata.
  */
 public record MediaUploadRequest(
         MediaCategory category,

@@ -1,6 +1,6 @@
 package ua.com.bravi.bravi.seller.catalog.products.api;
 
-/** Посилання на суміжний агрегат каталогу (категорія/виробник): public id + назва. */
+/** Reference to a neighbouring catalog aggregate such as a category or a manufacturer: public id and name. */
 public record CatalogRefView(
         String id,
         String name

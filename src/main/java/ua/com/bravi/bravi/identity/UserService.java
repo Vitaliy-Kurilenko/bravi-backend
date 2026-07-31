@@ -115,7 +115,7 @@ public class UserService implements IdentityApi {
                     userRepository.save(userEntityMapper.toEntity(toCreate)));
             eventPublisher.publishEvent(new UserProvisionedEvent(
                     saved.id(), saved.extId(), Instant.now()));
-            // без email/імені — PII в логи не потрапляє
+            // Identifiers only: no email or name reaches the logs.
             log.info("User provisioned userId={} publicId={} extId={}",
                     saved.id(), saved.publicId(), saved.extId());
             return toView(saved);

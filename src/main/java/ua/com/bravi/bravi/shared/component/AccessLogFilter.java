@@ -15,9 +15,9 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Один рядок логу на завершений HTTP-запит.
- * Логер названий окремо від пакетів застосунку, щоб рівень керувався незалежно
- * (`logging.level.ua.com.bravi.bravi.access`).
+ * Writes a single log line per completed HTTP request.
+ * The logger is named apart from the application packages so that its level is controlled
+ * independently ({@code logging.level.ua.com.bravi.bravi.access}).
  */
 public class AccessLogFilter extends OncePerRequestFilter {
 
@@ -47,8 +47,8 @@ public class AccessLogFilter extends OncePerRequestFilter {
             int status = response.getStatus();
             long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
 
-            // key-value пари стають окремими полями JSON у structured-профілі,
-            // а сформоване повідомлення лишає рядок читабельним у текстовому
+            // Key-value pairs become separate JSON fields in a structured profile,
+            // while the formatted message keeps the line readable in a plain text one.
             log.atInfo()
                     .addKeyValue("method", method)
                     .addKeyValue("path", path)

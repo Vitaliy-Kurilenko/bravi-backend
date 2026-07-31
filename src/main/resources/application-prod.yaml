@@ -1,7 +1,7 @@
-# Продовий профіль: structured logging у stdout (ECS JSON), збором логів займається docker/k8s.
-# MDC-ключі (requestId, accountId, storeId, userExtId) і SLF4J key-value пари
-# потрапляють у JSON окремими полями, а не всередину message.
-# Запуск: SPRING_PROFILES_ACTIVE=prod java -jar bravi.jar
+# Production profile: structured logging to stdout (ECS JSON); log collection is done by docker/k8s.
+# MDC keys (requestId, accountId, storeId, userExtId) and SLF4J key-value pairs
+# appear in the JSON as separate fields rather than inside the message.
+# Run: SPRING_PROFILES_ACTIVE=prod java -jar bravi.jar
 kind: Application
 
 logging:
@@ -16,7 +16,7 @@ logging:
   level:
     root: ${ROOT_LOG_LEVEL:WARN}
     ua.com.bravi.bravi: ${APP_LOG_LEVEL:INFO}
-    # Базовий yaml тримає ці логери на DEBUG для зручності розробки — у проді припинаємо їх
-    # до INFO, щоб payload'и та аргументи сервісів не текли в прод-логи без явного рішення.
+    # Payload and service-call logging is pinned to INFO here, so bodies and service arguments
+    # never reach production logs without an explicit decision.
     ua.com.bravi.bravi.payload: ${PAYLOAD_LOG_LEVEL:INFO}
     ua.com.bravi.bravi.calls: ${SERVICE_CALL_LOG_LEVEL:INFO}

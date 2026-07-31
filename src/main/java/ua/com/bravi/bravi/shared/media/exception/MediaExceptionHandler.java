@@ -12,7 +12,7 @@ import ua.com.bravi.bravi.shared.exception.dto.FiledValidationError;
 
 import java.util.List;
 
-/** Кросовий handler для завантаження медіа (presign/confirm будь-якого модуля). */
+/** Cross-module handler for media upload errors raised on presign and confirm. */
 @Slf4j
 @Order(Ordered.LOWEST_PRECEDENCE - 100)
 @RestControllerAdvice

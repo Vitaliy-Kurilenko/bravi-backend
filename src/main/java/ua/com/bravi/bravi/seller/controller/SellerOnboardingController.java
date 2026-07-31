@@ -31,7 +31,7 @@ import ua.com.bravi.bravi.seller.controller.mapper.StoreContactDtoMapper;
 import java.util.List;
 
 /**
- * Seller onboarding surface (spec §5). Authenticated; each method requires the STORE permission
+ * Seller onboarding surface. Authenticated; each method requires the STORE permission
  * of the account addressed by the {@code X-Account-Id} header (resolved into the current context).
  */
 @RestController

@@ -132,7 +132,7 @@ class ProductEntityRepositoryTest extends AbstractPostgresIT {
         Page<ProductEntity> firstPage = repository.findAll(
                 ProductSpecifications.forStore(storeId, query(null, null), null, null), pageable);
 
-        assertThat(firstPage.getTotalElements()).isEqualTo(3); // тільки свій магазин
+        assertThat(firstPage.getTotalElements()).isEqualTo(3); // only the own store
         assertThat(firstPage.getContent()).extracting(ProductEntity::getName).containsExactly("A", "B");
     }
 

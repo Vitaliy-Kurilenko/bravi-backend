@@ -1,6 +1,6 @@
 package ua.com.bravi.bravi.shared.media;
 
-/** Метадані вже завантаженого об'єкта (з HEAD). */
+/** Metadata of an object that is already uploaded to the storage. */
 public record StoredObject(
         String key,
         String contentType,

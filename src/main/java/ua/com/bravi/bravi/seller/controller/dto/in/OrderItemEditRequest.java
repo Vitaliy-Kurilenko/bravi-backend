@@ -6,7 +6,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 
 import java.math.BigDecimal;
 
-/** PATCH позиції замовлення: всі поля опційні (product_id → заміна товару, quantity, sale_price). */
+/** PATCH of an order item: every field is optional, and {@code product_id} replaces the product. */
 public record OrderItemEditRequest(
         @JsonProperty("product_id")
         Long productId,

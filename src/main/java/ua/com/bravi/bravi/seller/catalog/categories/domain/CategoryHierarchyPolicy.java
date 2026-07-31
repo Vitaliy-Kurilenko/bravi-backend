@@ -8,8 +8,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Інваріанти дерева категорій магазину: глибина не більша за {@link #MAX_DEPTH} рівнів
- * та відсутність циклів при переміщенні. Чисті функції над плоским набором категорій магазину.
+ * Invariants of a store category tree: a depth of at most {@link #MAX_DEPTH} levels and no cycles
+ * when a node is moved. Pure functions over the flat set of categories of one store.
  */
 public final class CategoryHierarchyPolicy {
 
@@ -20,7 +20,7 @@ public final class CategoryHierarchyPolicy {
     private CategoryHierarchyPolicy() {
     }
 
-    /** Створення нового вузла під {@code parentId} (parentId не null). */
+    /** Validates creation of a new node under {@code parentId}, which must not be null. */
     public static void validateCreate(List<Category> storeCategories, Long parentId) {
         Map<Long, Category> byId = indexById(storeCategories);
         if (depthOf(parentId, byId) + 1 > MAX_DEPTH) {
@@ -28,7 +28,7 @@ public final class CategoryHierarchyPolicy {
         }
     }
 
-    /** Переміщення вузла {@code nodeId} під {@code newParentId} (newParentId не null). */
+    /** Validates a move of node {@code nodeId} under {@code newParentId}, which must not be null. */
     public static void validateMove(List<Category> storeCategories, Long nodeId, Long newParentId) {
         if (newParentId.equals(nodeId)) {
             throw new InvalidCategoryHierarchyException(FIELD_PARENT, "Category cannot be its own parent");
@@ -44,7 +44,7 @@ public final class CategoryHierarchyPolicy {
         }
     }
 
-    /** Глибина вузла: корінь = 1, далі прогулянка вгору по parentId. */
+    /** Depth of a node, counted by walking up the parents; a root has depth 1. */
     private static int depthOf(Long id, Map<Long, Category> byId) {
         int depth = 0;
         Long current = id;
@@ -56,7 +56,7 @@ public final class CategoryHierarchyPolicy {
         return depth;
     }
 
-    /** Висота піддерева вузла: лист = 1. */
+    /** Height of the subtree of a node; a leaf has height 1. */
     private static int heightOf(Long id, Map<Long, List<Category>> byParent) {
         int maxChild = 0;
         for (Category child : byParent.getOrDefault(id, List.of())) {
@@ -65,7 +65,7 @@ public final class CategoryHierarchyPolicy {
         return 1 + maxChild;
     }
 
-    /** Чи є {@code candidateId} нащадком {@code ancestorId}. */
+    /** Tells whether {@code candidateId} is a descendant of {@code ancestorId}. */
     private static boolean isDescendant(Long ancestorId, Long candidateId, Map<Long, List<Category>> byParent) {
         for (Category child : byParent.getOrDefault(ancestorId, List.of())) {
             if (child.id().equals(candidateId) || isDescendant(child.id(), candidateId, byParent)) {

@@ -18,8 +18,8 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface ProductEntityMapper {
 
-    // category/manufacturer у view — вкладені посилання на суміжні агрегати; ProductService їх резолвить
-    // з internal bigint (entity) через categories/manufacturers api і передає сюди.
+    // In the view, category and manufacturer are nested references to neighbouring aggregates;
+    // ProductService resolves them from the entity bigint ids and passes them in.
     @Mapping(target = "id", source = "entity.id")
     @Mapping(target = "name", source = "entity.name")
     @Mapping(target = "category", source = "category")
@@ -34,7 +34,7 @@ public interface ProductEntityMapper {
     @Mapping(target = "id", source = "publicId")
     CatalogRefView toRef(ManufacturerView manufacturer);
 
-    // categoryId/manufacturerId приходять як public id — service резолвить їх у bigint і виставляє на entity.
+    // categoryId and manufacturerId arrive as public ids; the service resolves them into bigints and sets them on the entity.
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "publicId", ignore = true)
     @Mapping(target = "storeId", ignore = true)

@@ -3,28 +3,28 @@ package ua.com.bravi.bravi.shared.common;
 import java.util.List;
 
 /**
- * Налаштування діагностичного логування payload'ів і викликів сервісів.
- * Це фіксовані технічні переліки, а не конфіг середовища (див. §9 CLAUDE.md).
+ * Settings of the diagnostic logging of payloads and service calls.
+ * These are fixed technical listings rather than environment configuration.
  */
 public final class LoggingConstants {
 
-    /** HTTP-тіла запитів/відповідей. */
+    /** Logger for HTTP request and response bodies. */
     public static final String PAYLOAD_LOGGER = "ua.com.bravi.bravi.payload";
-    /** Аргументи та результати викликів між сервісами/модулями. */
+    /** Logger for arguments and results of calls between services and modules. */
     public static final String SERVICE_CALL_LOGGER = "ua.com.bravi.bravi.calls";
 
-    /** Довші payload'и обрізаються — логи не повинні тягнути мегабайти. */
+    /** Payloads longer than this are truncated. */
     public static final int MAX_PAYLOAD_CHARS = 2000;
 
-    /** Скільки байтів тіла запиту взагалі буферизувати (обмежує пам'ять, а не лише лог). */
+    /** Maximum number of request body bytes buffered in memory. */
     public static final int MAX_CACHED_BODY_BYTES = 8 * 1024;
 
     public static final String MASK = "***";
 
     /**
-     * Імена полів, значення яких маскуються в будь-якому payload'і чи аргументі.
-     * Свідомо ширші за потрібне: краще замаскувати зайве, ніж злити PII у логи.
-     * {@code value} — бо в ньому лежить контакт магазину (email/телефон).
+     * Names of fields whose values are masked in any payload or argument.
+     * Deliberately broader than strictly needed; {@code value} is included because it carries
+     * a store contact such as an email or a phone number.
      */
     public static final List<String> SENSITIVE_KEYS = List.of(
             "password", "secret", "token", "authorization", "credential", "signature",
@@ -34,7 +34,7 @@ public final class LoggingConstants {
             "value"
     );
 
-    /** Тіла цих типів не логуються (бінарні/великі). */
+    /** Bodies of these content types are never logged. */
     public static final List<String> SKIPPED_CONTENT_TYPES = List.of(
             "multipart/", "image/", "video/", "audio/", "application/octet-stream", "application/pdf"
     );

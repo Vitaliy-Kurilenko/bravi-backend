@@ -10,7 +10,7 @@ public interface ProductsApi {
 
     ProductPage search(Long storeId, ProductSearchQuery query);
 
-    /** Внутрішній lookup за bigint id — для крос-модульних споживачів (orders). */
+    /** Internal lookup by bigint id, used by cross-module consumers such as orders. */
     ProductView getById(Long storeId, Long productId);
 
     ProductView getByPublicId(Long storeId, String publicId);

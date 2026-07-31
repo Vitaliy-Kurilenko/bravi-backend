@@ -13,7 +13,7 @@ import ua.com.bravi.bravi.shared.config.props.MediaStorageProperties;
 
 import java.net.URI;
 
-/** Будує S3-клієнти для {@link S3MediaStorage} з {@link MediaStorageProperties} (сумісно з MinIO). */
+/** Builds the S3 clients for {@link S3MediaStorage} from {@link MediaStorageProperties}; MinIO compatible. */
 @Configuration
 @EnableConfigurationProperties(MediaStorageProperties.class)
 public class S3StorageConfig {

@@ -1,9 +1,9 @@
 package ua.com.bravi.bravi.shared.common;
 
 /**
- * MDC-ключі, які фільтри кладуть у діагностичний контекст запиту.
- * У structured-профілі кожен із них стає окремим полем JSON.
- * Кладемо лише непрямі ідентифікатори — жодних PII (email, ім'я, username).
+ * MDC keys that filters put into the diagnostic context of a request.
+ * In a structured profile each of them becomes a separate JSON field.
+ * Only indirect identifiers belong here — no personal data such as an email, a name or a username.
  */
 public final class MdcKeys {
 

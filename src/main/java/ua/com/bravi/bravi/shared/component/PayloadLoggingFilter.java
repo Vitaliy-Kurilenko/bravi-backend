@@ -20,10 +20,9 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Діагностичне логування тіл запитів/відповідей і query-параметрів.
- * Вимкнене, доки логер {@link LoggingConstants#PAYLOAD_LOGGER} не переведено в DEBUG —
- * у проді payload'и в логи не потрапляють. Значення чутливих полів маскуються
- * {@link LogSanitizer} навіть на DEBUG.
+ * Diagnostic logging of request and response bodies together with query parameters.
+ * Stays off until the {@link LoggingConstants#PAYLOAD_LOGGER} logger is set to DEBUG.
+ * Values of sensitive fields are masked by {@link LogSanitizer} even at DEBUG.
  */
 public class PayloadLoggingFilter extends OncePerRequestFilter {
 
@@ -52,7 +51,7 @@ public class PayloadLoggingFilter extends OncePerRequestFilter {
             filterChain.doFilter(cachedRequest, cachedResponse);
         } finally {
             logExchange(cachedRequest, cachedResponse);
-            // Обов'язково: без цього тіло лишиться в буфері й клієнт отримає порожню відповідь.
+            // Writes the buffered body out to the client.
             cachedResponse.copyBodyToResponse();
         }
     }

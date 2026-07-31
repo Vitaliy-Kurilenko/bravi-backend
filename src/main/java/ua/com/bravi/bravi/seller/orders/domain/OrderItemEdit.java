@@ -2,7 +2,7 @@ package ua.com.bravi.bravi.seller.orders.domain;
 
 import java.math.BigDecimal;
 
-/** Команда додавання/редагування позиції замовлення (productId/quantity/salePrice; для PATCH — будь-яке поле nullable). */
+/** Command that adds or edits an order item; on a PATCH any of the fields may be null. */
 public record OrderItemEdit(
         Long productId,
         Integer quantity,

@@ -14,10 +14,10 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * Логує параметри та результати публічних викликів {@code @Service}-бінів — зокрема
- * міжмодульних, бо модулі спілкуються через {@code <Module>Api}, який реалізує кореневий сервіс.
- * Вимкнений, доки логер {@link LoggingConstants#SERVICE_CALL_LOGGER} не переведено в DEBUG:
- * тоді {@code isDebugEnabled()} відсікає виклик до будь-якої обробки аргументів.
+ * Logs arguments and results of public calls on {@code @Service} beans, including cross-module ones,
+ * since modules talk to each other through a {@code <Module>Api} implemented by a root service.
+ * Stays off until the {@link LoggingConstants#SERVICE_CALL_LOGGER} logger is set to DEBUG:
+ * {@code isDebugEnabled()} short-circuits the advice before any argument is processed.
  */
 @Aspect
 public class ServiceCallLoggingAspect {
@@ -41,7 +41,7 @@ public class ServiceCallLoggingAspect {
                     target, LogSanitizer.describe(result), elapsedMs(start));
             return result;
         } catch (Throwable failure) {
-            // Сам виняток логується в exception-handler'і; тут лише факт і тип для трасування виклику.
+            // The exception itself is logged by the exception handler; only its type is traced here.
             log.debug("<-- {} threw {} in {}ms",
                     target, failure.getClass().getSimpleName(), elapsedMs(start));
             throw failure;
@@ -49,8 +49,8 @@ public class ServiceCallLoggingAspect {
     }
 
     /**
-     * Рендерить аргументи як {@code name=value}: без імені параметра скалярний рядок
-     * (напр. email, переданий позиційно) не має за чим маскуватись.
+     * Renders arguments as {@code name=value}: masking is driven by the parameter name,
+     * which a bare scalar value does not carry.
      */
     private String arguments(ProceedingJoinPoint joinPoint) {
         Object[] args = joinPoint.getArgs();

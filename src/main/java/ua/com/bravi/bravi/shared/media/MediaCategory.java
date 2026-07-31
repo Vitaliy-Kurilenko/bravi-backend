@@ -6,9 +6,10 @@ import ua.com.bravi.bravi.shared.media.exception.InvalidMediaUploadException;
 import java.util.Set;
 
 /**
- * Реєстр логічних типів медіа: де об'єкт лежить у сховищі (префікс ключа) та які обмеження на файл.
- * Один bucket, розділення за префіксом; кожна сутність, що завантажує медіа, передає свою категорію.
- * Нові типи (фото товару, категорії тощо) додаються сюди — авторизація й attach лишаються в модулі-власнику.
+ * Registry of logical media types: where an object lives in the storage (the key prefix) and which
+ * limits apply to the file. A single bucket is split by prefix, and every entity that uploads media
+ * passes its own category. New types are declared here, while authorization and attaching stay in
+ * the owning module.
  */
 public enum MediaCategory {
 
@@ -27,12 +28,12 @@ public enum MediaCategory {
         this.maxSizeBytes = maxSize.toBytes();
     }
 
-    /** Префікс ключа для конкретного власника, напр. {@code STORE_LOGO.keyPrefix("7") → "store-logos/7"}. */
+    /** Key prefix for a particular owner, e.g. {@code STORE_LOGO.keyPrefix("7") → "store-logos/7"}. */
     public String keyPrefix(String scope) {
         return prefix + "/" + scope;
     }
 
-    /** Перевіряє тип і розмір; викликається на presign (заявлені) і на confirm (реальні з {@code stat}). */
+    /** Validates content type and size: on presign against the declared values, on confirm against the stored ones. */
     public void validate(String contentType, long size) {
         if (contentType == null || !allowedContentTypes.contains(contentType.toLowerCase())) {
             throw new InvalidMediaUploadException(FIELD, "Unsupported media type: " + contentType);

@@ -10,8 +10,8 @@ spring:
     name: bravi
   jpa:
     hibernate:
-      ddl-auto: validate                              # перевірка відповідності entity і таблиць
-    show-sql: false                                   # SQL віддає логер org.hibernate.SQL (профіль local)
+      ddl-auto: validate                              # verifies that entities match the tables
+    show-sql: false                                   # SQL is emitted by the org.hibernate.SQL logger (local profile)
     properties:
       hibernate:
         jdbc:
@@ -39,13 +39,13 @@ spring:
 
 logging:
   pattern:
-    # %replace ховає порожні дужки поза контекстом запиту (старт, фонові задачі)
+    # %replace hides the empty brackets outside of a request context, such as startup or background tasks
     correlation: "%replace([%X{requestId:-}] ){'\\[\\] ',''}%replace([%X{accountId:-}/%X{storeId:-}] ){'\\[/\\] ',''}"
   level:
     root: ${ROOT_LOG_LEVEL:INFO}
     ua.com.bravi.bravi: ${APP_LOG_LEVEL:INFO}
     ua.com.bravi.bravi.access: ${ACCESS_LOG_LEVEL:INFO}    # HTTP access-log (AccessLogFilter)
-    # Діагностика: DEBUG вмикає логування payload'ів і аргументів сервісів (містять PII — не для проду)
+    # Diagnostics: DEBUG enables logging of payloads and service arguments, which carry personal data
     ua.com.bravi.bravi.payload: ${PAYLOAD_LOG_LEVEL:INFO}
     ua.com.bravi.bravi.calls: ${SERVICE_CALL_LOG_LEVEL:INFO}
     org:

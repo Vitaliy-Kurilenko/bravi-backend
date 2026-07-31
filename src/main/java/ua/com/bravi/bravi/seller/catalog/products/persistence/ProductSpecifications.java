@@ -10,15 +10,15 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-/** Будує динамічний {@link Specification} фільтрації товарів із {@link ProductSearchQuery}. */
+/** Builds a dynamic {@link Specification} that filters products by a {@link ProductSearchQuery}. */
 public final class ProductSpecifications {
 
     private ProductSpecifications() {
     }
 
     /**
-     * {@code categoryIds}/{@code manufacturerIds} — вже резолвлені internal bigint id
-     * (public id'и товарний API розшифровує через categories/manufacturers api до побудови specification).
+     * {@code categoryIds} and {@code manufacturerIds} are already resolved internal bigint ids;
+     * the product API translates public ids through the categories and manufacturers APIs beforehand.
      */
     public static Specification<ProductEntity> forStore(Long storeId, ProductSearchQuery query,
                                                         List<Long> categoryIds, List<Long> manufacturerIds) {

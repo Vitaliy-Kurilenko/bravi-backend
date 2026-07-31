@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class StoreService implements StoresApi {
 
-    // Onboarding defaults (see spec §5.2).
+    // Defaults applied to a store created during onboarding.
     private static final Currency DEFAULT_CURRENCY = Currency.getInstance("EUR");
     private static final ZoneId DEFAULT_TIMEZONE = ZoneId.of("Europe/Lisbon");
     private static final String DEFAULT_WEIGHT_UNIT = "KG";
@@ -258,9 +258,9 @@ public class StoreService implements StoresApi {
     }
 
     /**
-     * An object appears only after the client PUTs it, and is attached by a separate PATCH — a seller
-     * who abandons the form in between leaves it behind. Sweeping the store prefix on every presign
-     * caps that at one stray object per store instead of unbounded growth; the attached logo is kept.
+     * Deletes every object under the store logo prefix except the attached one. An object is uploaded
+     * by the client and attached by a separate request, so sweeping the prefix on each presign keeps
+     * at most one unattached object per store.
      */
     private void sweepOrphanedLogos(Long storeId, String attachedKey) {
         mediaStorage.list(MediaCategory.STORE_LOGO.keyPrefix(logoScope(storeId)) + "/").stream()

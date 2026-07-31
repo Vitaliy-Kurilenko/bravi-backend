@@ -8,7 +8,7 @@ public interface CategoriesApi {
 
     List<CategoryView> findTreeByStoreId(Long storeId);
 
-    /** Внутрішній lookup за bigint id — для крос-модульних споживачів (products). */
+    /** Internal lookup by bigint id, used by cross-module consumers such as products. */
     CategoryView getById(Long storeId, Long categoryId);
 
     CategoryView getByPublicId(Long storeId, String publicId);

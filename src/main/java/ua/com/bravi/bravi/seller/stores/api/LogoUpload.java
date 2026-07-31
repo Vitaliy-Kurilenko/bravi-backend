@@ -1,6 +1,6 @@
 package ua.com.bravi.bravi.seller.stores.api;
 
-/** Заявлені клієнтом метадані логотипу для presign (валідуються до і після завантаження). */
+/** Logo metadata declared by the client for a presign; validated both before and after the upload. */
 public record LogoUpload(
         String contentType,
         long size,

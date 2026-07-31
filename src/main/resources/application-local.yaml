@@ -1,5 +1,5 @@
-# Профіль локальної розробки: людино-читабельний текстовий вивід + докладні рівні.
-# Запуск: ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+# Local development profile: human-readable text output and verbose levels.
+# Run: ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 kind: Application
 
 spring:

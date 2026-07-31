@@ -15,8 +15,8 @@ import java.io.IOException;
 import java.util.UUID;
 
 /**
- * Наповнює MDC контекстом, доступним із заголовків запиту.
- * Стоїть до Spring Security, щоб логи 401/403 теж корелювались.
+ * Fills the MDC with the context available from request headers.
+ * Runs before Spring Security so that logs of 401 and 403 responses are correlated as well.
  */
 public class MdcContextFilter extends OncePerRequestFilter {
 

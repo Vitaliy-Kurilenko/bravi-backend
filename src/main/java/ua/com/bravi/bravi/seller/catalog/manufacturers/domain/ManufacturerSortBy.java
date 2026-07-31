@@ -4,8 +4,8 @@ import lombok.Getter;
 import ua.com.bravi.bravi.seller.catalog.manufacturers.exception.InvalidManufacturerRequestException;
 
 /**
- * Whitelist полів сортування виробників. {@code property} — ім'я властивості {@code ManufacturerEntity}
- * для безпечного {@code Sort} (без прямого прокидання довільного рядка з клієнта).
+ * Whitelist of manufacturer sort fields. {@code property} is the {@code ManufacturerEntity} property
+ * name used to build a {@code Sort}, so an arbitrary client string never reaches the query.
  */
 @Getter
 public enum ManufacturerSortBy {
@@ -20,7 +20,7 @@ public enum ManufacturerSortBy {
         this.property = property;
     }
 
-    /** Парсить зовнішній токен (наприклад {@code created_at}) у enum, case-insensitive. */
+    /** Parses an external token such as {@code created_at} into the enum, case-insensitively. */
     public static ManufacturerSortBy fromParam(String token) {
         for (ManufacturerSortBy value : values()) {
             if (value.name().equalsIgnoreCase(token)) {

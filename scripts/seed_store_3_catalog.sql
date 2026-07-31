@@ -1,17 +1,17 @@
--- Тестові дані каталогу для store_id = 3: 20 виробників, 20 категорій, 30 товарів.
+-- Sample catalog data for store_id = 3: 20 manufacturers, 20 categories, 30 products.
 --
--- ЦЕ НЕ FLYWAY-МІГРАЦІЯ. Не переносити у src/main/resources/db.migration —
--- це разові дані для локальної розробки, а не зміна схеми.
+-- THIS IS NOT A FLYWAY MIGRATION. It holds one-off data for local development rather than a
+-- schema change, and does not belong in src/main/resources/db.migration.
 --
--- Запуск:  psql "$DB_URL" -f scripts/seed_store_3_catalog.sql
+-- Run:  psql "$DB_URL" -f scripts/seed_store_3_catalog.sql
 --
--- Скрипт ідемпотентний: повторний запуск нічого не дублює (ON CONFLICT DO NOTHING
--- за тими самими унікальними констрейнтами, що їх перевіряє застосунок).
--- Усе в одній транзакції: або наповнюється повністю, або відкочується.
+-- The script is idempotent: a repeated run duplicates nothing, relying on ON CONFLICT DO NOTHING
+-- over the same unique constraints the application enforces.
+-- Everything runs in one transaction, so the data is either seeded in full or rolled back.
 
 BEGIN;
 
--- Магазин має існувати: FK не дасть вставити, але явна помилка зрозуміліша.
+-- The store has to exist; an explicit check reports it more clearly than a foreign key failure.
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM stores WHERE id = 3) THEN
@@ -19,8 +19,8 @@ BEGIN
     END IF;
 END $$;
 
--- public_id у форматі PublicIdGenerator: префікс + '_' + 16 символів base62.
--- pg_temp — тимчасова схема, функція живе лише в цій сесії й прибирати її не треба.
+-- public_id in the PublicIdGenerator format: a prefix, '_' and 16 base62 characters.
+-- pg_temp is a temporary schema, so the function lives only for this session and needs no cleanup.
 CREATE OR REPLACE FUNCTION pg_temp.public_id(prefix TEXT) RETURNS TEXT AS $$
     SELECT prefix || '_' || string_agg(
         substr('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
@@ -29,7 +29,7 @@ CREATE OR REPLACE FUNCTION pg_temp.public_id(prefix TEXT) RETURNS TEXT AS $$
 $$ LANGUAGE SQL VOLATILE;
 
 
--- ── Виробники (20) ────────────────────────────────────────────────────────────
+-- ── Manufacturers (20) ────────────────────────────────────────────────────────────
 INSERT INTO store_manufacturers (store_id, public_id, name, description, status, created_at)
 SELECT 3, pg_temp.public_id('mfr'), v.name, v.description, 'ACTIVE',
        (now() AT TIME ZONE 'UTC') - (v.ord * INTERVAL '1 hour')
@@ -58,7 +58,7 @@ FROM (VALUES
 ON CONFLICT ON CONSTRAINT uq_store_manufacturers_store_name DO NOTHING;
 
 
--- ── Категорії: 6 кореневих ────────────────────────────────────────────────────
+-- ── Categories: 6 root ones ────────────────────────────────────────────────────
 INSERT INTO store_categories (store_id, parent_id, public_id, name, description, status, created_at)
 SELECT 3, NULL, pg_temp.public_id('cat'), v.name, v.description, 'ACTIVE',
        (now() AT TIME ZONE 'UTC') - (v.ord * INTERVAL '1 hour')
@@ -72,7 +72,7 @@ FROM (VALUES
 ) AS v(ord, name, description)
 ON CONFLICT (store_id, name) WHERE parent_id IS NULL DO NOTHING;
 
--- ── Категорії: 14 дочірніх (parent резолвиться за назвою) ─────────────────────
+-- ── Categories: 14 child ones, parent resolved by name ─────────────────────
 INSERT INTO store_categories (store_id, parent_id, public_id, name, description, status, created_at)
 SELECT 3,
        (SELECT id FROM store_categories WHERE store_id = 3 AND name = v.parent AND parent_id IS NULL),
@@ -97,9 +97,9 @@ FROM (VALUES
 ON CONFLICT (store_id, parent_id, name) WHERE parent_id IS NOT NULL DO NOTHING;
 
 
--- ── Товари (30) ───────────────────────────────────────────────────────────────
--- Категорія/виробник/статус наявності резолвляться за назвою чи кодом, тож скрипт
--- не залежить від згенерованих id. price — NUMERIC(19,4), розміри — NUMERIC(12,3).
+-- ── Products (30) ───────────────────────────────────────────────────────────────
+-- Category, manufacturer and stock status are resolved by name or code, so the script does not
+-- depend on generated ids. price is NUMERIC(19,4) and the dimensions are NUMERIC(12,3).
 INSERT INTO store_products (store_id, public_id, category_id, manufacturer_id, stock_status_id,
                             name, sku, code, description, price, quantity,
                             weight, width, height, length, status, created_at)
@@ -147,7 +147,7 @@ FROM (VALUES
 ON CONFLICT ON CONSTRAINT uq_store_products_store_code DO NOTHING;
 
 
--- Підсумок: має бути 20 / 20 / 30.
+-- Summary: expected counts are 20 / 20 / 30.
 SELECT 'store_manufacturers' AS table_name, count(*) AS rows FROM store_manufacturers WHERE store_id = 3
 UNION ALL
 SELECT 'store_categories', count(*) FROM store_categories WHERE store_id = 3

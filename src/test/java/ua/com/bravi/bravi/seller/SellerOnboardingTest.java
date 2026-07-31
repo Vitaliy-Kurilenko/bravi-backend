@@ -31,7 +31,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * End-to-end seller onboarding (spec §5): register → create DRAFT store (+ default settings + manual
+ * End-to-end seller onboarding: register → create DRAFT store (+ default settings + manual
  * channel) → replace contacts → complete (account ACTIVE, onboarding COMPLETED, store ACTIVE);
  * plus the guard rails EMAIL_NOT_VERIFIED and ONBOARDING_INCOMPLETE.
  */
