@@ -25,6 +25,7 @@ public class ProductsExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
         problem.setTitle("Product already exists");
         problem.setDetail(ex.getMessage());
+        problem.setProperty("errors", List.of(new FiledValidationError(ex.getField(), ex.getMessage())));
         return problem;
     }
 

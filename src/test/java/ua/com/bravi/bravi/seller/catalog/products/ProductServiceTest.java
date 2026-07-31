@@ -1,5 +1,6 @@
 package ua.com.bravi.bravi.seller.catalog.products;
 
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +38,7 @@ import ua.com.bravi.bravi.shared.media.exception.InvalidMediaUploadException;
 import ua.com.bravi.bravi.shared.media.exception.MediaObjectNotFoundException;
 
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,6 +47,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -162,14 +165,56 @@ class ProductServiceTest {
     }
 
     @Test
-    void createMapsDuplicateToConflict() {
+    void createMapsDuplicateCodeToConflictOnCodeField() {
         ProductEntity entity = new ProductEntity();
         when(stockStatusRepository.existsById(STOCK_STATUS_ID)).thenReturn(true);
         when(productEntityMapper.toEntity(any())).thenReturn(entity);
-        when(productRepository.save(entity)).thenThrow(new DataIntegrityViolationException("uq_store_products_store_code"));
+        when(productRepository.save(entity)).thenThrow(violationOf("uq_store_products_store_code"));
 
         assertThatThrownBy(() -> service.create(STORE_ID, product(null, null, STOCK_STATUS_ID, null)))
-                .isInstanceOf(ProductAlreadyExistsException.class);
+                .isInstanceOf(ProductAlreadyExistsException.class)
+                .hasFieldOrPropertyWithValue("field", "code");
+    }
+
+    @Test
+    void createMapsDuplicateSkuToConflictOnSkuField() {
+        ProductEntity entity = new ProductEntity();
+        when(stockStatusRepository.existsById(STOCK_STATUS_ID)).thenReturn(true);
+        when(productEntityMapper.toEntity(any())).thenReturn(entity);
+        when(productRepository.save(entity)).thenThrow(violationOf("uq_store_products_store_sku"));
+
+        assertThatThrownBy(() -> service.create(STORE_ID, product(null, null, STOCK_STATUS_ID, null)))
+                .isInstanceOf(ProductAlreadyExistsException.class)
+                .hasFieldOrPropertyWithValue("field", "sku");
+    }
+
+    @Test
+    void createRethrowsUnmappedIntegrityViolation() {
+        ProductEntity entity = new ProductEntity();
+        when(stockStatusRepository.existsById(STOCK_STATUS_ID)).thenReturn(true);
+        when(productEntityMapper.toEntity(any())).thenReturn(entity);
+        when(productRepository.save(entity)).thenThrow(violationOf("fk_store_products_stock_status"));
+
+        assertThatThrownBy(() -> service.create(STORE_ID, product(null, null, STOCK_STATUS_ID, null)))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void updateMapsDuplicateSkuToConflictOnSkuField() {
+        ProductEntity entity = productEntityOwnedBy(STORE_ID);
+        when(productRepository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID)).thenReturn(Optional.of(entity));
+        when(stockStatusRepository.existsById(STOCK_STATUS_ID)).thenReturn(true);
+        doThrow(violationOf("uq_store_products_store_sku")).when(productRepository).flush();
+
+        assertThatThrownBy(() -> service.update(STORE_ID, PUBLIC_ID, product(null, null, STOCK_STATUS_ID, null)))
+                .isInstanceOf(ProductAlreadyExistsException.class)
+                .hasFieldOrPropertyWithValue("field", "sku");
+    }
+
+    /** Builds the exception in the shape Spring produces: a data access exception wrapping a named Hibernate cause. */
+    private static DataIntegrityViolationException violationOf(String constraint) {
+        return new DataIntegrityViolationException("could not execute statement",
+                new ConstraintViolationException("duplicate key value", new SQLException(), constraint));
     }
 
     @Test

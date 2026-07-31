@@ -40,6 +40,7 @@ import ua.com.bravi.bravi.shared.media.PresignedUpload;
 import ua.com.bravi.bravi.shared.media.StoredObject;
 import ua.com.bravi.bravi.shared.media.exception.InvalidMediaUploadException;
 import ua.com.bravi.bravi.shared.media.exception.MediaObjectNotFoundException;
+import ua.com.bravi.bravi.shared.util.ConstraintViolations;
 import ua.com.bravi.bravi.shared.util.PublicIdGenerator;
 
 import java.util.List;
@@ -55,7 +56,10 @@ public class ProductService implements ProductsApi {
 
     private static final int DEFAULT_LIMIT = 20;
     private static final int MAX_LIMIT = 100;
-    private static final String DUPLICATE = "Product with this code or SKU already exists in the store";
+    private static final String UQ_CODE = "uq_store_products_store_code";
+    private static final String UQ_SKU = "uq_store_products_store_sku";
+    private static final String DUPLICATE_CODE = "Product with this code already exists in the store";
+    private static final String DUPLICATE_SKU = "Product with this SKU already exists in the store";
 
     private final IProductEntityRepository productRepository;
     private final IProductImageEntityRepository imageRepository;
@@ -128,8 +132,8 @@ public class ProductService implements ProductsApi {
             log.info("Product created storeId={} productId={} publicId={}",
                     storeId, saved.getId(), saved.getPublicId());
             return toView(storeId, saved, List.of());
-        } catch (DataIntegrityViolationException duplicate) {
-            throw new ProductAlreadyExistsException(DUPLICATE);
+        } catch (DataIntegrityViolationException violation) {
+            throw duplicateOf(violation, storeId);
         }
     }
 
@@ -147,8 +151,8 @@ public class ProductService implements ProductsApi {
         productEntityMapper.updateEntity(entity, patch);
         try {
             productRepository.flush();
-        } catch (DataIntegrityViolationException duplicate) {
-            throw new ProductAlreadyExistsException(DUPLICATE);
+        } catch (DataIntegrityViolationException violation) {
+            throw duplicateOf(violation, storeId);
         }
         log.info("Product updated storeId={} publicId={}", storeId, publicId);
     }
@@ -159,7 +163,7 @@ public class ProductService implements ProductsApi {
         ProductEntity entity = requireOwned(storeId, publicId);
         imageRepository.findByProductIdOrderBySortOrderAsc(entity.getId())
                 .forEach(image -> mediaStorage.delete(image.getStorageKey()));
-        productRepository.delete(entity); // store_product_images знімаються ON DELETE CASCADE
+        productRepository.delete(entity); // store_product_images are removed by ON DELETE CASCADE
         log.info("Product deleted storeId={} publicId={}", storeId, publicId);
     }
 
@@ -240,13 +244,26 @@ public class ProductService implements ProductsApi {
                 storeId, publicId, imageId, wasPrimary);
     }
 
+    /** Translates a unique constraint violation into a field-aware conflict; other violations are returned as is. */
+    private RuntimeException duplicateOf(DataIntegrityViolationException violation, Long storeId) {
+        String constraint = ConstraintViolations.nameOf(violation);
+        if (UQ_CODE.equalsIgnoreCase(constraint)) {
+            return new ProductAlreadyExistsException("code", DUPLICATE_CODE);
+        }
+        if (UQ_SKU.equalsIgnoreCase(constraint)) {
+            return new ProductAlreadyExistsException("sku", DUPLICATE_SKU);
+        }
+        log.warn("Unmapped data integrity violation storeId={} constraint={}", storeId, constraint);
+        return violation;
+    }
+
     private void validateStockStatus(Long stockStatusId) {
         if (stockStatusId != null && !stockStatusRepository.existsById(stockStatusId)) {
             throw new NotFoundException("Stock status not found");
         }
     }
 
-    /** Резолвить public id категорії в internal bigint (заодно валідує існування й приналежність магазину). */
+    /** Resolves a category public id into an internal bigint, validating that it exists and belongs to the store. */
     private Long resolveCategoryId(Long storeId, String categoryPublicId) {
         return categoryPublicId == null ? null : categoriesApi.getByPublicId(storeId, categoryPublicId).id();
     }
@@ -283,7 +300,7 @@ public class ProductService implements ProductsApi {
                 productEntityMapper.toRef(manufacturer), images);
     }
 
-    /** Batch-резолв суміжних агрегатів для сторінки: один lookup на кожен унікальний id, не на кожен товар. */
+    /** Resolves neighbouring aggregates for a page with one lookup per distinct id rather than per product. */
     private Map<Long, CategoryView> categoriesById(Long storeId, List<ProductEntity> products) {
         return distinctRefs(products, ProductEntity::getCategoryId, id -> categoriesApi.getById(storeId, id));
     }

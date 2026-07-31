@@ -68,7 +68,10 @@ account → ACTIVE, onboarding → COMPLETED, store → ACTIVE). Один маг
 
 **Аутентифікація:** Spring Security OAuth2 resource server — валідація JWT Keycloak через JWKS;
 ролі беруться з claim'а `resource_access.backend-service.roles` (client-ролі `backend-service`).
-Формат помилок — RFC 9457 `ProblemDetail`.
+Формат помилок — RFC 9457 `ProblemDetail`. Помилки з атрибуцією поля несуть властивість `errors`
+(`[{ "field": …, "message": … }]`) — і 400-валідація, і 409-конфлікт дубліката: наприклад, при
+створенні товару з зайнятим SKU повертається `"errors": [{ "field": "sku", … }]`, з зайнятим
+кодом — `"field": "code"`.  
 
 **Персистентність:** JPA/Hibernate + PostgreSQL; схема керується **Flyway**
 (`src/main/resources/db.migration/`, застосовується автоматично при старті). Документація API —
