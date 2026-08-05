@@ -252,7 +252,6 @@ erDiagram
         bigint size_bytes
         string original_filename
         int sort_order
-        boolean is_primary
         datetime created_at
     }
 
