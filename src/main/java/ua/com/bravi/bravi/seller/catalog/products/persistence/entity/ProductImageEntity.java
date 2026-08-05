@@ -47,10 +47,6 @@ public class ProductImageEntity {
     @Column(name = "sort_order", nullable = false)
     private Integer sortOrder = 0;
 
-    @NotNull
-    @Column(name = "is_primary", nullable = false)
-    private Boolean isPrimary = false;
-
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

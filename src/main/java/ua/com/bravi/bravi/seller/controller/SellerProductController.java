@@ -134,29 +134,30 @@ public class SellerProductController {
     }
 
     @Operation(summary = "Attach product image",
-            description = "Confirms a previously uploaded image and adds it to the product gallery")
+            description = "Confirms a previously uploaded image and adds it to the end of the product gallery")
     @PostMapping("/{publicId}/images")
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
     public ResponseEntity<ProductImageResponse> attachImage(
             @PathVariable String publicId,
             @Valid @RequestBody ProductImageAttachRequest request
     ) {
-        ProductImageResponse body = productDtoMapper.toImageResponse(productsApi.confirmImage(
-                storeContext.get(), publicId, request.storageKey(), request.isPrimary()));
+        ProductImageResponse body = productDtoMapper.toImageResponse(
+                productsApi.confirmImage(storeContext.get(), publicId, request.storageKey()));
         return ResponseEntity.status(HttpStatus.CREATED).body(body);
     }
 
-    @Operation(summary = "Update product image",
-            description = "Changes an image's state; is_primary=true promotes it to the gallery primary")
+    @Operation(summary = "Move product image",
+            description = "Moves an image to a position and returns the whole gallery in its new order; "
+                    + "position 0 makes the image the product's main one")
     @PatchMapping("/{publicId}/images/{imageId}")
     @PreAuthorize("hasPermission('PRODUCT', 'WRITE')")
-    public ProductImageResponse updateImage(
+    public List<ProductImageResponse> updateImage(
             @PathVariable String publicId,
             @PathVariable Long imageId,
             @Valid @RequestBody ProductImageUpdateRequest request
     ) {
-        return productDtoMapper.toImageResponse(
-                productsApi.setPrimaryImage(storeContext.get(), publicId, imageId));
+        return productDtoMapper.toImageResponses(
+                productsApi.moveImage(storeContext.get(), publicId, imageId, request.sortOrder()));
     }
 
     @Operation(summary = "Delete product image", description = "Removes an image from the product gallery")

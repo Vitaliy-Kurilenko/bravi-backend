@@ -26,11 +26,14 @@ public interface ProductsApi {
     /** Validates the declared image and returns a presigned PUT URL for direct client upload. */
     PresignedUpload presignImageUpload(Long storeId, String publicId, ImageUpload upload);
 
-    /** Confirms an uploaded image: re-validates the stored object and attaches it to the gallery. */
-    ProductImageView confirmImage(Long storeId, String publicId, String storageKey, boolean primary);
+    /** Confirms an uploaded image: re-validates the stored object and appends it to the gallery. */
+    ProductImageView confirmImage(Long storeId, String publicId, String storageKey);
 
-    /** Makes the given image the gallery's primary one, demoting the others. */
-    ProductImageView setPrimaryImage(Long storeId, String publicId, Long imageId);
+    /**
+     * Moves an image to a zero-based position, shifting the others, and returns the whole
+     * re-sequenced gallery. Position 0 makes the image the product's main one.
+     */
+    List<ProductImageView> moveImage(Long storeId, String publicId, Long imageId, int sortOrder);
 
     void deleteImage(Long storeId, String publicId, Long imageId);
 }

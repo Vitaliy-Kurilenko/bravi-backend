@@ -134,9 +134,14 @@ Swagger UI / OpenAPI (springdoc).
 
 Фото товару — той самий потік для галереї: `POST /sellers/products/{publicId}/images/upload-url`
 (presigned PUT URL) → клієнт `PUT`-ить файл → `POST /sellers/products/{publicId}/images
-{ "storage_key": "<key>", "is_primary": true }` чіпляє об'єкт до товару (backend звіряє об'єкт і власника).
-`PATCH .../images/{imageId} { "is_primary": true }` робить фото головним, `DELETE .../images/{imageId}` —
-прибирає його. У відповіді кожне фото несе публічний `url` об'єкта. Один bucket, розкладка за префіксом
+{ "storage_key": "<key>" }` чіпляє об'єкт **у кінець** галереї (backend звіряє об'єкт і власника).
+
+Порядок фото — єдине джерело правди галереї: позиції утворюють щільну послідовність `0..n-1`, а фото
+на позиції `0` є **головним** (поле `is_primary` у відповіді похідне від `sort_order`).
+`PATCH .../images/{imageId} { "sort_order": 0 }` переміщує фото на задану позицію, зсуваючи решту, і
+повертає всю галерею в новому порядку; позиція поза межами галереї → `400` з полем `sort_order`.
+`DELETE .../images/{imageId}` прибирає фото і ущільнює послідовність — головним стає нове перше.
+У відповіді кожне фото несе публічний `url` об'єкта. Один bucket, розкладка за префіксом
 ключа централізована в `shared/media/MediaCategory` (лого → `store-logos/{storeId}/…`,
 фото товару → `product-images/{storeId}/{productId}/…`).
 

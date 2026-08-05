@@ -22,6 +22,7 @@ import ua.com.bravi.bravi.seller.catalog.products.api.ProductView;
 import ua.com.bravi.bravi.seller.catalog.products.domain.Product;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductSearchQuery;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductStatus;
+import ua.com.bravi.bravi.seller.catalog.products.exception.InvalidProductRequestException;
 import ua.com.bravi.bravi.seller.catalog.products.exception.ProductAlreadyExistsException;
 import ua.com.bravi.bravi.seller.catalog.products.persistence.IProductEntityRepository;
 import ua.com.bravi.bravi.seller.catalog.products.persistence.IProductImageEntityRepository;
@@ -39,11 +40,13 @@ import ua.com.bravi.bravi.shared.media.exception.MediaObjectNotFoundException;
 
 import java.math.BigDecimal;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -300,23 +303,21 @@ class ProductServiceTest {
     }
 
     @Test
-    void confirmFirstImageBecomesPrimary() {
+    void confirmImageAppendsAtTheEndOfTheGallery() {
         when(productRepository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID))
                 .thenReturn(Optional.of(productEntityOwnedBy(STORE_ID)));
         when(mediaStorage.stat(KEY)).thenReturn(Optional.of(new StoredObject(KEY, "image/png", 3)));
-        when(imageRepository.countByProductId(PRODUCT_ID)).thenReturn(0);
+        when(imageRepository.countByProductId(PRODUCT_ID)).thenReturn(2);
         when(imageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(imageRepository.findByProductIdOrderBySortOrderAsc(PRODUCT_ID)).thenReturn(List.of());
         when(imageEntityMapper.toView(any(), any())).thenReturn(mock(ProductImageView.class));
 
-        service.confirmImage(STORE_ID, PUBLIC_ID, KEY, false);
+        service.confirmImage(STORE_ID, PUBLIC_ID, KEY);
 
         ArgumentCaptor<ProductImageEntity> captor = ArgumentCaptor.forClass(ProductImageEntity.class);
         verify(imageRepository).save(captor.capture());
         ProductImageEntity saved = captor.getValue();
-        assertThat(saved.getIsPrimary()).isTrue();
         assertThat(saved.getStorageKey()).isEqualTo(KEY);
-        assertThat(saved.getSortOrder()).isZero();
+        assertThat(saved.getSortOrder()).isEqualTo(2);
     }
 
     @Test
@@ -324,7 +325,7 @@ class ProductServiceTest {
         when(productRepository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID))
                 .thenReturn(Optional.of(productEntityOwnedBy(STORE_ID)));
 
-        assertThatThrownBy(() -> service.confirmImage(STORE_ID, PUBLIC_ID, "product-images/1/2/x.png", false))
+        assertThatThrownBy(() -> service.confirmImage(STORE_ID, PUBLIC_ID, "product-images/1/2/x.png"))
                 .isInstanceOf(InvalidMediaUploadException.class);
 
         verify(imageRepository, never()).save(any());
@@ -336,7 +337,7 @@ class ProductServiceTest {
                 .thenReturn(Optional.of(productEntityOwnedBy(STORE_ID)));
         when(mediaStorage.stat(KEY)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.confirmImage(STORE_ID, PUBLIC_ID, KEY, false))
+        assertThatThrownBy(() -> service.confirmImage(STORE_ID, PUBLIC_ID, KEY))
                 .isInstanceOf(MediaObjectNotFoundException.class);
     }
 
@@ -351,26 +352,64 @@ class ProductServiceTest {
     }
 
     @Test
-    void deletePrimaryImagePromotesNext() {
-        ProductImageEntity primary = new ProductImageEntity();
-        primary.setId(10L);
-        primary.setProductId(PRODUCT_ID);
-        primary.setStorageKey("k10");
-        primary.setIsPrimary(true);
-        ProductImageEntity next = new ProductImageEntity();
-        next.setId(11L);
-        next.setProductId(PRODUCT_ID);
-        next.setIsPrimary(false);
-
+    void moveImageShiftsTheOtherImages() {
+        List<ProductImageEntity> gallery = gallery(10L, 11L, 12L);
         when(productRepository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID))
                 .thenReturn(Optional.of(productEntityOwnedBy(STORE_ID)));
-        when(imageRepository.findById(10L)).thenReturn(Optional.of(primary));
-        when(imageRepository.findByProductIdOrderBySortOrderAsc(PRODUCT_ID)).thenReturn(List.of(next));
+        when(imageRepository.findById(12L)).thenReturn(Optional.of(gallery.get(2)));
+        when(imageRepository.findByProductIdOrderBySortOrderAsc(PRODUCT_ID)).thenReturn(gallery);
+        when(imageEntityMapper.toView(any(), any())).thenReturn(mock(ProductImageView.class));
+
+        List<ProductImageView> moved = service.moveImage(STORE_ID, PUBLIC_ID, 12L, 0);
+
+        assertThat(moved).hasSize(3);
+        assertThat(gallery).extracting(ProductImageEntity::getId, ProductImageEntity::getSortOrder)
+                .containsExactly(tuple(10L, 1), tuple(11L, 2), tuple(12L, 0));
+        verify(imageRepository).saveAll(List.of(gallery.get(2), gallery.get(0), gallery.get(1)));
+    }
+
+    @Test
+    void moveImageRejectsPositionOutsideTheGallery() {
+        List<ProductImageEntity> gallery = gallery(10L, 11L);
+        when(productRepository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID))
+                .thenReturn(Optional.of(productEntityOwnedBy(STORE_ID)));
+        when(imageRepository.findById(10L)).thenReturn(Optional.of(gallery.getFirst()));
+        when(imageRepository.findByProductIdOrderBySortOrderAsc(PRODUCT_ID)).thenReturn(gallery);
+
+        assertThatThrownBy(() -> service.moveImage(STORE_ID, PUBLIC_ID, 10L, 5))
+                .isInstanceOf(InvalidProductRequestException.class)
+                .extracting("field").isEqualTo("sort_order");
+
+        verify(imageRepository, never()).saveAll(ArgumentMatchers.<List<ProductImageEntity>>any());
+    }
+
+    @Test
+    void deleteImageResequencesTheRemainingImages() {
+        List<ProductImageEntity> gallery = gallery(10L, 11L, 12L);
+        when(productRepository.findByStoreIdAndPublicId(STORE_ID, PUBLIC_ID))
+                .thenReturn(Optional.of(productEntityOwnedBy(STORE_ID)));
+        when(imageRepository.findById(10L)).thenReturn(Optional.of(gallery.getFirst()));
+        when(imageRepository.findByProductIdOrderBySortOrderAsc(PRODUCT_ID)).thenReturn(gallery);
 
         service.deleteImage(STORE_ID, PUBLIC_ID, 10L);
 
         verify(mediaStorage).delete("k10");
-        assertThat(next.getIsPrimary()).isTrue();
-        verify(imageRepository).save(next);
+        assertThat(gallery.get(1).getSortOrder()).isZero();
+        assertThat(gallery.get(2).getSortOrder()).isEqualTo(1);
+        verify(imageRepository).saveAll(List.of(gallery.get(1), gallery.get(2)));
+    }
+
+    /** Images of {@link #PRODUCT_ID} numbered 0..n-1 in the order the ids are given. */
+    private static List<ProductImageEntity> gallery(Long... imageIds) {
+        List<ProductImageEntity> images = new ArrayList<>();
+        for (int position = 0; position < imageIds.length; position++) {
+            ProductImageEntity image = new ProductImageEntity();
+            image.setId(imageIds[position]);
+            image.setProductId(PRODUCT_ID);
+            image.setStorageKey("k" + imageIds[position]);
+            image.setSortOrder(position);
+            images.add(image);
+        }
+        return images;
     }
 }

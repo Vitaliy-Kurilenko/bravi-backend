@@ -19,6 +19,7 @@ import ua.com.bravi.bravi.seller.catalog.products.api.ProductPage;
 import ua.com.bravi.bravi.seller.catalog.products.api.ProductView;
 import ua.com.bravi.bravi.seller.catalog.products.api.ProductsApi;
 import ua.com.bravi.bravi.seller.catalog.products.domain.Product;
+import ua.com.bravi.bravi.seller.catalog.products.domain.ProductGallery;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductSearchQuery;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductSortBy;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductStatus;
@@ -185,41 +186,41 @@ public class ProductService implements ProductsApi {
 
     @Override
     @Transactional
-    public ProductImageView confirmImage(Long storeId, String publicId, String storageKey, boolean primary) {
+    public ProductImageView confirmImage(Long storeId, String publicId, String storageKey) {
         ProductEntity product = requireOwned(storeId, publicId);
         requireOwnedKey(storeId, product.getId(), storageKey);
         StoredObject object = mediaStorage.stat(storageKey)
                 .orElseThrow(() -> new MediaObjectNotFoundException("Image upload not found or expired; upload again"));
         MediaCategory.PRODUCT_IMAGE.validate(object.contentType(), object.size());
 
-        int existing = imageRepository.countByProductId(product.getId());
         ProductImageEntity entity = new ProductImageEntity();
         entity.setProductId(product.getId());
         entity.setStorageKey(storageKey);
         entity.setContentType(object.contentType());
         entity.setSizeBytes(object.size());
-        entity.setSortOrder(existing);
-        entity.setIsPrimary(existing == 0 || primary);
+        entity.setSortOrder(imageRepository.countByProductId(product.getId()));
 
         ProductImageEntity saved = imageRepository.save(entity);
-        if (Boolean.TRUE.equals(saved.getIsPrimary())) {
-            demoteOtherPrimaries(product.getId(), saved.getId());
-        }
-        log.info("Product image added storeId={} publicId={} imageId={} primary={}",
-                storeId, publicId, saved.getId(), saved.getIsPrimary());
+        log.info("Product image added storeId={} publicId={} imageId={} sortOrder={}",
+                storeId, publicId, saved.getId(), saved.getSortOrder());
         return toImageView(saved);
     }
 
     @Override
     @Transactional
-    public ProductImageView setPrimaryImage(Long storeId, String publicId, Long imageId) {
+    public List<ProductImageView> moveImage(Long storeId, String publicId, Long imageId, int sortOrder) {
         ProductEntity product = requireOwned(storeId, publicId);
-        ProductImageEntity image = requireImage(product.getId(), imageId);
-        image.setIsPrimary(true);
-        ProductImageEntity saved = imageRepository.save(image);
-        demoteOtherPrimaries(product.getId(), saved.getId());
-        log.info("Product primary image changed storeId={} publicId={} imageId={}", storeId, publicId, imageId);
-        return toImageView(saved);
+        requireImage(product.getId(), imageId);
+
+        List<ProductImageEntity> images = imageRepository.findByProductIdOrderBySortOrderAsc(product.getId());
+        List<Long> order = gallery(images).move(imageId, sortOrder);
+        List<ProductImageView> resequenced = applyOrder(images, order).stream()
+                .map(this::toImageView)
+                .toList();
+
+        log.info("Product image moved storeId={} publicId={} imageId={} sortOrder={}",
+                storeId, publicId, imageId, sortOrder);
+        return resequenced;
     }
 
     @Override
@@ -227,21 +228,15 @@ public class ProductService implements ProductsApi {
     public void deleteImage(Long storeId, String publicId, Long imageId) {
         ProductEntity product = requireOwned(storeId, publicId);
         ProductImageEntity image = requireImage(product.getId(), imageId);
-        boolean wasPrimary = Boolean.TRUE.equals(image.getIsPrimary());
+        Integer sortOrder = image.getSortOrder();
 
+        List<ProductImageEntity> images = imageRepository.findByProductIdOrderBySortOrderAsc(product.getId());
         imageRepository.delete(image);
         mediaStorage.delete(image.getStorageKey());
+        applyOrder(images, gallery(images).without(imageId));
 
-        if (wasPrimary) {
-            imageRepository.findByProductIdOrderBySortOrderAsc(product.getId()).stream()
-                    .findFirst()
-                    .ifPresent(next -> {
-                        next.setIsPrimary(true);
-                        imageRepository.save(next);
-                    });
-        }
-        log.info("Product image deleted storeId={} publicId={} imageId={} wasPrimary={}",
-                storeId, publicId, imageId, wasPrimary);
+        log.info("Product image deleted storeId={} publicId={} imageId={} sortOrder={}",
+                storeId, publicId, imageId, sortOrder);
     }
 
     /** Translates a unique constraint violation into a field-aware conflict; other violations are returned as is. */
@@ -319,13 +314,20 @@ public class ProductService implements ProductsApi {
                 .collect(Collectors.toMap(Function.identity(), resolver));
     }
 
-    private void demoteOtherPrimaries(Long productId, Long keepImageId) {
-        imageRepository.findByProductIdOrderBySortOrderAsc(productId).stream()
-                .filter(image -> !image.getId().equals(keepImageId) && Boolean.TRUE.equals(image.getIsPrimary()))
-                .forEach(image -> {
-                    image.setIsPrimary(false);
-                    imageRepository.save(image);
-                });
+    private static ProductGallery gallery(List<ProductImageEntity> images) {
+        return ProductGallery.of(images.stream().map(ProductImageEntity::getId).toList());
+    }
+
+    /** Writes positions back so they match the given order, and returns the images in that order. */
+    private List<ProductImageEntity> applyOrder(List<ProductImageEntity> images, List<Long> order) {
+        Map<Long, ProductImageEntity> byId = images.stream()
+                .collect(Collectors.toMap(ProductImageEntity::getId, Function.identity()));
+        List<ProductImageEntity> ordered = order.stream().map(byId::get).toList();
+        for (int position = 0; position < ordered.size(); position++) {
+            ordered.get(position).setSortOrder(position);
+        }
+        imageRepository.saveAll(ordered);
+        return ordered;
     }
 
     private Map<Long, List<ProductImageView>> imagesByProduct(List<ProductEntity> products) {
