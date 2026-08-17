@@ -18,7 +18,7 @@ import ua.com.bravi.bravi.shared.media.PresignedUpload;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = AttributeDtoMapper.class)
 public interface ProductDtoMapper {
 
     @Mapping(target = "id", ignore = true)

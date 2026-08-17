@@ -26,6 +26,7 @@ public record ProductResponse(
         BigDecimal length,
         ProductStatus status,
         List<ProductImageResponse> images,
+        List<ProductAttributeValueResponse> attributes,
         @JsonProperty("created_at")
         Instant createdAt,
         @JsonProperty("updated_at")

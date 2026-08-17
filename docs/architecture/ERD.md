@@ -34,6 +34,16 @@ erDiagram
     STORE_MANUFACTURERS ||--o{ STORE_PRODUCTS : brands
     STORE_PRODUCTS ||--o{ STORE_PRODUCT_IMAGES : has
 
+    ATTRIBUTE_TEMPLATES ||--o{ ATTRIBUTE_TEMPLATE_OPTIONS : offers
+    ATTRIBUTE_TEMPLATES ||--o{ STORE_ATTRIBUTES : adopted_as
+    STORES ||--o{ STORE_ATTRIBUTES : owns
+    STORE_ATTRIBUTES ||--o{ STORE_ATTRIBUTE_OPTIONS : offers
+    STORE_CATEGORIES ||--o{ STORE_CATEGORY_ATTRIBUTES : offers
+    STORE_ATTRIBUTES ||--o{ STORE_CATEGORY_ATTRIBUTES : bound_to
+    STORE_PRODUCTS ||--o{ STORE_PRODUCT_ATTRIBUTE_VALUES : described_by
+    STORE_ATTRIBUTES ||--o{ STORE_PRODUCT_ATTRIBUTE_VALUES : defines
+    STORE_ATTRIBUTE_OPTIONS ||--o{ STORE_PRODUCT_ATTRIBUTE_VALUES : chosen_as
+
     SUPPLIER_ACCOUNTS ||--o{ SUPPLIER_PRODUCTS : owns
     SUPPLIER_ACCOUNTS ||--o{ WAREHOUSES : has
     SUPPLIER_ACCOUNTS ||--o{ SUPPLY_ORDERS : receives
@@ -253,6 +263,79 @@ erDiagram
         string original_filename
         int sort_order
         datetime created_at
+    }
+
+    ATTRIBUTE_TEMPLATES {
+        bigint id PK
+        string code UK
+        string name
+        string value_type
+        string unit_dictionary_code
+        string unit_default_code
+        boolean variant_defining
+        int sort_order
+        boolean active
+        datetime created_at
+        datetime updated_at
+    }
+
+    ATTRIBUTE_TEMPLATE_OPTIONS {
+        bigint id PK
+        bigint template_id FK
+        string code
+        string name
+        int sort_order
+    }
+
+    STORE_ATTRIBUTES {
+        bigint id PK
+        string public_id UK
+        bigint store_id FK
+        string template_code
+        string code
+        string name
+        string description
+        string value_type
+        string scope
+        string unit_dictionary_code
+        string unit_default_code
+        boolean variant_defining
+        string status
+        datetime created_at
+        datetime updated_at
+    }
+
+    STORE_ATTRIBUTE_OPTIONS {
+        bigint id PK
+        string public_id UK
+        bigint attribute_id FK
+        string code
+        string name
+        int sort_order
+        datetime created_at
+    }
+
+    STORE_CATEGORY_ATTRIBUTES {
+        bigint id PK
+        bigint category_id FK
+        bigint attribute_id FK
+        int sort_order
+        datetime created_at
+    }
+
+    STORE_PRODUCT_ATTRIBUTE_VALUES {
+        bigint id PK
+        bigint product_id FK
+        bigint attribute_id FK
+        bigint option_id FK
+        string value_string
+        decimal value_number
+        boolean value_boolean
+        date value_date
+        string unit_code
+        int sort_order
+        datetime created_at
+        datetime updated_at
     }
 
     SUPPLIER_PRODUCTS {

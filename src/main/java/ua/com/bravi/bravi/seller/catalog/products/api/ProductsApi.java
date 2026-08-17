@@ -1,5 +1,8 @@
 package ua.com.bravi.bravi.seller.catalog.products.api;
 
+import ua.com.bravi.bravi.seller.catalog.attributes.api.ProductAttributeValueView;
+import ua.com.bravi.bravi.seller.catalog.attributes.api.ProductAttributesView;
+import ua.com.bravi.bravi.seller.catalog.attributes.domain.AttributeValue;
 import ua.com.bravi.bravi.seller.catalog.products.domain.Product;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductSearchQuery;
 import ua.com.bravi.bravi.shared.media.PresignedUpload;
@@ -36,4 +39,19 @@ public interface ProductsApi {
     List<ProductImageView> moveImage(Long storeId, String publicId, Long imageId, int sortOrder);
 
     void deleteImage(Long storeId, String publicId, Long imageId);
+
+    /** What the product's category offers and what the product currently carries. */
+    ProductAttributesView describeAttributes(Long storeId, String publicId);
+
+    /** Replaces the product's whole set of characteristic values. */
+    List<ProductAttributeValueView> replaceAttributes(Long storeId, String publicId, List<AttributeValue> values);
+
+    /** Copies every characteristic value of another product of the same store onto this one. */
+    List<ProductAttributeValueView> copyAttributesFrom(Long storeId, String publicId, String sourcePublicId);
+
+    /**
+     * Writes the same values onto many products at once, leaving their other characteristics alone.
+     * Returns the number of products updated.
+     */
+    int applyAttributesBulk(Long storeId, List<String> publicIds, List<AttributeValue> values);
 }

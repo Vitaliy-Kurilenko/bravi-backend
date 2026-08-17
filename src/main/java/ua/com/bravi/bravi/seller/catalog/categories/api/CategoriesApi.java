@@ -13,6 +13,14 @@ public interface CategoriesApi {
 
     CategoryView getByPublicId(Long storeId, String publicId);
 
+    /**
+     * The category and its ancestors, nearest first. This is the chain along which a category-bound
+     * attribute is inherited; an unknown or null category yields an empty path.
+     */
+    List<CategoryPathEntry> findAncestorPath(Long storeId, Long categoryId);
+
+    List<CategoryPathEntry> findAncestorPathByPublicId(Long storeId, String categoryPublicId);
+
     CategoryView create(Long storeId, Category category);
 
     void update(Long storeId, String publicId, Category patch);

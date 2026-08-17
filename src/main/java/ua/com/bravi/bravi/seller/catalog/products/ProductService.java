@@ -9,6 +9,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ua.com.bravi.bravi.seller.catalog.attributes.api.AttributesApi;
+import ua.com.bravi.bravi.seller.catalog.attributes.api.ProductAttributeValueView;
+import ua.com.bravi.bravi.seller.catalog.attributes.api.ProductAttributesView;
+import ua.com.bravi.bravi.seller.catalog.attributes.domain.AttributeValue;
 import ua.com.bravi.bravi.seller.catalog.categories.api.CategoriesApi;
 import ua.com.bravi.bravi.seller.catalog.categories.api.CategoryView;
 import ua.com.bravi.bravi.seller.catalog.manufacturers.api.ManufacturerView;
@@ -69,6 +73,7 @@ public class ProductService implements ProductsApi {
     private final ProductImageEntityMapper imageEntityMapper;
     private final CategoriesApi categoriesApi;
     private final ManufacturersApi manufacturersApi;
+    private final AttributesApi attributesApi;
     private final MediaStorage mediaStorage;
 
     @Override
@@ -95,7 +100,8 @@ public class ProductService implements ProductsApi {
                 .map(entity -> toView(entity,
                         categories.get(entity.getCategoryId()),
                         manufacturers.get(entity.getManufacturerId()),
-                        imagesByProduct.getOrDefault(entity.getId(), List.of())))
+                        imagesByProduct.getOrDefault(entity.getId(), List.of()),
+                        List.of()))
                 .toList();
 
         int pages = (int) Math.ceil((double) result.getTotalElements() / limit);
@@ -128,14 +134,18 @@ public class ProductService implements ProductsApi {
         if (entity.getStatus() == null) {
             entity.setStatus(ProductStatus.ACTIVE);
         }
+        ProductEntity saved;
         try {
-            ProductEntity saved = productRepository.save(entity);
-            log.info("Product created storeId={} productId={} publicId={}",
-                    storeId, saved.getId(), saved.getPublicId());
-            return toView(storeId, saved, List.of());
+            saved = productRepository.save(entity);
         } catch (DataIntegrityViolationException violation) {
             throw duplicateOf(violation, storeId);
         }
+        if (product.attributes() != null && !product.attributes().isEmpty()) {
+            attributesApi.replaceProductValues(storeId, saved.getId(), saved.getCategoryId(), product.attributes());
+        }
+        log.info("Product created storeId={} productId={} publicId={}",
+                storeId, saved.getId(), saved.getPublicId());
+        return toView(storeId, saved, List.of());
     }
 
     @Override
@@ -154,6 +164,9 @@ public class ProductService implements ProductsApi {
             productRepository.flush();
         } catch (DataIntegrityViolationException violation) {
             throw duplicateOf(violation, storeId);
+        }
+        if (patch.attributes() != null) {
+            attributesApi.replaceProductValues(storeId, entity.getId(), entity.getCategoryId(), patch.attributes());
         }
         log.info("Product updated storeId={} publicId={}", storeId, publicId);
     }
@@ -252,6 +265,45 @@ public class ProductService implements ProductsApi {
         return violation;
     }
 
+    @Override
+    public ProductAttributesView describeAttributes(Long storeId, String publicId) {
+        ProductEntity product = requireOwned(storeId, publicId);
+        return attributesApi.describeProductAttributes(storeId, product.getId(), product.getCategoryId());
+    }
+
+    @Override
+    @Transactional
+    public List<ProductAttributeValueView> replaceAttributes(Long storeId, String publicId,
+                                                             List<AttributeValue> values) {
+        ProductEntity product = requireOwned(storeId, publicId);
+        return attributesApi.replaceProductValues(storeId, product.getId(), product.getCategoryId(), values);
+    }
+
+    @Override
+    @Transactional
+    public List<ProductAttributeValueView> copyAttributesFrom(Long storeId, String publicId,
+                                                              String sourcePublicId) {
+        ProductEntity target = requireOwned(storeId, publicId);
+        ProductEntity source = requireOwned(storeId, sourcePublicId);
+        List<AttributeValue> values = attributesApi.exportProductValues(storeId, source.getId());
+        log.info("Product attributes copied storeId={} fromProductId={} toProductId={} attributes={}",
+                storeId, source.getId(), target.getId(), values.size());
+        return attributesApi.replaceProductValues(storeId, target.getId(), target.getCategoryId(), values);
+    }
+
+    @Override
+    @Transactional
+    public int applyAttributesBulk(Long storeId, List<String> publicIds, List<AttributeValue> values) {
+        List<ProductEntity> products = publicIds.stream().distinct()
+                .map(publicId -> requireOwned(storeId, publicId))
+                .toList();
+        products.forEach(product ->
+                attributesApi.mergeProductValues(storeId, product.getId(), product.getCategoryId(), values));
+        log.info("Product attributes applied in bulk storeId={} products={} attributes={}",
+                storeId, products.size(), values.size());
+        return products.size();
+    }
+
     private void validateStockStatus(Long stockStatusId) {
         if (stockStatusId != null && !stockStatusRepository.existsById(stockStatusId)) {
             throw new NotFoundException("Stock status not found");
@@ -286,13 +338,14 @@ public class ProductService implements ProductsApi {
                 : categoriesApi.getById(storeId, entity.getCategoryId());
         ManufacturerView manufacturer = entity.getManufacturerId() == null ? null
                 : manufacturersApi.getById(storeId, entity.getManufacturerId());
-        return toView(entity, category, manufacturer, images);
+        return toView(entity, category, manufacturer, images,
+                attributesApi.listProductValues(storeId, entity.getId(), entity.getCategoryId()));
     }
 
     private ProductView toView(ProductEntity entity, CategoryView category, ManufacturerView manufacturer,
-                               List<ProductImageView> images) {
+                               List<ProductImageView> images, List<ProductAttributeValueView> attributes) {
         return productEntityMapper.toView(entity, productEntityMapper.toRef(category),
-                productEntityMapper.toRef(manufacturer), images);
+                productEntityMapper.toRef(manufacturer), images, attributes);
     }
 
     /** Resolves neighbouring aggregates for a page with one lookup per distinct id rather than per product. */

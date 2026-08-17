@@ -12,6 +12,9 @@ public final class ValidationPatterns {
 
     public static final Pattern TELEGRAM_USERNAME = Pattern.compile("^@[A-Za-z0-9_]{5,32}$");
 
+    /** Stable machine-readable identifier a seller assigns, such as an attribute or option code. */
+    public static final Pattern RESOURCE_CODE = Pattern.compile("^[A-Z][A-Z0-9_]{0,63}$");
+
     private ValidationPatterns() {
     }
 }

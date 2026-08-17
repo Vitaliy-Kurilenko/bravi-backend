@@ -1,11 +1,14 @@
 package ua.com.bravi.bravi.seller.controller.dto.in;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.PositiveOrZero;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductStatus;
 
 import java.math.BigDecimal;
+import java.util.List;
 
+/** {@code attributes}, when present, replaces the product's whole set of characteristic values. */
 public record ProductUpdateRequest(
         String name,
         String sku,
@@ -25,6 +28,8 @@ public record ProductUpdateRequest(
         BigDecimal width,
         BigDecimal height,
         BigDecimal length,
-        ProductStatus status
+        ProductStatus status,
+        @Valid
+        List<ProductAttributeValueRequest> attributes
 ) {
 }

@@ -6,6 +6,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ua.com.bravi.bravi.seller.catalog.categories.api.CategoriesApi;
+import ua.com.bravi.bravi.seller.catalog.categories.api.CategoryPathEntry;
 import ua.com.bravi.bravi.seller.catalog.categories.api.CategoryView;
 import ua.com.bravi.bravi.seller.catalog.categories.domain.Category;
 import ua.com.bravi.bravi.seller.catalog.categories.domain.CategoryHierarchyPolicy;
@@ -18,9 +19,12 @@ import ua.com.bravi.bravi.seller.catalog.categories.persistence.mapper.CategoryE
 import ua.com.bravi.bravi.shared.exception.NotFoundException;
 import ua.com.bravi.bravi.shared.util.PublicIdGenerator;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -56,6 +60,25 @@ public class CategoryService implements CategoriesApi {
     @Override
     public CategoryView getByPublicId(Long storeId, String publicId) {
         return toSubtree(storeId, requireOwned(storeId, publicId));
+    }
+
+    @Override
+    public List<CategoryPathEntry> findAncestorPath(Long storeId, Long categoryId) {
+        if (categoryId == null) {
+            return List.of();
+        }
+        return walkUp(indexById(categoryRepository.findByStoreId(storeId)), categoryId);
+    }
+
+    @Override
+    public List<CategoryPathEntry> findAncestorPathByPublicId(Long storeId, String categoryPublicId) {
+        List<CategoryEntity> all = categoryRepository.findByStoreId(storeId);
+        Long categoryId = all.stream()
+                .filter(category -> category.getPublicId().equals(categoryPublicId))
+                .map(CategoryEntity::getId)
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Category not found"));
+        return walkUp(indexById(all), categoryId);
     }
 
     @Override
@@ -129,6 +152,17 @@ public class CategoryService implements CategoriesApi {
                         .map(CategoryEntity::getPublicId)
                         .orElse(null);
         return categoryEntityMapper.toView(node, parentPublicId, children);
+    }
+
+    /** Walks parent links from the node up to its root, guarding against a cycle in stored data. */
+    private static List<CategoryPathEntry> walkUp(Map<Long, CategoryEntity> byId, Long categoryId) {
+        List<CategoryPathEntry> path = new ArrayList<>();
+        Set<Long> visited = new HashSet<>();
+        for (CategoryEntity node = byId.get(categoryId); node != null && visited.add(node.getId());
+             node = node.getParentId() == null ? null : byId.get(node.getParentId())) {
+            path.add(new CategoryPathEntry(node.getId(), node.getPublicId(), node.getName()));
+        }
+        return List.copyOf(path);
     }
 
     private static Map<Long, CategoryEntity> indexById(List<CategoryEntity> all) {

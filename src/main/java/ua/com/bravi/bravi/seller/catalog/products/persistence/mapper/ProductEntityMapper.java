@@ -5,6 +5,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
+import ua.com.bravi.bravi.seller.catalog.attributes.api.ProductAttributeValueView;
 import ua.com.bravi.bravi.seller.catalog.categories.api.CategoryView;
 import ua.com.bravi.bravi.seller.catalog.manufacturers.api.ManufacturerView;
 import ua.com.bravi.bravi.seller.catalog.products.api.CatalogRefView;
@@ -25,8 +26,9 @@ public interface ProductEntityMapper {
     @Mapping(target = "category", source = "category")
     @Mapping(target = "manufacturer", source = "manufacturer")
     @Mapping(target = "images", source = "images")
+    @Mapping(target = "attributes", source = "attributes")
     ProductView toView(ProductEntity entity, CatalogRefView category, CatalogRefView manufacturer,
-                       List<ProductImageView> images);
+                       List<ProductImageView> images, List<ProductAttributeValueView> attributes);
 
     @Mapping(target = "id", source = "publicId")
     CatalogRefView toRef(CategoryView category);

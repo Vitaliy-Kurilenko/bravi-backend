@@ -1,12 +1,14 @@
 package ua.com.bravi.bravi.seller.controller.dto.in;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductStatus;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public record ProductCreateRequest(
         @NotBlank
@@ -32,6 +34,8 @@ public record ProductCreateRequest(
         BigDecimal width,
         BigDecimal height,
         BigDecimal length,
-        ProductStatus status
+        ProductStatus status,
+        @Valid
+        List<ProductAttributeValueRequest> attributes
 ) {
 }
