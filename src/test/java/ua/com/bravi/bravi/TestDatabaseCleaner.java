@@ -19,6 +19,7 @@ public final class TestDatabaseCleaner {
             "store_category_attributes",
             "store_attribute_options",
             "store_attributes",
+            "store_product_discounts",
             "store_product_images",
             "store_products",
             "store_categories",

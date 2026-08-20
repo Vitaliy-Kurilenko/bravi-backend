@@ -9,6 +9,7 @@ import ua.com.bravi.bravi.seller.catalog.attributes.api.ProductAttributeValueVie
 import ua.com.bravi.bravi.seller.catalog.categories.api.CategoryView;
 import ua.com.bravi.bravi.seller.catalog.manufacturers.api.ManufacturerView;
 import ua.com.bravi.bravi.seller.catalog.products.api.CatalogRefView;
+import ua.com.bravi.bravi.seller.catalog.discounts.api.ProductDiscountView;
 import ua.com.bravi.bravi.seller.catalog.products.api.ProductImageView;
 import ua.com.bravi.bravi.seller.catalog.products.api.ProductView;
 import ua.com.bravi.bravi.seller.catalog.products.domain.Product;
@@ -27,8 +28,11 @@ public interface ProductEntityMapper {
     @Mapping(target = "manufacturer", source = "manufacturer")
     @Mapping(target = "images", source = "images")
     @Mapping(target = "attributes", source = "attributes")
+    @Mapping(target = "discountedPrice", source = "discount.discountedPrice")
+    @Mapping(target = "activeDiscount", source = "discount.discount")
     ProductView toView(ProductEntity entity, CatalogRefView category, CatalogRefView manufacturer,
-                       List<ProductImageView> images, List<ProductAttributeValueView> attributes);
+                       List<ProductImageView> images, List<ProductAttributeValueView> attributes,
+                       ProductDiscountView discount);
 
     @Mapping(target = "id", source = "publicId")
     CatalogRefView toRef(CategoryView category);

@@ -18,6 +18,14 @@ import ua.com.bravi.bravi.seller.catalog.categories.api.CategoryView;
 import ua.com.bravi.bravi.seller.catalog.manufacturers.api.ManufacturerView;
 import ua.com.bravi.bravi.seller.catalog.manufacturers.api.ManufacturersApi;
 import ua.com.bravi.bravi.seller.catalog.products.api.ImageUpload;
+import ua.com.bravi.bravi.seller.catalog.discounts.api.DiscountBulkResultView;
+import ua.com.bravi.bravi.seller.catalog.discounts.api.DiscountPredicates;
+import ua.com.bravi.bravi.seller.catalog.discounts.api.DiscountTarget;
+import ua.com.bravi.bravi.seller.catalog.discounts.api.DiscountView;
+import ua.com.bravi.bravi.seller.catalog.discounts.api.DiscountsApi;
+import ua.com.bravi.bravi.seller.catalog.discounts.api.ProductDiscountView;
+import ua.com.bravi.bravi.seller.catalog.discounts.domain.Discount;
+import ua.com.bravi.bravi.seller.catalog.discounts.domain.SubmittedDiscount;
 import ua.com.bravi.bravi.seller.catalog.products.api.ProductImageView;
 import ua.com.bravi.bravi.seller.catalog.products.api.ProductPage;
 import ua.com.bravi.bravi.seller.catalog.products.api.ProductView;
@@ -48,6 +56,7 @@ import ua.com.bravi.bravi.shared.media.exception.MediaObjectNotFoundException;
 import ua.com.bravi.bravi.shared.util.ConstraintViolations;
 import ua.com.bravi.bravi.shared.util.PublicIdGenerator;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -74,6 +83,8 @@ public class ProductService implements ProductsApi {
     private final CategoriesApi categoriesApi;
     private final ManufacturersApi manufacturersApi;
     private final AttributesApi attributesApi;
+    private final DiscountsApi discountsApi;
+    private final DiscountPredicates discountPredicates;
     private final MediaStorage mediaStorage;
 
     @Override
@@ -89,10 +100,14 @@ public class ProductService implements ProductsApi {
         Sort.Direction direction = sortOrder == SortOrder.ASC ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page - 1, limit, Sort.by(direction, sortBy.getProperty()));
 
+        // One instant filters and prices the page, so no product lands on the wrong side of a boundary.
+        Instant now = Instant.now();
         Page<ProductEntity> result = productRepository.findAll(
-                ProductSpecifications.forStore(storeId, query, categoryFilterIds, manufacturerFilterIds), pageable);
+                ProductSpecifications.forStore(storeId, query, categoryFilterIds, manufacturerFilterIds,
+                        discountPredicates, now), pageable);
         List<ProductEntity> products = result.getContent();
         Map<Long, List<ProductImageView>> imagesByProduct = imagesByProduct(products);
+        Map<Long, ProductDiscountView> discountsByProduct = discountsByProduct(storeId, products, now);
         Map<Long, CategoryView> categories = categoriesById(storeId, products);
         Map<Long, ManufacturerView> manufacturers = manufacturersById(storeId, products);
 
@@ -101,7 +116,8 @@ public class ProductService implements ProductsApi {
                         categories.get(entity.getCategoryId()),
                         manufacturers.get(entity.getManufacturerId()),
                         imagesByProduct.getOrDefault(entity.getId(), List.of()),
-                        List.of()))
+                        List.of(),
+                        discountsByProduct.get(entity.getId())))
                 .toList();
 
         int pages = (int) Math.ceil((double) result.getTotalElements() / limit);
@@ -158,6 +174,11 @@ public class ProductService implements ProductsApi {
         }
         if (patch.manufacturerId() != null) {
             entity.setManufacturerId(resolveManufacturerId(storeId, patch.manufacturerId()));
+        }
+        // Only a genuine price move can invalidate a fixed-amount discount, so an unchanged price skips the check.
+        if (patch.price() != null
+                && (entity.getPrice() == null || patch.price().compareTo(entity.getPrice()) != 0)) {
+            discountsApi.requireCompatibleWithPrice(storeId, entity.getId(), patch.price(), Instant.now());
         }
         productEntityMapper.updateEntity(entity, patch);
         try {
@@ -333,19 +354,55 @@ public class ProductService implements ProductsApi {
         return publicIds.stream().map(pid -> manufacturersApi.getByPublicId(storeId, pid).id()).toList();
     }
 
+    @Override
+    public List<DiscountView> listDiscounts(Long storeId, String publicId) {
+        ProductEntity product = requireOwned(storeId, publicId);
+        return discountsApi.listForProduct(storeId, product.getId(), Instant.now());
+    }
+
+    @Override
+    @Transactional
+    public List<DiscountView> replaceDiscounts(Long storeId, String publicId, List<SubmittedDiscount> discounts) {
+        ProductEntity product = requireOwned(storeId, publicId);
+        return discountsApi.replaceForProduct(storeId, product.getId(), product.getPrice(),
+                discounts, Instant.now());
+    }
+
+    @Override
+    @Transactional
+    public DiscountBulkResultView applyDiscountsBulk(Long storeId, List<String> publicIds, Discount discount) {
+        List<DiscountTarget> targets = publicIds.stream().distinct()
+                .map(publicId -> requireOwned(storeId, publicId))
+                .map(product -> new DiscountTarget(product.getId(), product.getPublicId(), product.getPrice()))
+                .toList();
+        return discountsApi.applyBulk(storeId, targets, discount, Instant.now());
+    }
+
     private ProductView toView(Long storeId, ProductEntity entity, List<ProductImageView> images) {
         CategoryView category = entity.getCategoryId() == null ? null
                 : categoriesApi.getById(storeId, entity.getCategoryId());
         ManufacturerView manufacturer = entity.getManufacturerId() == null ? null
                 : manufacturersApi.getById(storeId, entity.getManufacturerId());
+        ProductDiscountView discount = discountsApi
+                .activeForProduct(storeId, entity.getId(), entity.getPrice(), Instant.now())
+                .orElse(null);
         return toView(entity, category, manufacturer, images,
-                attributesApi.listProductValues(storeId, entity.getId(), entity.getCategoryId()));
+                attributesApi.listProductValues(storeId, entity.getId(), entity.getCategoryId()), discount);
     }
 
     private ProductView toView(ProductEntity entity, CategoryView category, ManufacturerView manufacturer,
-                               List<ProductImageView> images, List<ProductAttributeValueView> attributes) {
+                               List<ProductImageView> images, List<ProductAttributeValueView> attributes,
+                               ProductDiscountView discount) {
         return productEntityMapper.toView(entity, productEntityMapper.toRef(category),
-                productEntityMapper.toRef(manufacturer), images, attributes);
+                productEntityMapper.toRef(manufacturer), images, attributes, discount);
+    }
+
+    /** One query prices the whole page, and one instant keeps every row on the same side of a boundary. */
+    private Map<Long, ProductDiscountView> discountsByProduct(Long storeId, List<ProductEntity> products,
+                                                              Instant at) {
+        return discountsApi.activeByProduct(storeId, products.stream()
+                .map(product -> new DiscountTarget(product.getId(), product.getPublicId(), product.getPrice()))
+                .toList(), at);
     }
 
     /** Resolves neighbouring aggregates for a page with one lookup per distinct id rather than per product. */

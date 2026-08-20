@@ -17,6 +17,7 @@ public final class PublicIdGenerator {
     public static final String PRODUCT_PREFIX = "prd";
     public static final String ATTRIBUTE_PREFIX = "attr";
     public static final String ATTRIBUTE_OPTION_PREFIX = "aopt";
+    public static final String DISCOUNT_PREFIX = "dsc";
 
     private static final char[] ALPHABET =
             "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".toCharArray();

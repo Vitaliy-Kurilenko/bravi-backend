@@ -1,13 +1,19 @@
 package ua.com.bravi.bravi.seller.catalog.products.api;
 
 import ua.com.bravi.bravi.seller.catalog.attributes.api.ProductAttributeValueView;
+import ua.com.bravi.bravi.seller.catalog.discounts.api.DiscountView;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductStatus;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
-/** {@code attributes} is filled when a single product is read; a product page leaves it empty. */
+/**
+ * {@code attributes} is filled when a single product is read; a product page leaves it empty.
+ *
+ * <p>{@code discountedPrice} and {@code activeDiscount} are both null unless a discount is in effect
+ * right now. The price is computed here rather than stored, so it can never drift from the base price.
+ */
 public record ProductView(
         Long id,
         String publicId,
@@ -29,6 +35,8 @@ public record ProductView(
         Instant createdAt,
         Instant updatedAt,
         List<ProductImageView> images,
-        List<ProductAttributeValueView> attributes
+        List<ProductAttributeValueView> attributes,
+        BigDecimal discountedPrice,
+        DiscountView activeDiscount
 ) {
 }

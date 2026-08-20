@@ -33,6 +33,7 @@ erDiagram
     STORE_CATEGORIES ||--o{ STORE_CATEGORIES : parent_of
     STORE_MANUFACTURERS ||--o{ STORE_PRODUCTS : brands
     STORE_PRODUCTS ||--o{ STORE_PRODUCT_IMAGES : has
+    STORE_PRODUCTS ||--o{ STORE_PRODUCT_DISCOUNTS : discounted_by
 
     ATTRIBUTE_TEMPLATES ||--o{ ATTRIBUTE_TEMPLATE_OPTIONS : offers
     ATTRIBUTE_TEMPLATES ||--o{ STORE_ATTRIBUTES : adopted_as
@@ -263,6 +264,19 @@ erDiagram
         string original_filename
         int sort_order
         datetime created_at
+    }
+
+    STORE_PRODUCT_DISCOUNTS {
+        bigint id PK
+        string public_id UK
+        bigint product_id FK
+        string type
+        decimal value
+        datetime starts_at
+        datetime ends_at
+        string label
+        datetime created_at
+        datetime updated_at
     }
 
     ATTRIBUTE_TEMPLATES {

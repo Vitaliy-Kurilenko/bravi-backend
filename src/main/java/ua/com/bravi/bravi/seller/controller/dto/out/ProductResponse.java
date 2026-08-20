@@ -27,6 +27,10 @@ public record ProductResponse(
         ProductStatus status,
         List<ProductImageResponse> images,
         List<ProductAttributeValueResponse> attributes,
+        @JsonProperty("discounted_price")
+        BigDecimal discountedPrice,
+        @JsonProperty("active_discount")
+        ActiveDiscountResponse activeDiscount,
         @JsonProperty("created_at")
         Instant createdAt,
         @JsonProperty("updated_at")

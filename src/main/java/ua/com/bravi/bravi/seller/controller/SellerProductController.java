@@ -51,7 +51,8 @@ public class SellerProductController {
     private final StoreContext storeContext;
 
     @Operation(summary = "Search products",
-            description = "Returns a paginated, filtered and sorted list of the current store's products")
+            description = "Returns a paginated, filtered and sorted list of the current store's products. "
+                    + "has_active_discount keeps only products whose price a discount is shaping right now, or only those it is not.")
     @GetMapping
     @PreAuthorize("hasPermission('PRODUCT', 'READ')")
     public ProductPageResponse searchProducts(
@@ -66,6 +67,7 @@ public class SellerProductController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant createdFrom,
             @RequestParam(name = "created_to", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant createdTo,
+            @RequestParam(name = "has_active_discount", required = false) Boolean hasActiveDiscount,
             @RequestParam(name = "sort_by", required = false) String sortBy,
             @RequestParam(name = "sort_order", defaultValue = "DESC") SortOrder sortOrder,
             @RequestParam(name = "page", defaultValue = "1") int page,
@@ -73,7 +75,7 @@ public class SellerProductController {
     ) {
         ProductSearchQuery query = new ProductSearchQuery(
                 search, categoryIds, manufacturerIds, stockStatuses, statuses,
-                minPrice, maxPrice, createdFrom, createdTo,
+                minPrice, maxPrice, createdFrom, createdTo, hasActiveDiscount,
                 sortBy == null ? null : ProductSortBy.fromParam(sortBy), sortOrder, page, limit
         );
         return productDtoMapper.toPageResponse(productsApi.search(storeContext.get(), query));

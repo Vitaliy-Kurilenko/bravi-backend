@@ -16,6 +16,8 @@ public record ProductSearchQuery(
         BigDecimal maxPrice,
         Instant createdFrom,
         Instant createdTo,
+        /** Three-state: null leaves the filter off, true keeps only discounted products, false excludes them. */
+        Boolean hasActiveDiscount,
         ProductSortBy sortBy,
         SortOrder sortOrder,
         int page,

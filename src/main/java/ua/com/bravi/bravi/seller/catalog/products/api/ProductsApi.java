@@ -3,6 +3,10 @@ package ua.com.bravi.bravi.seller.catalog.products.api;
 import ua.com.bravi.bravi.seller.catalog.attributes.api.ProductAttributeValueView;
 import ua.com.bravi.bravi.seller.catalog.attributes.api.ProductAttributesView;
 import ua.com.bravi.bravi.seller.catalog.attributes.domain.AttributeValue;
+import ua.com.bravi.bravi.seller.catalog.discounts.api.DiscountBulkResultView;
+import ua.com.bravi.bravi.seller.catalog.discounts.api.DiscountView;
+import ua.com.bravi.bravi.seller.catalog.discounts.domain.Discount;
+import ua.com.bravi.bravi.seller.catalog.discounts.domain.SubmittedDiscount;
 import ua.com.bravi.bravi.seller.catalog.products.domain.Product;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductSearchQuery;
 import ua.com.bravi.bravi.shared.media.PresignedUpload;
@@ -54,4 +58,19 @@ public interface ProductsApi {
      * Returns the number of products updated.
      */
     int applyAttributesBulk(Long storeId, List<String> publicIds, List<AttributeValue> values);
+
+    /** The product's discount schedule, earliest period first, with statuses resolved now. */
+    List<DiscountView> listDiscounts(Long storeId, String publicId);
+
+    /**
+     * Replaces the product's whole discount schedule. Entries carrying a public id keep their row and
+     * creation time; a stored discount left out of the submission is removed.
+     */
+    List<DiscountView> replaceDiscounts(Long storeId, String publicId, List<SubmittedDiscount> discounts);
+
+    /**
+     * Applies one discount to many products, skipping those where it would collide with an existing
+     * period or would not stay below the product's price.
+     */
+    DiscountBulkResultView applyDiscountsBulk(Long storeId, List<String> publicIds, Discount discount);
 }

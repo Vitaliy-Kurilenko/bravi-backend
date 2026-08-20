@@ -3,9 +3,11 @@ package ua.com.bravi.bravi.seller.catalog.products.persistence;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;
+import ua.com.bravi.bravi.seller.catalog.discounts.api.DiscountPredicates;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductSearchQuery;
 import ua.com.bravi.bravi.seller.catalog.products.persistence.entity.ProductEntity;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -19,9 +21,11 @@ public final class ProductSpecifications {
     /**
      * {@code categoryIds} and {@code manufacturerIds} are already resolved internal bigint ids;
      * the product API translates public ids through the categories and manufacturers APIs beforehand.
+     * {@code at} is passed in rather than sampled here so a page is filtered and priced by one instant.
      */
     public static Specification<ProductEntity> forStore(Long storeId, ProductSearchQuery query,
-                                                        List<Long> categoryIds, List<Long> manufacturerIds) {
+                                                        List<Long> categoryIds, List<Long> manufacturerIds,
+                                                        DiscountPredicates discountPredicates, Instant at) {
         return (root, criteriaQuery, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.equal(root.get("storeId"), storeId));
@@ -50,6 +54,11 @@ public final class ProductSpecifications {
             }
             if (query.createdTo() != null) {
                 predicates.add(cb.lessThanOrEqualTo(root.get("createdAt"), query.createdTo()));
+            }
+            // criteriaQuery is null on the exists() path, which never carries this filter.
+            if (query.hasActiveDiscount() != null && criteriaQuery != null) {
+                Predicate discounted = discountPredicates.activeAt(cb, criteriaQuery, root.get("id"), at);
+                predicates.add(query.hasActiveDiscount() ? discounted : cb.not(discounted));
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };
