@@ -31,6 +31,7 @@ import ua.com.bravi.bravi.seller.catalog.products.api.ProductPage;
 import ua.com.bravi.bravi.seller.catalog.products.api.ProductView;
 import ua.com.bravi.bravi.seller.catalog.products.api.ProductsApi;
 import ua.com.bravi.bravi.seller.catalog.products.domain.Product;
+import ua.com.bravi.bravi.seller.catalog.products.domain.ProductFilterRefs;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductGallery;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductSearchQuery;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductSortBy;
@@ -44,6 +45,12 @@ import ua.com.bravi.bravi.seller.catalog.products.persistence.entity.ProductEnti
 import ua.com.bravi.bravi.seller.catalog.products.persistence.entity.ProductImageEntity;
 import ua.com.bravi.bravi.seller.catalog.products.persistence.mapper.ProductEntityMapper;
 import ua.com.bravi.bravi.seller.catalog.products.persistence.mapper.ProductImageEntityMapper;
+import ua.com.bravi.bravi.seller.tags.api.TagPredicates;
+import ua.com.bravi.bravi.seller.tags.api.TagView;
+import ua.com.bravi.bravi.seller.tags.api.TagsApi;
+import ua.com.bravi.bravi.seller.tags.domain.TagBulkMode;
+import ua.com.bravi.bravi.seller.tags.domain.TagRef;
+import ua.com.bravi.bravi.seller.tags.domain.TagTarget;
 import ua.com.bravi.bravi.shared.common.SortOrder;
 import ua.com.bravi.bravi.shared.exception.NotFoundException;
 import ua.com.bravi.bravi.shared.media.MediaCategory;
@@ -85,6 +92,8 @@ public class ProductService implements ProductsApi {
     private final AttributesApi attributesApi;
     private final DiscountsApi discountsApi;
     private final DiscountPredicates discountPredicates;
+    private final TagsApi tagsApi;
+    private final TagPredicates tagPredicates;
     private final MediaStorage mediaStorage;
 
     @Override
@@ -94,8 +103,10 @@ public class ProductService implements ProductsApi {
         ProductSortBy sortBy = query.sortBy() != null ? query.sortBy() : ProductSortBy.CREATED_AT;
         SortOrder sortOrder = query.sortOrder() != null ? query.sortOrder() : SortOrder.DESC;
 
-        List<Long> categoryFilterIds = resolveCategoryFilter(storeId, query.categoryIds());
-        List<Long> manufacturerFilterIds = resolveManufacturerFilter(storeId, query.manufacturerIds());
+        ProductFilterRefs refs = new ProductFilterRefs(
+                resolveCategoryFilter(storeId, query.categoryIds()),
+                resolveManufacturerFilter(storeId, query.manufacturerIds()),
+                resolveTagFilter(storeId, query.tagIds()));
 
         Sort.Direction direction = sortOrder == SortOrder.ASC ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page - 1, limit, Sort.by(direction, sortBy.getProperty()));
@@ -103,10 +114,12 @@ public class ProductService implements ProductsApi {
         // One instant filters and prices the page, so no product lands on the wrong side of a boundary.
         Instant now = Instant.now();
         Page<ProductEntity> result = productRepository.findAll(
-                ProductSpecifications.forStore(storeId, query, categoryFilterIds, manufacturerFilterIds,
-                        discountPredicates, now), pageable);
+                ProductSpecifications.forStore(storeId, query, refs, discountPredicates,
+                        tagPredicates, now), pageable);
         List<ProductEntity> products = result.getContent();
         Map<Long, List<ProductImageView>> imagesByProduct = imagesByProduct(products);
+        Map<Long, List<TagView>> tagsByProduct = tagsApi.listByOwner(storeId, TagTarget.PRODUCT,
+                products.stream().map(ProductEntity::getId).toList());
         Map<Long, ProductDiscountView> discountsByProduct = discountsByProduct(storeId, products, now);
         Map<Long, CategoryView> categories = categoriesById(storeId, products);
         Map<Long, ManufacturerView> manufacturers = manufacturersById(storeId, products);
@@ -117,6 +130,7 @@ public class ProductService implements ProductsApi {
                         manufacturers.get(entity.getManufacturerId()),
                         imagesByProduct.getOrDefault(entity.getId(), List.of()),
                         List.of(),
+                        tagsByProduct.getOrDefault(entity.getId(), List.of()),
                         discountsByProduct.get(entity.getId())))
                 .toList();
 
@@ -159,6 +173,9 @@ public class ProductService implements ProductsApi {
         if (product.attributes() != null && !product.attributes().isEmpty()) {
             attributesApi.replaceProductValues(storeId, saved.getId(), saved.getCategoryId(), product.attributes());
         }
+        if (product.tags() != null) {
+            tagsApi.replaceFor(storeId, TagTarget.PRODUCT, saved.getId(), product.tags());
+        }
         log.info("Product created storeId={} productId={} publicId={}",
                 storeId, saved.getId(), saved.getPublicId());
         return toView(storeId, saved, List.of());
@@ -188,6 +205,9 @@ public class ProductService implements ProductsApi {
         }
         if (patch.attributes() != null) {
             attributesApi.replaceProductValues(storeId, entity.getId(), entity.getCategoryId(), patch.attributes());
+        }
+        if (patch.tags() != null) {
+            tagsApi.replaceFor(storeId, TagTarget.PRODUCT, entity.getId(), patch.tags());
         }
         log.info("Product updated storeId={} publicId={}", storeId, publicId);
     }
@@ -325,6 +345,26 @@ public class ProductService implements ProductsApi {
         return products.size();
     }
 
+    @Override
+    public List<TagView> listTags(Long storeId, String publicId) {
+        return tagsApi.listFor(storeId, TagTarget.PRODUCT, requireOwned(storeId, publicId).getId());
+    }
+
+    @Override
+    @Transactional
+    public List<TagView> replaceTags(Long storeId, String publicId, List<TagRef> tags) {
+        return tagsApi.replaceFor(storeId, TagTarget.PRODUCT, requireOwned(storeId, publicId).getId(), tags);
+    }
+
+    @Override
+    @Transactional
+    public int applyTagsBulk(Long storeId, List<String> publicIds, List<TagRef> tags, TagBulkMode mode) {
+        List<Long> productIds = publicIds.stream().distinct()
+                .map(publicId -> requireOwned(storeId, publicId).getId())
+                .toList();
+        return tagsApi.applyBulk(storeId, TagTarget.PRODUCT, productIds, tags, mode);
+    }
+
     private void validateStockStatus(Long stockStatusId) {
         if (stockStatusId != null && !stockStatusRepository.existsById(stockStatusId)) {
             throw new NotFoundException("Stock status not found");
@@ -352,6 +392,13 @@ public class ProductService implements ProductsApi {
             return null;
         }
         return publicIds.stream().map(pid -> manufacturersApi.getByPublicId(storeId, pid).id()).toList();
+    }
+
+    private List<Long> resolveTagFilter(Long storeId, List<String> publicIds) {
+        if (publicIds == null || publicIds.isEmpty()) {
+            return null;
+        }
+        return tagsApi.resolveFilter(storeId, TagTarget.PRODUCT, publicIds);
     }
 
     @Override
@@ -387,14 +434,16 @@ public class ProductService implements ProductsApi {
                 .activeForProduct(storeId, entity.getId(), entity.getPrice(), Instant.now())
                 .orElse(null);
         return toView(entity, category, manufacturer, images,
-                attributesApi.listProductValues(storeId, entity.getId(), entity.getCategoryId()), discount);
+                attributesApi.listProductValues(storeId, entity.getId(), entity.getCategoryId()),
+                tagsApi.listFor(storeId, TagTarget.PRODUCT, entity.getId()), discount);
     }
 
     private ProductView toView(ProductEntity entity, CategoryView category, ManufacturerView manufacturer,
                                List<ProductImageView> images, List<ProductAttributeValueView> attributes,
-                               ProductDiscountView discount) {
+                               List<TagView> tags, ProductDiscountView discount) {
         return productEntityMapper.toView(entity, productEntityMapper.toRef(category),
-                productEntityMapper.toRef(manufacturer), images, attributes, discount);
+                productEntityMapper.toRef(manufacturer), images, attributes,
+                productEntityMapper.toTagRefs(tags), discount);
     }
 
     /** One query prices the whole page, and one instant keeps every row on the same side of a boundary. */

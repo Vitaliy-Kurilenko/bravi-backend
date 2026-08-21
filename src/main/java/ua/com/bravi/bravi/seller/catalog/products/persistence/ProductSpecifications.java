@@ -4,8 +4,12 @@ import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;
 import ua.com.bravi.bravi.seller.catalog.discounts.api.DiscountPredicates;
+import ua.com.bravi.bravi.seller.catalog.products.domain.ProductFilterRefs;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductSearchQuery;
 import ua.com.bravi.bravi.seller.catalog.products.persistence.entity.ProductEntity;
+import ua.com.bravi.bravi.seller.tags.api.TagPredicates;
+import ua.com.bravi.bravi.seller.tags.domain.TagTarget;
+import ua.com.bravi.bravi.seller.tags.domain.TagsMatch;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -19,13 +23,14 @@ public final class ProductSpecifications {
     }
 
     /**
-     * {@code categoryIds} and {@code manufacturerIds} are already resolved internal bigint ids;
-     * the product API translates public ids through the categories and manufacturers APIs beforehand.
-     * {@code at} is passed in rather than sampled here so a page is filtered and priced by one instant.
+     * {@code refs} carries filters already resolved into internal bigint ids; the product API
+     * translates the public ids through the neighbouring APIs beforehand. {@code at} is passed in
+     * rather than sampled here so a page is filtered and priced by one instant.
      */
     public static Specification<ProductEntity> forStore(Long storeId, ProductSearchQuery query,
-                                                        List<Long> categoryIds, List<Long> manufacturerIds,
-                                                        DiscountPredicates discountPredicates, Instant at) {
+                                                        ProductFilterRefs refs,
+                                                        DiscountPredicates discountPredicates,
+                                                        TagPredicates tagPredicates, Instant at) {
         return (root, criteriaQuery, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.equal(root.get("storeId"), storeId));
@@ -38,8 +43,8 @@ public final class ProductSpecifications {
                         cb.like(cb.lower(root.get("sku")), like)
                 ));
             }
-            addIn(predicates, root.get("categoryId"), categoryIds);
-            addIn(predicates, root.get("manufacturerId"), manufacturerIds);
+            addIn(predicates, root.get("categoryId"), refs.categoryIds());
+            addIn(predicates, root.get("manufacturerId"), refs.manufacturerIds());
             addIn(predicates, root.get("stockStatusId"), query.stockStatusIds());
             addIn(predicates, root.get("status"), query.statuses());
 
@@ -59,6 +64,10 @@ public final class ProductSpecifications {
             if (query.hasActiveDiscount() != null && criteriaQuery != null) {
                 Predicate discounted = discountPredicates.activeAt(cb, criteriaQuery, root.get("id"), at);
                 predicates.add(query.hasActiveDiscount() ? discounted : cb.not(discounted));
+            }
+            if (refs.tagIds() != null && !refs.tagIds().isEmpty() && criteriaQuery != null) {
+                predicates.add(tagPredicates.taggedWith(TagTarget.PRODUCT, cb, criteriaQuery,
+                        root.get("id"), refs.tagIds(), query.tagsMatch() == TagsMatch.ALL));
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };

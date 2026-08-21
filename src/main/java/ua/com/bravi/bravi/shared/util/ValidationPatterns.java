@@ -15,6 +15,9 @@ public final class ValidationPatterns {
     /** Stable machine-readable identifier a seller assigns, such as an attribute or option code. */
     public static final Pattern RESOURCE_CODE = Pattern.compile("^[A-Z][A-Z0-9_]{0,63}$");
 
+    /** Canonical badge colour: seven characters, upper-case, exactly as stored. */
+    public static final Pattern HEX_COLOR = Pattern.compile("^#[0-9A-F]{6}$");
+
     private ValidationPatterns() {
     }
 }

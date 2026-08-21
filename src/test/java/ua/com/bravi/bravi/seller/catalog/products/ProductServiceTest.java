@@ -35,6 +35,8 @@ import ua.com.bravi.bravi.seller.catalog.products.persistence.mapper.ProductImag
 import ua.com.bravi.bravi.shared.exception.ForbiddenException;
 import ua.com.bravi.bravi.shared.exception.NotFoundException;
 import ua.com.bravi.bravi.seller.catalog.discounts.api.DiscountPredicates;
+import ua.com.bravi.bravi.seller.tags.api.TagPredicates;
+import ua.com.bravi.bravi.seller.tags.api.TagsApi;
 import ua.com.bravi.bravi.seller.catalog.discounts.api.DiscountsApi;
 import ua.com.bravi.bravi.shared.media.MediaStorage;
 import ua.com.bravi.bravi.shared.media.StoredObject;
@@ -83,6 +85,8 @@ class ProductServiceTest {
     private final MediaStorage mediaStorage = mock(MediaStorage.class);
     private final DiscountsApi discountsApi = mock(DiscountsApi.class);
     private final DiscountPredicates discountPredicates = mock(DiscountPredicates.class);
+    private final TagsApi tagsApi = mock(TagsApi.class);
+    private final TagPredicates tagPredicates = mock(TagPredicates.class);
 
     private ProductService service;
 
@@ -90,12 +94,12 @@ class ProductServiceTest {
     void setUp() {
         service = new ProductService(productRepository, imageRepository, stockStatusRepository,
                 productEntityMapper, imageEntityMapper, categoriesApi, manufacturersApi, attributesApi,
-                discountsApi, discountPredicates, mediaStorage);
+                discountsApi, discountPredicates, tagsApi, tagPredicates, mediaStorage);
     }
 
     private static Product product(String categoryId, String manufacturerId, Long stockStatusId, ProductStatus status) {
         return new Product(null, null, null, categoryId, manufacturerId, stockStatusId, "Widget", null, "CODE-1",
-                null, BigDecimal.ONE, 1, null, null, null, null, status, null, null, null);
+                null, BigDecimal.ONE, 1, null, null, null, null, status, null, null, null, null);
     }
 
     private static ProductEntity productEntityOwnedBy(Long storeId) {
@@ -118,7 +122,8 @@ class ProductServiceTest {
     }
 
     private static ProductSearchQuery searchQuery() {
-        return new ProductSearchQuery(null, null, null, null, null, null, null, null, null, null, null, null, 1, 20);
+        return new ProductSearchQuery(null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null, 1, 20);
     }
 
     @Test
@@ -128,7 +133,7 @@ class ProductServiceTest {
         when(stockStatusRepository.existsById(STOCK_STATUS_ID)).thenReturn(true);
         when(productEntityMapper.toEntity(any())).thenReturn(entity);
         when(productRepository.save(entity)).thenReturn(entity);
-        when(productEntityMapper.toView(any(), any(), any(), any(), any(), any())).thenReturn(mock(ProductView.class));
+        when(productEntityMapper.toView(any(), any(), any(), any(), any(), any(), any())).thenReturn(mock(ProductView.class));
 
         service.create(STORE_ID, product(null, null, STOCK_STATUS_ID, null));
 
@@ -147,7 +152,7 @@ class ProductServiceTest {
         when(categoriesApi.getByPublicId(STORE_ID, "cat_x")).thenReturn(category);
         when(categoriesApi.getById(STORE_ID, 55L)).thenReturn(category);
         when(productRepository.save(entity)).thenReturn(entity);
-        when(productEntityMapper.toView(any(), any(), any(), any(), any(), any())).thenReturn(mock(ProductView.class));
+        when(productEntityMapper.toView(any(), any(), any(), any(), any(), any(), any())).thenReturn(mock(ProductView.class));
 
         service.create(STORE_ID, product("cat_x", null, STOCK_STATUS_ID, null));
 
@@ -248,7 +253,7 @@ class ProductServiceTest {
 
         service.getByPublicId(STORE_ID, PUBLIC_ID);
 
-        verify(productEntityMapper).toView(eq(entity), eq(CATEGORY_REF), eq(MANUFACTURER_REF), any(), any(), any());
+        verify(productEntityMapper).toView(eq(entity), eq(CATEGORY_REF), eq(MANUFACTURER_REF), any(), any(), any(), any());
     }
 
     @Test
@@ -260,7 +265,7 @@ class ProductServiceTest {
 
         verify(categoriesApi, never()).getById(any(), any());
         verify(manufacturersApi, never()).getById(any(), any());
-        verify(productEntityMapper).toView(eq(entity), isNull(), isNull(), any(), any(), any());
+        verify(productEntityMapper).toView(eq(entity), isNull(), isNull(), any(), any(), any(), any());
     }
 
     @Test
@@ -278,13 +283,13 @@ class ProductServiceTest {
         when(manufacturersApi.getById(STORE_ID, 66L)).thenReturn(manufacturer());
         when(productEntityMapper.toRef(category())).thenReturn(CATEGORY_REF);
         when(productEntityMapper.toRef(manufacturer())).thenReturn(MANUFACTURER_REF);
-        when(productEntityMapper.toView(any(), any(), any(), any(), any(), any())).thenReturn(mock(ProductView.class));
+        when(productEntityMapper.toView(any(), any(), any(), any(), any(), any(), any())).thenReturn(mock(ProductView.class));
 
         service.search(STORE_ID, searchQuery());
 
         verify(categoriesApi, times(1)).getById(STORE_ID, 55L);
         verify(manufacturersApi, times(1)).getById(STORE_ID, 66L);
-        verify(productEntityMapper, times(2)).toView(any(), eq(CATEGORY_REF), eq(MANUFACTURER_REF), any(), any(), any());
+        verify(productEntityMapper, times(2)).toView(any(), eq(CATEGORY_REF), eq(MANUFACTURER_REF), any(), any(), any(), any());
     }
 
     @Test

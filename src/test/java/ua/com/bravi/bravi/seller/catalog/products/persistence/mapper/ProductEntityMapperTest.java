@@ -60,7 +60,8 @@ class ProductEntityMapperTest {
 
     @Test
     void toViewNestsRefsAndKeepsProductOwnFields() {
-        ProductView view = mapper.toView(entity(), mapper.toRef(category()), mapper.toRef(manufacturer()), List.of(), List.of(), null);
+        ProductView view = mapper.toView(entity(), mapper.toRef(category()), mapper.toRef(manufacturer()),
+                List.of(), List.of(), List.of(), null);
 
         assertThat(view.id()).isEqualTo(42L);
         assertThat(view.publicId()).isEqualTo("prd_x");
@@ -73,7 +74,7 @@ class ProductEntityMapperTest {
 
     @Test
     void toViewLeavesRefsNullForProductWithoutCategoryOrManufacturer() {
-        ProductView view = mapper.toView(entity(), null, null, List.of(), List.of(), null);
+        ProductView view = mapper.toView(entity(), null, null, List.of(), List.of(), List.of(), null);
 
         assertThat(view.category()).isNull();
         assertThat(view.manufacturer()).isNull();

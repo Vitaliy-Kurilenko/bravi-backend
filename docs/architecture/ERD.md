@@ -34,6 +34,9 @@ erDiagram
     STORE_MANUFACTURERS ||--o{ STORE_PRODUCTS : brands
     STORE_PRODUCTS ||--o{ STORE_PRODUCT_IMAGES : has
     STORE_PRODUCTS ||--o{ STORE_PRODUCT_DISCOUNTS : discounted_by
+    STORES ||--o{ STORE_TAGS : owns
+    STORE_TAGS ||--o{ STORE_PRODUCT_TAGS : labels
+    STORE_PRODUCTS ||--o{ STORE_PRODUCT_TAGS : tagged_by
 
     ATTRIBUTE_TEMPLATES ||--o{ ATTRIBUTE_TEMPLATE_OPTIONS : offers
     ATTRIBUTE_TEMPLATES ||--o{ STORE_ATTRIBUTES : adopted_as
@@ -277,6 +280,25 @@ erDiagram
         string label
         datetime created_at
         datetime updated_at
+    }
+
+    STORE_TAGS {
+        bigint id PK
+        string public_id UK
+        bigint store_id FK
+        string target
+        string name
+        string color
+        string status
+        datetime created_at
+        datetime updated_at
+    }
+
+    STORE_PRODUCT_TAGS {
+        bigint id PK
+        bigint product_id FK
+        bigint tag_id FK
+        datetime created_at
     }
 
     ATTRIBUTE_TEMPLATES {

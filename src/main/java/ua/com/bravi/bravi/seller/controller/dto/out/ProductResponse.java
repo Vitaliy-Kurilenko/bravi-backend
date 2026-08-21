@@ -27,6 +27,7 @@ public record ProductResponse(
         ProductStatus status,
         List<ProductImageResponse> images,
         List<ProductAttributeValueResponse> attributes,
+        List<TagRefResponse> tags,
         @JsonProperty("discounted_price")
         BigDecimal discountedPrice,
         @JsonProperty("active_discount")

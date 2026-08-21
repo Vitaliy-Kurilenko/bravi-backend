@@ -11,6 +11,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import ua.com.bravi.bravi.AbstractPostgresIT;
+import ua.com.bravi.bravi.seller.catalog.products.domain.ProductFilterRefs;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductSearchQuery;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductStatus;
 import ua.com.bravi.bravi.seller.catalog.products.persistence.entity.ProductEntity;
@@ -71,7 +72,8 @@ class ProductEntityRepositoryTest extends AbstractPostgresIT {
     }
 
     private static ProductSearchQuery query(String search, BigDecimal minPrice) {
-        return new ProductSearchQuery(search, null, null, null, null, minPrice, null, null, null, null, null, null, 1, 20);
+        return new ProductSearchQuery(search, null, null, null, null, minPrice, null, null, null, null,
+                null, null, null, null, 1, 20);
     }
 
     @Test
@@ -103,7 +105,7 @@ class ProductEntityRepositoryTest extends AbstractPostgresIT {
         repository.saveAndFlush(newProduct(storeId, "Samsung", "P2", "100"));
 
         Page<ProductEntity> result = repository.findAll(
-                ProductSpecifications.forStore(storeId, query("apple", null), null, null, null, Instant.now()), Pageable.unpaged());
+                ProductSpecifications.forStore(storeId, query("apple", null), ProductFilterRefs.none(), null, null, Instant.now()), Pageable.unpaged());
 
         assertThat(result.getContent()).extracting(ProductEntity::getName).containsExactly("Apple iPhone");
     }
@@ -115,7 +117,7 @@ class ProductEntityRepositoryTest extends AbstractPostgresIT {
         repository.saveAndFlush(newProduct(storeId, "Pricey", "P2", "100"));
 
         Page<ProductEntity> result = repository.findAll(
-                ProductSpecifications.forStore(storeId, query(null, new BigDecimal("50")), null, null, null, Instant.now()), Pageable.unpaged());
+                ProductSpecifications.forStore(storeId, query(null, new BigDecimal("50")), ProductFilterRefs.none(), null, null, Instant.now()), Pageable.unpaged());
 
         assertThat(result.getContent()).extracting(ProductEntity::getName).containsExactly("Pricey");
     }
@@ -131,7 +133,7 @@ class ProductEntityRepositoryTest extends AbstractPostgresIT {
 
         Pageable pageable = PageRequest.of(0, 2, Sort.by(Sort.Direction.ASC, "name"));
         Page<ProductEntity> firstPage = repository.findAll(
-                ProductSpecifications.forStore(storeId, query(null, null), null, null, null, Instant.now()), pageable);
+                ProductSpecifications.forStore(storeId, query(null, null), ProductFilterRefs.none(), null, null, Instant.now()), pageable);
 
         assertThat(firstPage.getTotalElements()).isEqualTo(3); // only the own store
         assertThat(firstPage.getContent()).extracting(ProductEntity::getName).containsExactly("A", "B");
@@ -147,9 +149,11 @@ class ProductEntityRepositoryTest extends AbstractPostgresIT {
         repository.saveAndFlush(inactive);
 
         ProductSearchQuery q = new ProductSearchQuery(null, null, null, null,
-                List.of(ProductStatus.INACTIVE), null, null, null, null, null, null, SortOrder.ASC, 1, 20);
+                List.of(ProductStatus.INACTIVE), null, null, null, null, null, null, null, null,
+                SortOrder.ASC, 1, 20);
         Page<ProductEntity> result = repository.findAll(
-                ProductSpecifications.forStore(storeId, q, null, null, null, Instant.now()), Pageable.unpaged());
+                ProductSpecifications.forStore(storeId, q, ProductFilterRefs.none(), null, null, Instant.now()),
+                Pageable.unpaged());
 
         assertThat(result.getContent()).extracting(ProductEntity::getName).containsExactly("Inactive");
     }

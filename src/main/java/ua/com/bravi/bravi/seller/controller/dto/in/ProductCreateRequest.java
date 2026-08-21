@@ -36,6 +36,8 @@ public record ProductCreateRequest(
         BigDecimal length,
         ProductStatus status,
         @Valid
-        List<ProductAttributeValueRequest> attributes
+        List<ProductAttributeValueRequest> attributes,
+        @Valid
+        List<ProductTagRequest> tags
 ) {
 }

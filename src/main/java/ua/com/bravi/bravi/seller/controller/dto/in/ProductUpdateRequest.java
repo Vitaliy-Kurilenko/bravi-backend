@@ -8,7 +8,10 @@ import ua.com.bravi.bravi.seller.catalog.products.domain.ProductStatus;
 import java.math.BigDecimal;
 import java.util.List;
 
-/** {@code attributes}, when present, replaces the product's whole set of characteristic values. */
+/**
+ * {@code attributes} and {@code tags}, when present, replace the product's whole set. An absent
+ * field leaves what the product carries alone; an empty list clears it.
+ */
 public record ProductUpdateRequest(
         String name,
         String sku,
@@ -30,6 +33,8 @@ public record ProductUpdateRequest(
         BigDecimal length,
         ProductStatus status,
         @Valid
-        List<ProductAttributeValueRequest> attributes
+        List<ProductAttributeValueRequest> attributes,
+        @Valid
+        List<ProductTagRequest> tags
 ) {
 }

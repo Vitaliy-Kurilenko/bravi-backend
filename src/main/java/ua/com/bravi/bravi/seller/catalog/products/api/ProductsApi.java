@@ -9,6 +9,9 @@ import ua.com.bravi.bravi.seller.catalog.discounts.domain.Discount;
 import ua.com.bravi.bravi.seller.catalog.discounts.domain.SubmittedDiscount;
 import ua.com.bravi.bravi.seller.catalog.products.domain.Product;
 import ua.com.bravi.bravi.seller.catalog.products.domain.ProductSearchQuery;
+import ua.com.bravi.bravi.seller.tags.api.TagView;
+import ua.com.bravi.bravi.seller.tags.domain.TagBulkMode;
+import ua.com.bravi.bravi.seller.tags.domain.TagRef;
 import ua.com.bravi.bravi.shared.media.PresignedUpload;
 
 import java.util.List;
@@ -73,4 +76,16 @@ public interface ProductsApi {
      * period or would not stay below the product's price.
      */
     DiscountBulkResultView applyDiscountsBulk(Long storeId, List<String> publicIds, Discount discount);
+
+    /** The tags pinned on the product, by name. */
+    List<TagView> listTags(Long storeId, String publicId);
+
+    /**
+     * Leaves the product carrying exactly the submitted tags. An entry naming a tag the store does
+     * not own yet mints it, so a seller can tag from the product card alone.
+     */
+    List<TagView> replaceTags(Long storeId, String publicId, List<TagRef> tags);
+
+    /** Applies the same tags to many products at once. Returns the number of products changed. */
+    int applyTagsBulk(Long storeId, List<String> publicIds, List<TagRef> tags, TagBulkMode mode);
 }

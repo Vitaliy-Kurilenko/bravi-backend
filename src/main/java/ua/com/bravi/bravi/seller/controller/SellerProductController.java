@@ -31,6 +31,7 @@ import ua.com.bravi.bravi.seller.controller.dto.out.ProductImageUploadUrlRespons
 import ua.com.bravi.bravi.seller.controller.dto.out.ProductPageResponse;
 import ua.com.bravi.bravi.seller.controller.dto.out.ProductResponse;
 import ua.com.bravi.bravi.seller.controller.mapper.ProductDtoMapper;
+import ua.com.bravi.bravi.seller.tags.domain.TagsMatch;
 import ua.com.bravi.bravi.shared.common.SortOrder;
 import ua.com.bravi.bravi.shared.component.RequireStore;
 import ua.com.bravi.bravi.seller.stores.api.StoreContext;
@@ -52,7 +53,8 @@ public class SellerProductController {
 
     @Operation(summary = "Search products",
             description = "Returns a paginated, filtered and sorted list of the current store's products. "
-                    + "has_active_discount keeps only products whose price a discount is shaping right now, or only those it is not.")
+                    + "has_active_discount keeps only products whose price a discount is shaping right now, or only those it is not. "
+                    + "tag_ids narrows to tagged products; tags_match=any accepts a product carrying one of them, all demands every one.")
     @GetMapping
     @PreAuthorize("hasPermission('PRODUCT', 'READ')")
     public ProductPageResponse searchProducts(
@@ -68,6 +70,8 @@ public class SellerProductController {
             @RequestParam(name = "created_to", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant createdTo,
             @RequestParam(name = "has_active_discount", required = false) Boolean hasActiveDiscount,
+            @RequestParam(name = "tag_ids", required = false) List<String> tagIds,
+            @RequestParam(name = "tags_match", defaultValue = "ANY") TagsMatch tagsMatch,
             @RequestParam(name = "sort_by", required = false) String sortBy,
             @RequestParam(name = "sort_order", defaultValue = "DESC") SortOrder sortOrder,
             @RequestParam(name = "page", defaultValue = "1") int page,
@@ -75,7 +79,7 @@ public class SellerProductController {
     ) {
         ProductSearchQuery query = new ProductSearchQuery(
                 search, categoryIds, manufacturerIds, stockStatuses, statuses,
-                minPrice, maxPrice, createdFrom, createdTo, hasActiveDiscount,
+                minPrice, maxPrice, createdFrom, createdTo, hasActiveDiscount, tagIds, tagsMatch,
                 sortBy == null ? null : ProductSortBy.fromParam(sortBy), sortOrder, page, limit
         );
         return productDtoMapper.toPageResponse(productsApi.search(storeContext.get(), query));

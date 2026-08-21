@@ -1,12 +1,16 @@
 package ua.com.bravi.bravi.seller.catalog.products.domain;
 
 import ua.com.bravi.bravi.seller.catalog.attributes.domain.AttributeValue;
+import ua.com.bravi.bravi.seller.tags.domain.TagRef;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
-/** {@code attributes} carries the characteristic values submitted alongside the product itself. */
+/**
+ * {@code attributes} and {@code tags} carry what was submitted alongside the product itself. On a
+ * patch both tell absent from empty: null leaves the collection alone, an empty list clears it.
+ */
 public record Product(
         Long id,
         String publicId,
@@ -27,6 +31,7 @@ public record Product(
         ProductStatus status,
         Instant createdAt,
         Instant updatedAt,
-        List<AttributeValue> attributes
+        List<AttributeValue> attributes,
+        List<TagRef> tags
 ) {
 }
